@@ -1,0 +1,9 @@
+name = "Khepri"
+uuid = "c487d830-b105-11e8-2c9d-150ba7e503f8"
+authors = ["aptmcl <antonio.menezes.leitao@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
