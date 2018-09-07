@@ -258,7 +258,7 @@ create_backend_connection(backend::String, port::Integer) =
       return connect(port)
     catch e
       @info("Please, start/restart $(backend).")
-      sleep(4)
+      sleep(5)
       if i == 9
         throw(e)
       end
