@@ -45,9 +45,9 @@ update_file_if_needed(path) =
 update_plugin() =
     begin
         # Do we have the bundle folder?
-        isdir(autocad_khepri_plugin) || mkdir(autocad_khepri_plugin)
+        isdir(autocad_khepri_plugin) || mkpath(autocad_khepri_plugin)
         update_file_if_needed(xml_name)
-        isdir(autocad_khepri_plugin_dll_folder) || mkdir(autocad_khepri_plugin_dll_folder)
+        isdir(autocad_khepri_plugin_dll_folder) || mkpath(autocad_khepri_plugin_dll_folder)
         map(dlls) do dll
             update_file_if_needed(joinpath("Contents", dll))
         end
@@ -66,7 +66,7 @@ check_plugin() =
                 checked_plugin = true
             catch exc
                 if isa(exc, Base.IOError)
-                    error("Please, close AutoCAD and retry.")
+                    @error("Please, close AutoCAD and retry.")
                 else
                     throw(exc)
                 end
