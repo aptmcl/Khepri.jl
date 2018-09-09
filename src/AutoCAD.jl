@@ -27,9 +27,11 @@ local_plugins = joinpath(dirname(dirname(abspath(@__FILE__))), "Plugins", "AutoC
 local_khepri_plugin = joinpath(local_plugins, bundle_name)
 local_khepri_plugin_dll_folder = joinpath(local_plugins, bundle_dll_folder)
 
-autocad_general_plugins = joinpath(dirname(joinpath(ENV["CommonProgramFiles"])), "Autodesk", "ApplicationPlugins")
-autocad_allusers_plugins = joinpath(ENV["ALLUSERSPROFILE"], "Autodesk", "ApplicationPlugins")
-autocad_user_plugins = joinpath(ENV["APPDATA"], "Autodesk", "ApplicationPlugins")
+env(name) = Sys.iswindows() ? ENV[name] : ""
+
+autocad_general_plugins = joinpath(dirname(env("CommonProgramFiles")), "Autodesk", "ApplicationPlugins")
+autocad_allusers_plugins = joinpath(env("ALLUSERSPROFILE"), "Autodesk", "ApplicationPlugins")
+autocad_user_plugins = joinpath(env("APPDATA"), "Autodesk", "ApplicationPlugins")
 autocad_khepri_plugin = joinpath(autocad_user_plugins, bundle_name)
 autocad_khepri_plugin_dll_folder = joinpath(autocad_user_plugins, bundle_dll_folder)
 
