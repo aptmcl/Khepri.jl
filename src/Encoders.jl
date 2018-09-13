@@ -121,7 +121,7 @@ decode_int_or_error_numbered(err_num) = (c::IO) ->
     end
   end
 
-decode_int_or_error = decode_int_or_error_numbered(-12345)
+decode_int_or_error = decode_int_or_error_numbered(-1)
 
 encode_string_array(c::IO, v::Vector) = begin
   encode_int(c, length(v))
