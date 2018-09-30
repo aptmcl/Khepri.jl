@@ -896,28 +896,26 @@ shape_from_ref(r, b::ACAD=current_backend()) =
             end
         elseif code == 12 || code == 13
             surface(Shapes1D[], backend=b, ref=ref)
-        elseif code == 50
-            block_instance(block("To be finished!",
-                                 backend=b, ref=ref),
-                           backend=b, ref=ref)
-        elseif code == 70
-            block_instance(block("A viewport to be finished!"))
         elseif 103 <= code <= 106
             polygon(ACADLineVertices(c, r),
                     backend=b, ref=ref)
         else
-            block_instance(block("Unknown shape. To be finished!",
-                                 backend=b, ref=ref),
-                           backend=b, ref=ref)
-            #error("Unknown shape with code $(code)")
+            error("Unknown shape with code $(code)")
         end
     end
 
+# HACK: This should be filtered on the plugin, not here.
 all_shapes(b::ACAD) =
-  [shape_from_ref(r, b) for r in ACADGetAllShapes(connection(b))]
+    let c = connection(b)
+        Shape[shape_from_ref(r, b)
+              for r in filter(r -> ACADShapeCode(c, r) != 0, ACADGetAllShapes(c))]
+    end
 
 all_shapes_in_layer(layer, b::ACAD) =
-  [shape_from_ref(r, b) for r in ACADGetAllShapesInLayer(connection(b), layer)]
+    let c = connection(b)
+        Shape[shape_from_ref(r, b)
+              for r in filter(r -> ACADShapeCode(c, r) != 0, ACADGetAllShapesInLayer(c))]
+    end
 
 disable_update(b::ACAD) =
     ACADDisableUpdate(connection(b))
