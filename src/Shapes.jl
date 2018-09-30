@@ -2,6 +2,7 @@ using IntervalSets
 using Interpolations
 
 export Shape,
+       Path,
        backend,
        current_backend,
        switch_to_backend,
@@ -456,6 +457,7 @@ export open_path,
        translate,
        stroke,
        fill,
+       curve_length,
        location_at_length,
        subpath
 
@@ -546,6 +548,25 @@ bounding_rectangle(pts::Locs) =
 
 bounding_rectangle(ss::Shapes) =
     bounding_rectangle(mapreduce(bounding_rectangle, vcat, ss))
+
+
+curve_length(path::CircularPath) = 2*pi*path.radius
+curve_length(path::RectangularPath) = 2*(path.dx + path.dy)
+curve_length(path::OpenPolygonalPath) = length(path.vertices)
+curve_length(path::ClosedPolygonalPath) = length(path.vertices) + distance(path.vertices[end], path.vertices[1])
+curve_length(s::Shape) = length(convert(Path, s))
+curve_length(ps::Vector{<:Loc}) =
+  let p = ps[1]
+      l = 0.0
+    for i in 2:length(ps)
+        pp = ps[i]
+        l += distance(p, pp)
+        p = pp
+    end
+    l
+  end
+
+
 
 location_at_length(path::CircularPath, d::Real) =
     loc_from_o_phi(path.center + vpol(path.radius, d/path.radius), d/path.radius+pi/2)
@@ -889,10 +910,7 @@ backend_fill(b, path) = backend_fill_curves(b, backend_stroke(b, path))
 import Base.convert
 convert(::Type{ClosedPath}, s::Rectangle) = closed_path([MoveToOp(s.c), RectOp(vxy(s.dx, s.dy))])
 convert(::Type{ClosedPath}, s::Circle) = closed_path([CircleOp(s.center, s.radius)])
-convert(::Type{Path}, s::Line) =
-    let vs = line_vertices(s)
-        open_path(vcat([MoveToOp(vs[1])], map(LineToOp, vs[2:end])))
-    end
+convert(::Type{Path}, s::Line) = convert(OpenPath, s.vertices)
 convert(::Type{OpenPath}, vs::Locs) = open_polygonal_path(vs)
 convert(::Type{ClosedPath}, vs::Locs) = closed_polygonal_path(vs)
 convert(::Type{Path}, vs::Locs) =
@@ -1249,7 +1267,7 @@ A wall contains doors and windows
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
           doors::Shapes=Shape[], windows::Shapes=Shape[])
-wall(path::Vector;
+wall(path::Any;
      bottom_level::Level=default_level(),
      top_level::Level=upper_level(bottom_level),
      family::WallFamily=default_wall_family()) =
@@ -1268,6 +1286,15 @@ wall(p0::Loc, p1::Loc;
     thickness::Real=0.05)
 
 @defproxy(door, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
+
+# Window
+
+@deffamily(window_family, Family,
+    width::Real=1.0,
+    height::Real=2.0,
+    thickness::Real=0.05)
+
+@defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
 # Default implementation
 realize(b::Backend, w::Wall) =
@@ -1310,6 +1337,14 @@ realize(b::Backend, s::Door) =
       backend_wall(b, subpath, height, s.family.thickness)
   end
 
+realize(b::Backend, s::Window) =
+  let base_height = s.wall.bottom_level.height + s.loc.y,
+      height = s.family.height,
+      subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
+      # we emulate a window using a small wall
+      backend_wall(b, subpath, height, s.family.thickness)
+  end
+
 ##
 
 export add_door
@@ -1322,6 +1357,19 @@ add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_fami
         end
         w
     end
+
+#
+export add_window
+add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
+    let b = backend(w)
+        d = window(w, loc, family=family)
+        push!(w.windows, d)
+        if realized(w)
+            set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
+        end
+        w
+    end
+
 #
 # We need to redefine the default method (maybe add an option to the macro to avoid defining the meta_program)
 # This needs to be fixed for windows
