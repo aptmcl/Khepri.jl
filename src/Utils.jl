@@ -53,6 +53,10 @@ division(t0, t1, n::Real, include_last::Bool=true) =
     collect(include_last ? iter : take(iter, n))
   end
 
+# Generic objects are processed using map_division
+division(obj::Any, n::Real) = map_division(identity, obj, n)
+
+
 map_division(f, t0, t1, n::Real, include_last::Bool=true) =
   let n = convert(Int, n), iter = range(t0, stop=t1, length=n + 1)
     map(f, include_last ? iter : take(iter, n))
