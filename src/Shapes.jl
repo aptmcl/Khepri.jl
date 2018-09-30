@@ -994,7 +994,7 @@ upper_level(lvl, height=default_level_to_level_height()) = level(lvl.height + he
 #default implementation
 realize(b::Backend, s::Level) = s.height
 
-export default_level, default_level_to_level_height
+export default_level, default_level_to_level_height, upper_level
 
 #=
 @defproxy(polygonal_mass, Shape3D, points::Locs, height::Real)
