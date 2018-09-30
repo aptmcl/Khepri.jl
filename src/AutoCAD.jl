@@ -897,14 +897,18 @@ shape_from_ref(r, b::ACAD=current_backend()) =
         elseif code == 12 || code == 13
             surface(Shapes1D[], backend=b, ref=ref)
         elseif code == 50
-            block_instance(block("To be finished!"))
+            block_instance(block("To be finished!",
+                                 backend=b, ref=ref),
+                           backend=b, ref=ref)
         elseif code == 70
             block_instance(block("A viewport to be finished!"))
         elseif 103 <= code <= 106
             polygon(ACADLineVertices(c, r),
                     backend=b, ref=ref)
         else
-            block_instance(block("Unknown shape. To be finished!"))
+            block_instance(block("Unknown shape. To be finished!",
+                                 backend=b, ref=ref),
+                           backend=b, ref=ref)
             #error("Unknown shape with code $(code)")
         end
     end
