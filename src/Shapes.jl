@@ -366,6 +366,11 @@ export text_centered
 text_centered(str::String="", c::Loc=u0(), h::Real=1) =
   text(str, add_xy(c, -length(str)*h*0.85/2, -h/2), h)
 
+# This is for unknown shapes (they are opaque, the only thing you can do with then
+# might be just delete them)
+@defproxy(unknown, Shape3D)
+
+
 @defproxy(sphere, Shape3D, center::Loc=u0(), radius::Real=1)
 @defproxy(torus, Shape3D, center::Loc=u0(), re::Real=1, ri::Real=1/2)
 @defproxy(cuboid, Shape3D,

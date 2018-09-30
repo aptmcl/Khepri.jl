@@ -900,7 +900,8 @@ shape_from_ref(r, b::ACAD=current_backend()) =
             polygon(ACADLineVertices(c, r),
                     backend=b, ref=ref)
         else
-            error("Unknown shape with code $(code)")
+            unknown(backend=b, ref=ref)
+            #error("Unknown shape with code $(code)")
         end
     end
 
@@ -913,8 +914,7 @@ all_shapes(b::ACAD) =
 
 all_shapes_in_layer(layer, b::ACAD) =
     let c = connection(b)
-        Shape[shape_from_ref(r, b)
-              for r in filter(r -> ACADShapeCode(c, r) != 0, ACADGetAllShapesInLayer(c))]
+        Shape[shape_from_ref(r, b) for r in ACADGetAllShapesInLayer(c, layer)]
     end
 
 disable_update(b::ACAD) =
