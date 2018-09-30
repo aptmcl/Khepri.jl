@@ -552,9 +552,9 @@ bounding_rectangle(ss::Shapes) =
 
 curve_length(path::CircularPath) = 2*pi*path.radius
 curve_length(path::RectangularPath) = 2*(path.dx + path.dy)
-curve_length(path::OpenPolygonalPath) = length(path.vertices)
-curve_length(path::ClosedPolygonalPath) = length(path.vertices) + distance(path.vertices[end], path.vertices[1])
-curve_length(s::Shape) = length(convert(Path, s))
+curve_length(path::OpenPolygonalPath) = curve_length(path.vertices)
+curve_length(path::ClosedPolygonalPath) = curve_length(path.vertices) + distance(path.vertices[end], path.vertices[1])
+curve_length(s::Shape) = curve_length(convert(Path, s))
 curve_length(ps::Vector{<:Loc}) =
   let p = ps[1]
       l = 0.0
