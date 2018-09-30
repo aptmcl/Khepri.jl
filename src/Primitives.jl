@@ -96,7 +96,7 @@ function initiate_rpc_call(conn, opcode, name)
 end
 function complete_rpc_call(conn, opcode, result)
     if show_rpc()
-        println(stderr, "-> $(result)")
+        println(stderr, result == nothing ? "-> nothing" : "-> $(result)")
     end
     result
 end
