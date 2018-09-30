@@ -153,6 +153,9 @@ ensure_ref(b::Backend{K,T}, v::Proxy) where {K,T} = ref(v)
 set_ref!(s::Proxy, value) = s.ref.value = value
 
 abstract type Shape <: Proxy end
+Base.show(io::IO, s::Shape) =
+    print(io, "$(typeof(s))(...)")
+
 Shapes = Vector{<:Shape}
 
 map_ref(f::Function, s::Shape) = map_ref(s.ref.backend, f, ref(s))
