@@ -34,6 +34,11 @@ function with(f, p, newvalue)
   end
 end
 
+with(f, p, newvalue, others...) =
+  with(p, newvalue) do
+    with(f, others...)
+  end
+
 mutable struct LazyParameter{T}
   initializer::Function #This should be a more specific type: None->T
   value::Union{T, Nothing}
