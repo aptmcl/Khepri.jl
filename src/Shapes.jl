@@ -303,11 +303,13 @@ Shapes1D = Vector{<:Any}
 @defproxy(universal_shape, Shape3D)
 @defproxy(point, Shape0D, position::Loc=u0())
 @defproxy(line, Shape1D, vertices::Locs=[u0(), ux()])
+line(vs::List) = line(collect(vs))
 line(v0, v1, vs...) = line([v0, v1, vs...])
 @defproxy(closed_line, Shape1D, vertices::Locs=[u0(), ux(), uy()])
 closed_line(v0, v1, vs...) = closed_line([v0, v1, vs...])
 @defproxy(spline, Shape1D, points::Locs=[u0(), ux(), uy()], v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false,
           interpolator::Any=LazyParameter(Any, () -> curve_interpolator(points)))
+spline(vs::List, v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false) = spline(collect(vs), v0, v1)
 curve_interpolator(pts::Locs) =
     let pts = map(p -> in_world(p).raw, pts)
         Interpolations.scale(
@@ -323,12 +325,14 @@ evaluate(s::Spline, t::Real) = xyz(s.interpolator()[t], world_cs)
 #(def-base-shape 1D-shape (spline* [pts : (Listof Loc) (list (u0) (ux) (uy))] [v0 : (U Boolean Vec) #f] [v1 : (U Boolean Vec) #f]))
 
 @defproxy(closed_spline, Shape1D, points::Locs=[u0(), ux(), uy()])
+closed_spline(vs::List) = closed_spline(collect(vs))
 closed_spline(v0, v1, vs...) = closed_spline([v0, v1, vs...])
 @defproxy(circle, Shape1D, center::Loc=u0(), radius::Real=1)
 @defproxy(arc, Shape1D, center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=pi)
 @defproxy(elliptic_arc, Shape1D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1, start_angle::Real=0, amplitude::Real=pi)
 @defproxy(ellipse, Shape1D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1)
 @defproxy(polygon, Shape1D, vertices::Locs=[u0(), ux(), uy()])
+polygon(vs::List) = polygon(collect(vs))
 polygon(v0, v1, vs...) = polygon([v0, v1, vs...])
 @defproxy(regular_polygon, Shape1D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
 @defproxy(rectangle, Shape1D, c::Loc=u0(), dx::Real=1, dy::Real=1)
@@ -345,6 +349,7 @@ surface_polygon(v0, v1, vs...) = surface_polygon([v0, v1, vs...])
 @defproxy(surface_regular_polygon, Shape2D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
 @defproxy(surface_rectangle, Shape2D, c::Loc=u0(), dx::Real=1, dy::Real=1)
 @defproxy(surface, Shape2D, frontier::Shapes1D=[circle()])
+surface(cs::List) = surface(collect(cs))
 surface(c0::Shape, cs...) = surface([c0, cs...])
 #To be removed
 surface_from = surface
@@ -437,7 +442,9 @@ extrusion(profile, h::Real) =
 @defproxy(sweep, Shape3D, path::Shape1D=circle(), profile::Shape=point(), rotation::Real=0, scale::Real=1)
 @defproxy(revolve, Shape3D, profile::Shape=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
 @defproxy(loft, Shape3D, profiles::Shapes=[], rails::Shapes=[], ruled::Bool=false, closed::Bool=false)
+loft(profiles::List, rails::List=list(), ruled::Bool=false, closed::Bool=false) = loft(collect(profiles), collect(rails), ruled, closed)
 loft_ruled(profiles::Shapes=[]) = loft(profiles, [], true, false)
+loft_ruled(profiles::List) = loft(collect(profiles), [], true, false)
 export loft_ruled
 
 @defproxy(move, Shape3D, shape::Shape=point(), v::Vec=vx())
@@ -1250,6 +1257,7 @@ realize(b::Backend, s::SlabOpening) =
 
 @defproxy(panel, Shape3D, vertices::Locs=[], level::Any=default_level(), family::Any=default_panel_family())
 
+#TODO Pass the provided backend
 realize(b::Backend, s::Panel) =
     let p1 = s.vertices[1],
         p2 = s.vertices[2],
