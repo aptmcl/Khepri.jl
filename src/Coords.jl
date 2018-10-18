@@ -105,6 +105,16 @@ struct XYZ <: Loc
   raw::Vec4f
 end
 
+# Basic conversions
+# From tuples of Loc
+convert(::Type{Locs}, ps::NTuple{N,Loc}) where {N} = collect(XYZ, ps)
+
+# From arrays of Any. This looks like a failure in Julia type inference, particularly when
+# an empty array is involved, e.g., line(vcat([xy(10,20), xy(30,40)], []))
+convert(::Type{Locs}, ps::Vector{<:Any}) = collect(XYZ, ps)
+
+
+
 Base.show(io::IO, loc::XYZ) =
     print(io, "xyz($(loc.x),$(loc.y),$(loc.z)$(loc.cs == world_cs ? "" : ", ..."))")
 
@@ -373,3 +383,7 @@ meta_program(v::Vec) =
     else
         Expr(:call, :vxyz, meta_program(cx(p)), meta_program(cy(p)), meta_program(cz(p)))
     end
+
+# Conversions
+# We could accept some nice conversions
+# convert(::Type{Loc}, t::Tuple{Real,Real,Real}) = xyz(t[1], t[2], t[3])
