@@ -94,7 +94,9 @@ Base.cat(lst::List, lsts::List...) =
 Base.iterate(l::List, ::Nil) = nothing
 Base.iterate(l::List, state::Cons = l) = state.head, state.tail
 
+# Lists can be converted to Arrays
 
+Base.convert(::Type{Array{S,1}}, l::List{T}) where {S, T <: S} = collect(T, l)
 
 
 
