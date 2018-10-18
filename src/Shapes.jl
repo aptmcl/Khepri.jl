@@ -249,6 +249,15 @@ switch_to_backend(from::Backend, to::Backend) = current_backend(to)
 @defop reset_backend()
 @defop save_as(pathname::String, format::String)
 
+struct WrongTypeForParam <: Exception
+  param::Symbol
+  value::Any
+  expected_type::Type
+end
+Base.showerror(io::IO, e::WrongTypeForParam) =
+  print(io, "$(e.param) expected a $(e.expected_type) but got $(e.value) of type $(typeof(e.value))")
+
+
 macro defproxy(name, parent, fields...)
   name_str = string(name)
   struct_name = esc(Symbol(string(map(uppercasefirst,split(name_str,'_'))...)))
@@ -261,20 +270,22 @@ macro defproxy(name, parent, fields...)
 #  opt_params = map((name,typ,init) -> :($(name) :: $(typ) = $(init)), field_renames, field_types, field_inits)
 #  key_params = map((name,typ,rename) -> :($(name) :: $(typ) = $(rename)), field_names, field_types, field_renames)
 #  mk_param(name,typ) = Expr(:kw, Expr(:(::), name, typ))
-  mk_param(name,typ,init) = Expr(:kw, Expr(:(::), name, typ), init)
+  mk_param(name,typ,init) = Expr(:kw, name, init) #Expr(:kw, Expr(:(::), name, typ), init)
   opt_params = map(mk_param, field_renames, field_types, map(init -> replace_in(init, field_replacements), field_inits))
   key_params = map(mk_param, field_names, field_types, field_renames)
   constructor_name = esc(name)
   predicate_name = esc(Symbol("is_", name_str))
-  selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
+  mk_convert(name,typ) = :(isa($(name), $(typ)) ? $(name) : throw(WrongTypeForParam($(QuoteNode(name)), $(name), $(typ))))
+  field_converts = map(mk_convert, field_names, field_types)
+  #selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
   quote
-    export $(constructor_name), $(struct_name), $(predicate_name), $(selector_names...)
+    export $(constructor_name), $(struct_name), $(predicate_name) #, $(selector_names...)
     struct $struct_name <: $parent
       ref::LazyRef
       $(struct_fields...)
     end
     $(constructor_name)($(opt_params...); $(key_params...), backend::Backend=current_backend(), ref::LazyRef=LazyRef(backend)) =
-      create($(struct_name)(ref, $(field_names...)))
+      create($(struct_name)(ref, $(field_converts...)))
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
 #    $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
@@ -303,13 +314,11 @@ Shapes1D = Vector{<:Any}
 @defproxy(universal_shape, Shape3D)
 @defproxy(point, Shape0D, position::Loc=u0())
 @defproxy(line, Shape1D, vertices::Locs=[u0(), ux()])
-line(vs::List) = line(collect(vs))
 line(v0, v1, vs...) = line([v0, v1, vs...])
 @defproxy(closed_line, Shape1D, vertices::Locs=[u0(), ux(), uy()])
 closed_line(v0, v1, vs...) = closed_line([v0, v1, vs...])
 @defproxy(spline, Shape1D, points::Locs=[u0(), ux(), uy()], v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false,
           interpolator::Any=LazyParameter(Any, () -> curve_interpolator(points)))
-spline(vs::List, v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false) = spline(collect(vs), v0, v1)
 curve_interpolator(pts::Locs) =
     let pts = map(p -> in_world(p).raw, pts)
         Interpolations.scale(
@@ -325,14 +334,12 @@ evaluate(s::Spline, t::Real) = xyz(s.interpolator()[t], world_cs)
 #(def-base-shape 1D-shape (spline* [pts : (Listof Loc) (list (u0) (ux) (uy))] [v0 : (U Boolean Vec) #f] [v1 : (U Boolean Vec) #f]))
 
 @defproxy(closed_spline, Shape1D, points::Locs=[u0(), ux(), uy()])
-closed_spline(vs::List) = closed_spline(collect(vs))
 closed_spline(v0, v1, vs...) = closed_spline([v0, v1, vs...])
 @defproxy(circle, Shape1D, center::Loc=u0(), radius::Real=1)
 @defproxy(arc, Shape1D, center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=pi)
 @defproxy(elliptic_arc, Shape1D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1, start_angle::Real=0, amplitude::Real=pi)
 @defproxy(ellipse, Shape1D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1)
 @defproxy(polygon, Shape1D, vertices::Locs=[u0(), ux(), uy()])
-polygon(vs::List) = polygon(collect(vs))
 polygon(v0, v1, vs...) = polygon([v0, v1, vs...])
 @defproxy(regular_polygon, Shape1D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
 @defproxy(rectangle, Shape1D, c::Loc=u0(), dx::Real=1, dy::Real=1)
@@ -349,7 +356,6 @@ surface_polygon(v0, v1, vs...) = surface_polygon([v0, v1, vs...])
 @defproxy(surface_regular_polygon, Shape2D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
 @defproxy(surface_rectangle, Shape2D, c::Loc=u0(), dx::Real=1, dy::Real=1)
 @defproxy(surface, Shape2D, frontier::Shapes1D=[circle()])
-surface(cs::List) = surface(collect(cs))
 surface(c0::Shape, cs...) = surface([c0, cs...])
 #To be removed
 surface_from = surface
@@ -442,9 +448,7 @@ extrusion(profile, h::Real) =
 @defproxy(sweep, Shape3D, path::Shape1D=circle(), profile::Shape=point(), rotation::Real=0, scale::Real=1)
 @defproxy(revolve, Shape3D, profile::Shape=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
 @defproxy(loft, Shape3D, profiles::Shapes=[], rails::Shapes=[], ruled::Bool=false, closed::Bool=false)
-loft(profiles::List, rails::List=list(), ruled::Bool=false, closed::Bool=false) = loft(collect(profiles), collect(rails), ruled, closed)
 loft_ruled(profiles::Shapes=[]) = loft(profiles, [], true, false)
-loft_ruled(profiles::List) = loft(collect(profiles), [], true, false)
 export loft_ruled
 
 @defproxy(move, Shape3D, shape::Shape=point(), v::Vec=vx())
