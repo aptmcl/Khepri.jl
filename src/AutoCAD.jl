@@ -572,7 +572,7 @@ unite_refs(b::ACAD, refs::Vector{<:ACADRef}) =
 
 
 realize(b::ACAD, s::IntersectionShape) =
-  foldl((r0,r1)->intersect_ref(b,r0,r1), ACADUniversalRef(), map(ref, s.shapes))
+    foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes), init=ACADUniversalRef())
 
 realize(b::ACAD, s::Slice) =
   slice_ref(b, ref(s.shape), s.p, s.n)
