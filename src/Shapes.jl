@@ -343,7 +343,7 @@ closed_spline(v0, v1, vs...) = closed_spline([v0, v1, vs...])
 polygon(v0, v1, vs...) = polygon([v0, v1, vs...])
 @defproxy(regular_polygon, Shape1D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
 @defproxy(rectangle, Shape1D, c::Loc=u0(), dx::Real=1, dy::Real=1)
-rectangle(p, q) =
+rectangle(p::Loc, q::Loc) =
   let v = in_cs(q - p, p.cs)
     rectangle(p, v.x, v.y)
   end
@@ -421,22 +421,22 @@ right_cuboid(cb::Loc, width::Real, height::Real, ct::Loc, angle::Real=0; backend
     right_cuboid(c, width, height, h, angle, backend=backend)
   end
 @defproxy(box, Shape3D, c::Loc=u0(), dx::Real=1, dy::Real=1, dz::Real=1)
-box(c0, c1) =
+box(c0::Loc, c1::Loc) =
   let v = in_cs(c1, c0)-c0
     box(c0, v.x, v.y, v.z)
   end
 @defproxy(cone, Shape3D, cb::Loc=u0(), r::Real=1, h::Real=1)
-cone(cb, r, ct) =
+cone(::Loc, r::Real, ct::Loc) =
   let (c, h) = position_and_height(cb, ct)
     cone(c, r, h)
   end
 @defproxy(cone_frustum, Shape3D, cb::Loc=u0(), rb::Real=1, h::Real=1, rt::Real=1)
-cone_frustum(cb, rb, ct, rt) =
+cone_frustum(cb::Loc, rb::Real, ct::Loc, rt::Real) =
   let (c, h) = position_and_height(cb, ct)
     cone_frustum(c, rb, h, rt)
   end
 @defproxy(cylinder, Shape3D, cb::Loc=u0(), r::Real=1, h::Real=1)
-cylinder(cb, r, ct) =
+cylinder(cb::Loc, r::Real, ct::Loc) =
   let (c, h) = position_and_height(cb, ct)
     cylinder(c, r, h)
   end
@@ -1194,8 +1194,6 @@ ref(family::Family) = family.ref()==-1 ? family.ref(backend_get_family(current_b
 @defproxy(slab, Shape3D, contour::ClosedPath=rectangular_path(),
           level::Level=default_level(), family::SlabFamily=default_slab_family(),
           openings::Vector{ClosedPath}=ClosedPath[])
-slab(contour; level::Level=default_level(), family::SlabFamily=default_slab_family()) =
-    slab(convert(ClosedPath, contour), level, family)
 
 # Default implementation: dispatch on the slab elements
 realize(b::Backend, s::Slab) =
@@ -1287,11 +1285,6 @@ A wall contains doors and windows
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
           doors::Shapes=Shape[], windows::Shapes=Shape[])
-wall(path::Any;
-     bottom_level::Level=default_level(),
-     top_level::Level=upper_level(bottom_level),
-     family::WallFamily=default_wall_family()) =
-    wall(convert(Path, path), bottom_level, top_level, family)
 wall(p0::Loc, p1::Loc;
      bottom_level::Level=default_level(),
      top_level::Level=upper_level(bottom_level),
