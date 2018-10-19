@@ -107,11 +107,11 @@ end
 
 # Basic conversions
 # From tuples of Loc
-convert(::Type{Locs}, ps::NTuple{N,Loc}) where {N} = collect(XYZ, ps)
+Base.convert(::Type{Locs}, ps::NTuple{N,Loc}) where {N} = collect(XYZ, ps)
 
 # From arrays of Any. This looks like a failure in Julia type inference, particularly when
 # an empty array is involved, e.g., line(vcat([xy(10,20), xy(30,40)], []))
-convert(::Type{Locs}, ps::Vector{<:Any}) = collect(XYZ, ps)
+Base.convert(::Type{Locs}, ps::Vector{<:Any}) = collect(XYZ, ps)
 
 
 
