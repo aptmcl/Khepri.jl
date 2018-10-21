@@ -769,7 +769,7 @@ backend_bounding_box(b::ACAD, shapes::Shapes) =
 
 backend_name(b::ACAD) = "AutoCAD"
 
-Base.view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
+set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
   ACADView(connection(b), camera, target, lens)
 
 get_view(b::ACAD) =
