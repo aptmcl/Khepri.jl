@@ -343,7 +343,7 @@ closed_spline(v0, v1, vs...) = closed_spline([v0, v1, vs...])
 @defproxy(polygon, Shape1D, vertices::Locs=[u0(), ux(), uy()])
 polygon(v0, v1, vs...) = polygon([v0, v1, vs...])
 @defproxy(regular_polygon, Shape1D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
-@defproxy(rectangle, Shape1D, c::Loc=u0(), dx::Real=1, dy::Real=1)
+@defproxy(rectangle, Shape1D, corner::Loc=u0(), dx::Real=1, dy::Real=1)
 rectangle(p::Loc, q::Loc) =
   let v = in_cs(q - p, p.cs)
     rectangle(p, v.x, v.y)
@@ -355,7 +355,7 @@ rectangle(p::Loc, q::Loc) =
 @defproxy(surface_polygon, Shape2D, vertices::Locs=[u0(), ux(), uy()])
 surface_polygon(v0, v1, vs...) = surface_polygon([v0, v1, vs...])
 @defproxy(surface_regular_polygon, Shape2D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=false)
-@defproxy(surface_rectangle, Shape2D, c::Loc=u0(), dx::Real=1, dy::Real=1)
+@defproxy(surface_rectangle, Shape2D, corner::Loc=u0(), dx::Real=1, dy::Real=1)
 @defproxy(surface, Shape2D, frontier::Shapes1D=[circle()])
 surface(c0::Shape, cs...) = surface([c0, cs...])
 #To be removed
@@ -375,11 +375,11 @@ surface_domain(s::Shape2D, backend::Backend=current_backend()) =
 map_division(f::Function, s::Shape2D, nu::Int, nv::Int, backend::Backend=current_backend()) =
     backend_map_division(backend, f, s, nu, nv)
 
-@defproxy(text, Shape0D, str::String="", c::Loc=u0(), h::Real=1)
+@defproxy(text, Shape0D, str::String="", corner::Loc=u0(), height::Real=1)
 
 export text_centered
-text_centered(str::String="", c::Loc=u0(), h::Real=1) =
-  text(str, add_xy(c, -length(str)*h*0.85/2, -h/2), h)
+text_centered(str::String="", center::Loc=u0(), height::Real=1) =
+  text(str, add_xy(center, -length(str)*height*0.85/2, -height/2), height)
 
 # This is for unknown shapes (they are opaque, the only thing you can do with then
 # might be just delete them)
@@ -928,8 +928,10 @@ backend_fill(b, path) = backend_fill_curves(b, backend_stroke(b, path))
 
 # Convertions from/to paths
 import Base.convert
-convert(::Type{ClosedPath}, s::Rectangle) = closed_path([MoveToOp(s.c), RectOp(vxy(s.dx, s.dy))])
-convert(::Type{ClosedPath}, s::Circle) = closed_path([CircleOp(s.center, s.radius)])
+convert(::Type{ClosedPath}, s::Rectangle) =
+  closed_path([MoveToOp(s.corner), RectOp(vxy(s.dx, s.dy))])
+convert(::Type{ClosedPath}, s::Circle) =
+  closed_path([CircleOp(s.center, s.radius)])
 convert(::Type{Path}, s::Line) = convert(OpenPath, s.vertices)
 convert(::Type{OpenPath}, vs::Locs) = open_polygonal_path(vs)
 convert(::Type{ClosedPath}, vs::Locs) = closed_polygonal_path(vs)
@@ -994,7 +996,7 @@ frame_at(c::Shape1D, t::Real) = backend_frame_at(backend(c), c, t)
 frame_at(s::Shape2D, u::Real, v::Real) = backend_frame_at(backend(s), s, u, v)
 
 #Some specific cases can be handled in an uniform way without the backend
-frame_at(s::SurfaceRectangle, u::Real, v::Real) = add_xy(s.c, u, v)
+frame_at(s::SurfaceRectangle, u::Real, v::Real) = add_xy(s.corner, u, v)
 frame_at(s::SurfaceCircle, u::Real, v::Real) = add_pol(s.center, u, v)
 
 

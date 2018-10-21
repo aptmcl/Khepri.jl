@@ -362,7 +362,12 @@ realize(b::ACAD, s::Polygon) =
 realize(b::ACAD, s::RegularPolygon) =
   ACADClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::Rectangle) =
-  ACADClosedPolyLine(connection(b), [s.c, add_x(s.c, s.dx), add_xy(s.c, s.dx, s.dy), add_y(s.c, s.dy)])
+  ACADClosedPolyLine(
+    connection(b),
+    [s.corner,
+     add_x(s.corner, s.dx),
+     add_xy(s.corner, s.dx, s.dy),
+     add_y(s.corner, s.dy)])
 realize(b::ACAD, s::SurfaceCircle) =
   ACADSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
 realize(b::ACAD, s::SurfaceArc) =
@@ -395,7 +400,12 @@ realize(b::ACAD, s::SurfacePolygon) =
 realize(b::ACAD, s::SurfaceRegularPolygon) =
   ACADSurfaceClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::SurfaceRectangle) =
-  ACADSurfaceClosedPolyLine(connection(b), [s.c, add_x(s.c, s.dx), add_xy(s.c, s.dx, s.dy), add_y(s.c, s.dy)])
+  ACADSurfaceClosedPolyLine(
+    connection(b),
+    [s.corner,
+     add_x(s.corner, s.dx),
+     add_xy(s.corner, s.dx, s.dy),
+     add_y(s.corner, s.dy)])
 realize(b::ACAD, s::Surface) =
   let #ids = map(r->ACADNurbSurfaceFrom(connection(b),r), ACADSurfaceFromCurves(connection(b), collect_ref(s.frontier)))
       ids = ACADSurfaceFromCurves(connection(b), collect_ref(s.frontier))
@@ -453,7 +463,9 @@ backend_map_division(b::ACAD, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
     end
 
 realize(b::ACAD, s::Text) =
-  ACADText(connection(b), s.str, s.c, vx(1, s.c.cs), vy(1, s.c.cs), s.h)
+  ACADText(
+    connection(b),
+    s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), s.height)
 
 realize(b::ACAD, s::Sphere) =
   ACADSphere(connection(b), s.center, s.radius)
