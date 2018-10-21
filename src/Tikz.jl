@@ -1,6 +1,6 @@
 export tikz,
-       get_accumulated_tikz,
-       display_tikz
+       tikz_output,
+       display_tikz_output
 
 tikz_e(out::IO, arg) =
   begin
@@ -194,8 +194,8 @@ tikz_transform(out::IO, f::Function, c::Loc) =
     tikz_e(out, "\\end{scope}")
   end
 
-tikz_set_view(camera::Loc, target::Loc, lens::Real) =
-  let (v, contents) = (camera-target, get_output_bytes(tikz_port, true))
+tikz_set_view(out::IO, camera::Loc, target::Loc, lens::Real) =
+  let (v, contents) = (camera-target, get_accumulated_tikz(out))
     print("\\tdplotsetmaincoords{")
     tikz_number(radians_>degrees(sph_psi(v)))
     print("}{")
@@ -234,7 +234,9 @@ const tikz = TikZ(create_TikZ_connection())
 
 get_accumulated_tikz(out::IO) = String(take!(out))
 
-display_tikz(b::TikZ=current_backend()) = print(get_accumulated_tikz(connection(b)))
+tikz_output(b::TikZ=current_backend()) = get_accumulated_tikz(connection(b))
+
+display_tikz_output(b::TikZ=current_backend()) = print(tikz_output(b))
 
 withTikZXForm(f, out, c) =
   if is_world_cs(c.cs)
