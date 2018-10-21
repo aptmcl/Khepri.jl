@@ -1486,13 +1486,18 @@ realize(b::Backend, s::Ieslight) =
 
 #################################
 
-#We need to fix this confusion between virtual and non virtual stuff
+@deffamily(truss_node_family, Family,
+    radius::Real=0.2,
+    support::Any=false) #(Option node_support)
 
-virtual = identity
-#=
-@defproxy(truss_node, Shape3D, p::Loc, family::Any)
-@defproxy(truss_bar, Shape3D, p0::Loc, p1::Loc, angle::Real, family::Any)
-=#
+@deffamily(truss_bar_family, Family,
+    radius::Real=0.03,
+    section::Any=false,
+    material::Any=false,
+    created::Bool=false)
+
+@defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
+@defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
 
 import Base.union
 export union, intersection, subtraction
@@ -1651,8 +1656,7 @@ end
 
 @defop disable_update()
 @defop enable_update()
-import Base.view
-@defop view(camera::Loc, target::Loc, lens::Real)
+@defop set_view(camera::Loc, target::Loc, lens::Real)
 @defop get_view()
 @defop zoom_extents()
 @defop view_top()
