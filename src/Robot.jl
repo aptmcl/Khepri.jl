@@ -928,17 +928,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
             end
             for (bar_family, bars_ids) in family_bars
                 if ! bar_family.created
-                    let mat = bar_family.material
-                        (name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT) =
-                         (mat.name, mat.typ, mat.Name, mat.Nuance,
-                          mat.E, mat.NU, mat.Kirchoff, mat.RO,
-                          mat.LX, mat.DumpCoef, mat.RE, mat.RT)
-                        create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT)
-                    end
-                    let sec = bar_family.section
-                        (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
-                        create_bar_tube_section_label(name, material_name, iswood, specs)
-                    end
+                    create_bar_material_label(bar_family.material...)
+                    create_bar_tube_section_label(bar_family.section...)
                     bar_family.created = true
                 end
                 let selection = selections(struc)[I_OT_BAR]
@@ -949,8 +940,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                     str = String(take!(ids))
                     from_text(selection, str)
                     let sec = bar_family.section
-                        (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
-                        set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+                        set_selection_label(brs, selection, I_LT_BAR_SECTION, sec.name)
                     end
                 end
             end
