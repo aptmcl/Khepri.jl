@@ -1,6 +1,7 @@
 module Khepri
 using Base.Iterators
 using Sockets
+using PyCall
 
 include("Parameters.jl")
 include("Utils.jl")
@@ -14,5 +15,6 @@ include("AutoCAD.jl")
 include("Revit.jl")
 include("ArchiCAD.jl")
 #include("Radiance.jl")
+
 include("Robot.jl")
 end
