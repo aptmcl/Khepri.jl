@@ -609,7 +609,10 @@ bs[:Create](1, 1, 2)
 macro def_rw_property(name, InType, OutType)
     quote
         function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(name))] end
-        function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing in[$(QuoteNode(name))] = val end
+        function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing
+            in[$(QuoteNode(name))] = val
+            nothing
+        end
     end
 end
 
@@ -800,8 +803,8 @@ new_label(fn, typ, name) =
       delete(labels, typ, name)
     end
     label = create_label(labels, typ, name)
-    data = data(label)
-    fn(data)
+    println("Label:", label)
+    fn(data(label))
     store(labels, label)
     name
   end
@@ -910,6 +913,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                                                   support.ux, support.uy, support.uz,
                                                   support.rx, support.ry, support.rz)
                         support.created = true
+                        println("Setting Label", support)
                         set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, name)
                     end
                 end
@@ -919,6 +923,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
             end
           end
         end
+        println("Done Nodes")
         family_bars = Dict()
         for data in values(added_bars())
             let (bar_id, node_id0, node_id1, rotation, bar_family) = (data.id, data.node0.id, data.node1.id, data.rotation, data.family)
@@ -950,6 +955,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
                     print(ids, bar_id, " ", ids)
                 end
                 str = String(take!(ids))
+                println("Sending:")
+                println(str)
                 from_text(selection, str)
                 let sec = bar_family.section
                     (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
