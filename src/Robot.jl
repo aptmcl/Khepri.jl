@@ -765,7 +765,8 @@ end
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
-@def_com set_label IRobotNode typ::Int name::String Void
+@def_com set_label IRobotNode typ::IRobotLabelType name::String Void
+@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::Int name::String Void
 @def_com set_value IRobotBarSectionConcreteData typ::Int value::Double Void
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double CreateNonstd
@@ -859,10 +860,7 @@ add_node!(p, family, load=false, reuse=false) =
         #                  distance(k, p) < isreuse && k) || #We should check that the families are the same. What about the loads?
         #                   ||
         node_counter(node_counter()+1)
-        let data = truss_node_data(node_counter(), p, family, load)
-            added_nodes()[p] = data # Should we check for collisions here? (nodes at the same location);
-            data
-        end
+        added_nodes()[p] = truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
     end
 
 current_nodes_ids() = 0:node_counter()
@@ -880,14 +878,12 @@ end
 add_bar!(p0, p1, rotation, family) =
     begin
         bar_counter(bar_counter()+1)
-        let data = truss_bar_data(bar_counter(),
-                                  added_nodes()[p0],
-                                  added_nodes()[p1],
-                                  rotation,
-                                  family)
-            added_bars()[bar_counter()] = data
-            data
-        end
+        added_bars()[bar_counter()] =
+            truss_bar_data(bar_counter(),
+                           added_nodes()[p0],
+                           added_nodes()[p1],
+                           rotation,
+                           family)
     end
 
 current_bars_ids() = 0:bar_counter()
@@ -902,8 +898,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
             nds = nodes(struc)
             brs = bars(struc)
             node_loads = Dict(v != 0 ? [v => map(truss_node_data_id, values(added_nodes()))] : [])
-          for data in values(added_nodes())
-            let (node_id, p, node_family, node_load) = (data.id, data.loc, data.family, data.load)
+          for node_data in values(added_nodes())
+            let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
                 create_node(nds, node_id, p.x, p.y, p.z)
                 support = node_family.support
                 if support != false
@@ -921,8 +917,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
             end
           end
             family_bars = Dict()
-            for data in values(added_bars())
-                let (bar_id, node_id0, node_id1, rotation, bar_family) = (data.id, data.node0.id, data.node1.id, data.rotation, data.family)
+            for bar_data in values(added_bars())
+                let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
                     create_bar(brs, bar_id, node_id0, node_id1)
                     if abs(rotation) > 1e-16 #fix this
                       Gamma(get_bar(brs, bar_id), rotation)
@@ -974,7 +970,7 @@ end
 create_bar_release_label(name, sux, suy, suz, srx, sry, srz, eux, euy, euz, erx, ery, erz) =
   new_label(I_LT_BAR_RELEASE,
             name,
-            data -> let (start_node, end_node) = (data.start_node, data.end_node);
+            bar_data -> let (start_node, end_node) = (bar_data.start_node, bar_data.end_node);
                         UX(start_node, sux)
                         UY(start_node, suy)
                         UZ(start_node, suz)
@@ -1000,45 +996,45 @@ set_bar_release!(bar, label) =
 create_bar_timber_material_label(name, typ, Timber_Type, Name, Nuance, E, NU, GMean, RO, LX, DumpCoef, RE_Bending, RE_AxTens, RE_TrTens, RE_AxCompr, RE_TrCompr, RE_Shear, E_5, E_Trans) =
   new_label(I_LT_BAR_MATERIAL,
             name,
-            data -> begin
-                        Type(data, typ)
-                        Timber_Type(data, Timber_Type)
-                        Name(data, Name)
-                        Nuance(data, Nuance)
-                        E(data, E)
-                        NU(data, NU)
-                        GMean(data, GMean)
-                        RO(data, RO)
-                        LX(data, LX)
-                        DumpCoef(data, DumpCoef)
-                        RE_Bending(data, RE_Bending)
-                        RE_AxTens(data, RE_AxTens)
-                        RE_TrTens(data, RE_TrTens)
-                        RE_AxCompr(data, RE_AxCompr)
-                        RE_TrCompr(data, RE_TrCompr)
-                        RE_Shear(data, RE_Shear)
-                        E_5(data, E_5)
-                        E_Trans(data, E_Trans)
-                        SaveToDBase(data)
+            bar_data -> begin
+                        Type(bar_data, typ)
+                        Timber_Type(bar_data, Timber_Type)
+                        Name(bar_data, Name)
+                        Nuance(bar_data, Nuance)
+                        E(bar_data, E)
+                        NU(bar_data, NU)
+                        GMean(bar_data, GMean)
+                        RO(bar_data, RO)
+                        LX(bar_data, LX)
+                        DumpCoef(bar_data, DumpCoef)
+                        RE_Bending(bar_data, RE_Bending)
+                        RE_AxTens(bar_data, RE_AxTens)
+                        RE_TrTens(bar_data, RE_TrTens)
+                        RE_AxCompr(bar_data, RE_AxCompr)
+                        RE_TrCompr(bar_data, RE_TrCompr)
+                        RE_Shear(bar_data, RE_Shear)
+                        E_5(bar_data, E_5)
+                        E_Trans(bar_data, E_Trans)
+                        SaveToDBase(bar_data)
                     end)
 
 create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT) =
   new_label(I_LT_BAR_MATERIAL,
             name,
-            data -> begin
-                        Type(data, typ)
-                        Timber_Type(data, Timber_Type)
-                        Name(data, Name)
-                        Nuance(data, Nuance)
-                        E(data, E)
-                        NU(data, NU)
-                        Kirchoff(data, Kirchoff)
-                        RO(data, RO)
-                        LX(data, LX)
-                        DumpCoef(data, DumpCoef)
-                        RE(data, RE)
-                        RT(data, RT)
-                        SaveToDBase(data)
+            bar_data -> begin
+                        Type(bar_data, typ)
+                        Timber_Type(bar_data, Timber_Type)
+                        Name(bar_data, Name)
+                        Nuance(bar_data, Nuance)
+                        E(bar_data, E)
+                        NU(bar_data, NU)
+                        Kirchoff(bar_data, Kirchoff)
+                        RO(bar_data, RO)
+                        LX(bar_data, LX)
+                        DumpCoef(bar_data, DumpCoef)
+                        RE(bar_data, RE)
+                        RT(bar_data, RT)
+                        SaveToDBase(bar_data)
                     end)
 
 # Bar section
@@ -1046,32 +1042,32 @@ create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, Dump
 create_bar_tube_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
-            data -> begin
-                        Type(data, I_BST_NS_TUBE)
-                        shape_type(data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
-                        MaterialName(data, material_name)
+            bar_data -> begin
+                        Type(bar_data, I_BST_NS_TUBE)
+                        shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
+                        MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
                             let (issolid, diameter, thickness) = spec
-                                robotBarSectionNonstdData = CreateNonstd(data, relative)
+                                robotBarSectionNonstdData = CreateNonstd(bar_data, relative)
                                 set_value(robotBarSectionNonstdData, I_BSNDV_BOX_H, diameter)
                                 if ! issolid
                                     set_value(robotBarSectionNonstdData, I_BSNDV_BOX_B, thickness)
                                 end
                             end
                         end
-                        CalcNonstdGeometry(data)
+                        CalcNonstdGeometry(bar_data)
                     end)
 
 create_bar_rectangle_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
-            data -> begin
-                        Type(data, I_BST_NS_RECT)
-                        shape_type(data, iswood ? I_BSST_FRTG : I_BSST_RECT)
-                        MaterialName(data, material_name)
+            bar_data -> begin
+                        Type(bar_data, I_BST_NS_RECT)
+                        shape_type(bar_data, iswood ? I_BSST_FRTG : I_BSST_RECT)
+                        MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
                             let (issolid, width, height, thickness) = spec
-                                robotBarSectionNonstdData = CreateNonstd(data, relative)
+                                robotBarSectionNonstdData = CreateNonstd(bar_data, relative)
                                 set_value(robotBarSectionNonstdData, I_BSNDV_BOX_H, width)
                                 set_value(robotBarSectionNonstdData, I_BSNDV_BOX_B, height)
                                 if ! issolid
@@ -1079,7 +1075,7 @@ create_bar_rectangle_section_label(name, material_name, iswood, specs) =
                                 end
                             end
                         end
-                        CalcNonstdGeometry(data)
+                        CalcNonstdGeometry(bar_data)
                     end)
 
 
