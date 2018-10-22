@@ -758,7 +758,7 @@ end
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
 @def_com is_available IRobotLabelServer typ::IRobotLabelType name::String Boolean
-@def_com delete IRobotLabelServer typ::Int name::String Void
+@def_com delete IRobotLabelServer typ::IRobotLabelType name::String Void
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
