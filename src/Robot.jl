@@ -674,8 +674,6 @@ Void = Nothing
 @def_ro_property nodes IRobotStructure IRobotNodeServer
 @def_ro_property bars IRobotStructure IRobotBarServer
 
-# I hate type piracy. This must be solvable in Julia
-import Juno.structure
 @def_ro_property structure IRobotProject IRobotStructure
 @def_ro_property calc_engine IRobotProject IRobotCalcEngine
 @def_ro_property results IRobotStructure IRobotResultsServer
