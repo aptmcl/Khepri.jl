@@ -803,7 +803,6 @@ new_label(fn, typ, name) =
       delete(labels, typ, name)
     end
     label = create_label(labels, typ, name)
-    println("Label:", label)
     fn(data(label))
     store(labels, label)
     name
@@ -913,8 +912,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                                                   support.ux, support.uy, support.uz,
                                                   support.rx, support.ry, support.rz)
                         support.created = true
-                        println("Setting Label", support)
-                        set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, name)
+                        set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
                     end
                 end
                 if node_load != 0
@@ -922,57 +920,53 @@ new_robot_analysis(process_results, create_truss, v=0) =
                 end
             end
           end
-        end
-        println("Done Nodes")
-        family_bars = Dict()
-        for data in values(added_bars())
-            let (bar_id, node_id0, node_id1, rotation, bar_family) = (data.id, data.node0.id, data.node1.id, data.rotation, data.family)
-                create_bar(brs, bar_id, node_id0, node_id1)
-                if abs(rotation) > 1e-16 #fix this
-                  Gamma(get_bar(brs, bar_id), rotation)
-                end
-                family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
-            end
-        end
-        for (bar_family, bars_ids) in family_bars
-            if ! bar_family.created
-                let mat = bar_family.material
-                    (name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT) =
-                     (mat.name, mat.typ, mat.Name, mat.Nuance,
-                      mat.E, mat.NU, mat.Kirchoff, mat.RO,
-                      mat.LX, mat.DumpCoef, mat.RE, mat.RT)
-                    create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT)
-                end
-                let sec = bar_family.section
-                    (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
-                    create_bar_tube_section_label(name, material_name, iswood, specs)
-                end
-                bar_family.created = true
-            end
-            let selection = selections(struc)[I_OT_BAR]
-                ids = IOBuffer()
-                for bar_id in bars_ids
-                    print(ids, bar_id, " ", ids)
-                end
-                str = String(take!(ids))
-                println("Sending:")
-                println(str)
-                from_text(selection, str)
-                let sec = bar_family.section
-                    (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
-                    set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+            family_bars = Dict()
+            for data in values(added_bars())
+                let (bar_id, node_id0, node_id1, rotation, bar_family) = (data.id, data.node0.id, data.node1.id, data.rotation, data.family)
+                    create_bar(brs, bar_id, node_id0, node_id1)
+                    if abs(rotation) > 1e-16 #fix this
+                      Gamma(get_bar(brs, bar_id), rotation)
+                    end
+                    family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
                 end
             end
-        end
-        case_counter(case_counter()+1)
-        new_case(case_counter(),
-                 "Test-$(case_counter())",
-                 I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
-                 I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
-                 records -> new_node_loads(records, node_loads),
-                 process_results)
-  end
-
+            for (bar_family, bars_ids) in family_bars
+                if ! bar_family.created
+                    let mat = bar_family.material
+                        (name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT) =
+                         (mat.name, mat.typ, mat.Name, mat.Nuance,
+                          mat.E, mat.NU, mat.Kirchoff, mat.RO,
+                          mat.LX, mat.DumpCoef, mat.RE, mat.RT)
+                        create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT)
+                    end
+                    let sec = bar_family.section
+                        (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
+                        create_bar_tube_section_label(name, material_name, iswood, specs)
+                    end
+                    bar_family.created = true
+                end
+                let selection = selections(struc)[I_OT_BAR]
+                    ids = IOBuffer()
+                    for bar_id in bars_ids
+                        print(ids, bar_id, " ", ids)
+                    end
+                    str = String(take!(ids))
+                    from_text(selection, str)
+                    let sec = bar_family.section
+                        (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
+                        set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+                    end
+                end
+            end
+            case_counter(case_counter()+1)
+            new_case(case_counter(),
+                     "Test-$(case_counter())",
+                     I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
+                     I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
+                     records -> new_node_loads(records, node_loads),
+                     process_results)
+      end
+end
 #
 
 # Bar release
