@@ -16,5 +16,11 @@ include("Revit.jl")
 include("ArchiCAD.jl")
 #include("Radiance.jl")
 
+const com = PyNULL()
+
+function __init__()
+    copy!(com, pywrap(pyimport("win32com.client")))
+end
+
 include("Robot.jl")
 end
