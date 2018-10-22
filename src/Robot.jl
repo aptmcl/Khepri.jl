@@ -590,9 +590,6 @@ db["AddCircle"](PyVector([0.0, 0.0, 0.0]), float(4))
 
 =#
 
-using PyCall
-@pyimport win32com.client as com
-
 #=
 r = com.Dispatch("Robot.Application")
 r[:Visible] = 1
