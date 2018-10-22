@@ -287,8 +287,7 @@ backend_bounding_box(b::RVT, shapes::Shapes) =
 
 backend_name(b::RVT) = "Revit"
 
-import Base.view
-view(camera::Loc, target::Loc, lens::Real, b::RVT) =
+set_view(camera::Loc, target::Loc, lens::Real, b::RVT) =
   RVTSetView(connection(b), camera, target, lens)
 
 get_view(b::RVT) =
