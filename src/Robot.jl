@@ -783,7 +783,7 @@ robot_app = nothing
 function application()
     global robot_app
     if robot_app == nothing
-        robot_app = let r = com.Dispatch("Robot.Application")
+        robot_app = let r = com[:Dispatch]("Robot.Application")
                         r[:Visible] = 1
                         r
                     end

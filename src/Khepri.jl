@@ -19,7 +19,7 @@ include("ArchiCAD.jl")
 const com = PyNULL()
 
 function __init__()
-    copy!(com, pywrap(pyimport("win32com.client")))
+    copy!(com, pyimport("win32com.client"))
 end
 
 include("Robot.jl")
