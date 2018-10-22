@@ -666,6 +666,7 @@ end
 Double = Float64
 Long = Int64
 Void = Nothing
+Boolean = Bool
 
 @def_ro_property project IRobotApplication IRobotProject
 @def_ro_property nodes IRobotStructure IRobotNodeServer
@@ -755,8 +756,8 @@ end
 @def_com new IRobotProject typ::IRobotProjectType Void
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
-@def_com (create_label, Create) IRobotLabelServer typ::Int name::String IRobotLabel
-@def_com is_available IRobotLabelServer typ::Int name::String Boolean
+@def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
+@def_com is_available IRobotLabelServer typ::IRobotLabelType name::String Boolean
 @def_com delete IRobotLabelServer typ::Int name::String Void
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
@@ -896,20 +897,20 @@ new_robot_analysis(process_results, create_truss, v=0) =
          case_counter, 0) do
         create_truss()
         let struc = structure(project(application()))
-            nodes = nodes(struc)
-            bars = bars(struc)
+            nds = nodes(struc)
+            brs = bars(struc)
             node_loads = Dict(v != 0 ? [v => map(truss_node_data_id, values(added_nodes()))] : [])
           for data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (data.id, data.loc, data.family, data.load)
-                create_node(nodes, node_id, p.x, p.y, p.z)
+                create_node(nds, node_id, p.x, p.y, p.z)
                 support = node_family.support
-                if support != nothing
-                    if ! support.iscreated
+                if support != false
+                    if ! support.created
                         create_node_support_label(support.name,
                                                   support.ux, support.uy, support.uz,
                                                   support.rx, support.ry, support.rz)
                         support.created = true
-                        set_label(get_node(nodes, node_id), I_LT_NODE_SUPPORT, name)
+                        set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, name)
                     end
                 end
                 if node_load != 0
@@ -921,9 +922,9 @@ new_robot_analysis(process_results, create_truss, v=0) =
         family_bars = Dict()
         for data in values(added_bars())
             let (bar_id, node_id0, node_id1, rotation, bar_family) = (data.id, data.node0.id, data.node1.id, data.rotation, data.family)
-                create_bar(bars, bar_id, node_id0, node_id1)
+                create_bar(brs, bar_id, node_id0, node_id1)
                 if abs(rotation) > 1e-16 #fix this
-                  Gamma(get_bar(bars, bar_id), rotation)
+                  Gamma(get_bar(brs, bar_id), rotation)
                 end
                 family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
             end
@@ -952,7 +953,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                 from_text(selection, str)
                 let sec = bar_family.section
                     (name, material_name, iswood, specs) = (sec.name, sec.material_name, sec.iswood, sec.specs)
-                    set_selection_label(bars, selection, I_LT_BAR_SECTION, name)
+                    set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
                 end
             end
         end
