@@ -14,5 +14,5 @@ include("AutoCAD.jl")
 include("Revit.jl")
 include("ArchiCAD.jl")
 #include("Radiance.jl")
-#include("Robot.jl")
+include("Robot.jl")
 end
