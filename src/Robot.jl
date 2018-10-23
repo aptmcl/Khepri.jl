@@ -738,6 +738,7 @@ Boolean = Bool
 @def_rw_property Steel_Thermal IRobotMaterialData Bool
 @def_rw_property Timber_Type IRobotMaterialData IRobotMaterialTimberType
 @def_rw_property (MaterialType, Type) IRobotMaterialData IRobotMaterialType
+@def_rw_property (MaterialType, Type) IRobotBarSectionData IRobotBarSectionType
 @def_ro_property Nodes IRobotResultsServer IRobotNodeResultServer
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
 @def_ro_property Displacements IRobotNodeResultServer IRobotNodeDisplacementServer
@@ -1015,10 +1016,7 @@ create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-            println("Before Type")
-            println(bar_data["Type"])
-            bar_data["Type"] = 1 #_Type #MaterialType(bar_data, _Type)
-                        println("After Type")
+                        MaterialType(bar_data, _Type)
                         Name(bar_data, _Name)
                         Nuance(bar_data, _Nuance)
                         E(bar_data, _E)
