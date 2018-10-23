@@ -613,9 +613,9 @@ name_method(name) =
 macro def_rw_property(name, InType, OutType)
     name, method = name_method(name)
     quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(method))] end
+        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) $(esc(OutType))(in[$(QuoteNode(method))]) end
         function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing
-            in[$(QuoteNode(method))] = val
+            in[$(QuoteNode(method))] = $(Core.eval(__module__, InType) <: Enum ? :(Int64(val)) : :(val))
             nothing
         end
     end
@@ -624,7 +624,7 @@ end
 macro def_ro_property(name, InType, OutType)
     name, method = name_method(name)
     quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(method))] end
+        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) $(esc(OutType))(in[$(QuoteNode(method))]) end
     end
 end
 
@@ -746,17 +746,13 @@ Boolean = Bool
 macro def_com(name, Type, params...)
   out = last(params)
   params = params[1:end-1]
-  if isa(name, Symbol)
-      method_name = name |> string |> titlecase |> s -> replace(s, r"_" => "") |> Symbol
-  else
-      name, method_name = name.args[1], name.args[2]
-  end
+  name, method = name_method(name)
   param_names = map(param -> param.args[1], params)
   param_types = map(param -> param.args[2], params)
   args = map((name, typ) -> Core.eval(__module__, typ) <: Enum ? :(Int64($name)) : name, param_names, param_types)
   quote
     function $(esc(name))(receiver :: $(Type), $(params...)) :: $(esc(out))
-        receiver[$(QuoteNode(method_name))]($(args...))
+        receiver[$(QuoteNode(method))]($(args...))
     end
   end
 end
@@ -806,7 +802,6 @@ end
 # Labels
 new_label(typ, name, fn) =
   let labels = labels(structure(project(application())))
-      println(typ, name)
     if is_available(labels, typ, name)
       delete(labels, typ, name)
     end
@@ -1020,7 +1015,10 @@ create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        MaterialType(bar_data, _Type)
+            println("Before Type")
+            println(bar_data["Type"])
+            bar_data["Type"] = 1 #_Type #MaterialType(bar_data, _Type)
+                        println("After Type")
                         Name(bar_data, _Name)
                         Nuance(bar_data, _Nuance)
                         E(bar_data, _E)
