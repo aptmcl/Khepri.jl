@@ -605,20 +605,26 @@ bs[:Create](1, 1, 2)
 =#
 
 ## Properties
+name_method(name) =
+  isa(name, Symbol) ?
+    (name, name |> string |> titlecase |> s -> replace(s, r"_" => "") |> Symbol) :
+    (name.args[1], name.args[2])
 
 macro def_rw_property(name, InType, OutType)
+    name, method = name_method(name)
     quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(name))] end
+        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(method))] end
         function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing
-            in[$(QuoteNode(name))] = val
+            in[$(QuoteNode(method))] = val
             nothing
         end
     end
 end
 
 macro def_ro_property(name, InType, OutType)
+    name, method = name_method(name)
     quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(name))] end
+        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) in[$(QuoteNode(method))] end
     end
 end
 
@@ -731,7 +737,7 @@ Boolean = Bool
 @def_rw_property SecondName IRobotMaterialData Double
 @def_rw_property Steel_Thermal IRobotMaterialData Bool
 @def_rw_property Timber_Type IRobotMaterialData IRobotMaterialTimberType
-@def_rw_property Type IRobotMaterialData IRobotMaterialType
+@def_rw_property (MaterialType, Type) IRobotMaterialData IRobotMaterialType
 @def_ro_property Nodes IRobotResultsServer IRobotNodeResultServer
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
 @def_ro_property Displacements IRobotNodeResultServer IRobotNodeDisplacementServer
@@ -766,7 +772,7 @@ end
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
-@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
+#@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::Int name::String Void
 @def_com set_value IRobotBarSectionConcreteData typ::Int value::Double Void
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double CreateNonstd
@@ -798,8 +804,9 @@ function application()
 end
 
 # Labels
-new_label(fn, typ, name) =
+new_label(typ, name, fn) =
   let labels = labels(structure(project(application())))
+      println(typ, name)
     if is_available(labels, typ, name)
       delete(labels, typ, name)
     end
@@ -811,14 +818,15 @@ new_label(fn, typ, name) =
 
 # Node support
 create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
-  new_label(I_LT_NODE_SUPPORT, name) do support_data
+  new_label(I_LT_NODE_SUPPORT, name,
+    support_data -> begin
       UX(support_data, ux ? 1 : 0)
       UY(support_data, uy ? 1 : 0)
       UZ(support_data, uz ? 1 : 0)
       RX(support_data, rx ? 1 : 0)
       RY(support_data, ry ? 1 : 0)
       RZ(support_data, rz ? 1 : 0)
-  end
+  end)
 
 # Nodes
 mutable struct node_support
@@ -983,47 +991,46 @@ set_bar_release!(bar, label) =
 
 # Bar material
 
-create_bar_timber_material_label(name, typ, Timber_Type, Name, Nuance, E, NU, GMean, RO, LX, DumpCoef, RE_Bending, RE_AxTens, RE_TrTens, RE_AxCompr, RE_TrCompr, RE_Shear, E_5, E_Trans) =
+create_bar_timber_material_label(name, _Type, _Timber_Type, _Name, _Nuance, _E, _NU, _GMean, _RO, _LX, _DumpCoef, _RE_Bending, _RE_AxTens, _RE_TrTens, _RE_AxCompr, _RE_TrCompr, _RE_Shear, _E_5, _E_Trans) =
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        Type(bar_data, typ)
-                        Timber_Type(bar_data, Timber_Type)
-                        Name(bar_data, Name)
-                        Nuance(bar_data, Nuance)
-                        E(bar_data, E)
-                        NU(bar_data, NU)
-                        GMean(bar_data, GMean)
-                        RO(bar_data, RO)
-                        LX(bar_data, LX)
-                        DumpCoef(bar_data, DumpCoef)
-                        RE_Bending(bar_data, RE_Bending)
-                        RE_AxTens(bar_data, RE_AxTens)
-                        RE_TrTens(bar_data, RE_TrTens)
-                        RE_AxCompr(bar_data, RE_AxCompr)
-                        RE_TrCompr(bar_data, RE_TrCompr)
-                        RE_Shear(bar_data, RE_Shear)
-                        E_5(bar_data, E_5)
-                        E_Trans(bar_data, E_Trans)
+                        MaterialType(bar_data, _Type)
+                        Timber_Type(bar_data, _Timber_Type)
+                        Name(bar_data, _Name)
+                        Nuance(bar_data, _Nuance)
+                        E(bar_data, _E)
+                        NU(bar_data, _NU)
+                        GMean(bar_data, _GMean)
+                        RO(bar_data, _RO)
+                        LX(bar_data, _LX)
+                        DumpCoef(bar_data, _DumpCoef)
+                        RE_Bending(bar_data, _RE_Bending)
+                        RE_AxTens(bar_data, _RE_AxTens)
+                        RE_TrTens(bar_data, _RE_TrTens)
+                        RE_AxCompr(bar_data, _RE_AxCompr)
+                        RE_TrCompr(bar_data, _RE_TrCompr)
+                        RE_Shear(bar_data, _RE_Shear)
+                        E_5(bar_data, _E_5)
+                        E_Trans(bar_data, _E_Trans)
                         SaveToDBase(bar_data)
                     end)
 
-create_bar_material_label(name, typ, Name, Nuance, E, NU, Kirchoff, RO, LX, DumpCoef, RE, RT) =
+create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, _LX, _DumpCoef, _RE, _RT) =
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        Type(bar_data, typ)
-                        Timber_Type(bar_data, Timber_Type)
-                        Name(bar_data, Name)
-                        Nuance(bar_data, Nuance)
-                        E(bar_data, E)
-                        NU(bar_data, NU)
-                        Kirchoff(bar_data, Kirchoff)
-                        RO(bar_data, RO)
-                        LX(bar_data, LX)
-                        DumpCoef(bar_data, DumpCoef)
-                        RE(bar_data, RE)
-                        RT(bar_data, RT)
+                        MaterialType(bar_data, _Type)
+                        Name(bar_data, _Name)
+                        Nuance(bar_data, _Nuance)
+                        E(bar_data, _E)
+                        NU(bar_data, _NU)
+                        Kirchoff(bar_data, _Kirchoff)
+                        RO(bar_data, _RO)
+                        LX(bar_data, _LX)
+                        DumpCoef(bar_data, _DumpCoef)
+                        RE(bar_data, _RE)
+                        RT(bar_data, _RT)
                         SaveToDBase(bar_data)
                     end)
 
@@ -1033,7 +1040,7 @@ create_bar_tube_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        Type(bar_data, I_BST_NS_TUBE)
+                        MaterialType(bar_data, I_BST_NS_TUBE)
                         shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
@@ -1052,7 +1059,7 @@ create_bar_rectangle_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        Type(bar_data, I_BST_NS_RECT)
+                        MaterialType(bar_data, I_BST_NS_RECT)
                         shape_type(bar_data, iswood ? I_BSST_FRTG : I_BSST_RECT)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
