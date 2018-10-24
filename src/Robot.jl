@@ -688,6 +688,7 @@ end
 @def_com_type IRobotNodeSuportData
 @def_com_type IRobotBarSectionData
 @def_com_type RobotBarSectionConcreteData
+@def_com_type IRobotBarSectionNonstdData
 @def_com_type IRobotBarReleaseData
 @def_com_type StartNode
 @def_com_type EndNode
