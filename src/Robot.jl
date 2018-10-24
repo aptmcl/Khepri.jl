@@ -1133,7 +1133,7 @@ new_case(number, name, nature, analize_type, setup, process_results) =
   end
 
 new_node_loads(records, loads) =
-  for (vec, ids) in in_hash(loads)
+  for (vec, ids) in loads
     idx = new(records, I_LRT_NODE_FORCE)
     record = get(records, idx)
     objects = objects(record)
