@@ -649,7 +649,7 @@ macro def_rw_property(name, InType, OutType)
     quote
         function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) $(esc(OutType))(in[$(QuoteNode(method))]) end
         function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing
-            in[$(QuoteNode(method))] = $(Core.eval(__module__, InType) <: Enum ? :(Int64(val)) : :(val))
+            in[$(QuoteNode(method))] = $(Core.eval(__module__, OutType) <: Enum ? :(Int(val)) : :(val))
             nothing
         end
     end
@@ -786,7 +786,7 @@ macro def_com(name, Type, params...)
   name, method = name_method(name)
   param_names = map(param -> param.args[1], params)
   param_types = map(param -> param.args[2], params)
-  args = map((name, typ) -> Core.eval(__module__, typ) <: Enum ? :(Int64($name)) : name, param_names, param_types)
+  args = map((name, typ) -> Core.eval(__module__, typ) <: Enum ? :(Int($name)) : name, param_names, param_types)
   quote
     function $(esc(name))(receiver :: $(Type), $(params...)) :: $(esc(out))
         receiver[$(QuoteNode(method))]($(args...))
@@ -1032,6 +1032,7 @@ create_bar_timber_material_label(name, _Type, _Timber_Type, _Name, _Nuance, _E, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
+                        #bar_data["Type"] = Int(_Type)
                         MaterialType(bar_data, _Type)
                         Timber_Type(bar_data, _Timber_Type)
                         Name(bar_data, _Name)
@@ -1057,8 +1058,8 @@ create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        #bar_data["Type"] = 1
                         MaterialType(bar_data, _Type)
+                        #bar_data["Type"] = Int(_Type)
                         Name(bar_data, _Name)
                         Nuance(bar_data, _Nuance)
                         E(bar_data, _E)
@@ -1078,10 +1079,10 @@ create_bar_tube_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        #bar_data["Type"] = 4
+                        #bar_data["Type"] = Int(I_BST_NS_TUBE)
                         SectionType(bar_data, I_BST_NS_TUBE)
-                        bar_data["ShapeType"] = 93
-                            #shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
+                        #bar_data["ShapeType"] = 93
+                        shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
                             let (issolid, diameter, thickness) = spec
