@@ -389,7 +389,43 @@ end
   I_BERV_ELASTIC_REDUCED_PLUS
   I_BERV_ELASTIC_REDUCED_MINUS
 end
-
+@enums IRobotBarSectionDataValue begin
+I_BSDV_SURFACE = 10 Painting area (perimeter).
+I_BSDV_WEIGHT = 11 Nominal weight per length unit.
+I_BSDV_D = 12 Section height - basic (maximum) vertical dimension of a
+section.
+I_BSDV_BF = 13 Section width - basic (maximum) horizontal dimension of a
+section.
+I_BSDV_TW = 14 Web thickness / vertical wall thickness.
+I_BSDV_TF = 15 Flange thickness / horizontal wall thickness.
+I_BSDV_RA = 16 Fillet radius.
+I_BSDV_RI = 17 Fillet radius.
+I_BSDV_S = 18 Spacing - distance between section elements (double
+angles).
+I_BSDV_ZY = 19 Section plasticity modulus - bending around Y axis.
+I_BSDV_ZZ = 20 Section plasticity modulus - bending around Z axis.
+I_BSDV_WX = 21 Section modulus for calculation of torsional stresses.
+I_BSDV_WY = 22 Section modulus for calculation of limit shear stresses along
+Y axis.
+I_BSDV_WZ = 23 Section modulus for calculation of limit shear stresses along
+Z axis.
+I_BSDV_GAMMA = 24 Angle between principal and main coordinate system axes.
+I_BSDV_IOMEGA = 25 First moment of area.
+I_BSDV_P1_LENGTH = 26 Length of plate 1 in the CROSS section type.
+I_BSDV_P1_THICKNESS = 27 Thickness of plate 1 in the CROSS section type.
+I_BSDV_P2_LENGTH = 28 Length of plate 2 in the CROSS section type.
+I_BSDV_P2_THICKNESS = 29 Thickness of plate 2 in the CROSS section type.
+I_BSDV_P3_LENGTH = 30 Length of plate 3 in the CROSS section type.
+I_BSDV_P3_THICKNESS = 31 Thickness of plate 3 in the CROSS section type.
+I_BSDV_P4_LENGTH = 32 Length of plate 4 in the CROSS section type.
+I_BSDV_P4_THICKNESS = 33 Thickness of plate 4 in the CROSS section type.
+I_BSDV_BF2 = 34 Second section width (compare I_BSDV_BF).
+I_BSDV_TF2 = 35 Second flange thickness (compare I_BSDV_TF).
+I_BSDV_DIM1 = 36 First dimension.
+I_BSDV_DIM2 = 37 Second dimension.
+I_BSDV_DIM3 = 38 Third dimension.
+I_BSDV_ANGLE1 = 39 Additional angle.
+I_BSDV_ANGLE2 = 40
 @enums IRobotBarSectionNonstdDataValue begin
   I_BSNDV_BOX_H
   I_BSNDV_BOX_B
@@ -699,7 +735,7 @@ Boolean = Bool
 @def_rw_property RZ IRobotNodeSuportData Integer
 @def_rw_property Gamma IRobotBar Double #Angle of rotation
 
-@def_rw_property shape_type IRobotBarSectionData Integer
+@def_rw_property shape_type IRobotBarSectionData IRobotBarSectionShapeType
 @def_rw_property concrete IRobotBarSectionData RobotBarSectionConcreteData
 @def_rw_property MaterialName IRobotBarSectionData String
 @def_rw_property start_node IRobotBarReleaseData StartNode
@@ -771,7 +807,10 @@ end
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
 #@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::Int name::String Void
-@def_com set_value IRobotBarSectionConcreteData typ::Int value::Double Void
+#@def_com set_value IRobotBarSectionConcreteData attr::IRobotBarSectionConcreteDataValue value::Double Void
+@def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
+@def_com set_value IRobotBarSectionNonstdData attr::IRobotBarSectionNonstdDataValue value::Double Void
+#@def_com set_value IRobotBarSectionSpecialData attr::IRobotBarSectionSpecialDataValue value::Double Void
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double CreateNonstd
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
 @def_com create_simple IRobotCaseServer number::Int name::String nature::IRobotCaseNature analize_type::IRobotCaseAnalizeType IRobotSimpleCase
@@ -1016,7 +1055,8 @@ create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        MaterialType(bar_data, _Type)
+                        bar_data["Type"] = 1
+                            #MaterialType(bar_data, _Type)
                         Name(bar_data, _Name)
                         Nuance(bar_data, _Nuance)
                         E(bar_data, _E)
@@ -1036,7 +1076,9 @@ create_bar_tube_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        MaterialType(bar_data, I_BST_NS_TUBE)
+                        bar_data["Type"] = 4
+                            #MaterialType(bar_data, I_BST_NS_TUBE)
+                        bar_data["ShapeType"] =
                         shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
