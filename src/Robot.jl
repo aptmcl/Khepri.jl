@@ -939,7 +939,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
         let struc = structure(project(application()))
             nds = nodes(struc)
             brs = bars(struc)
-            node_loads = Dict(v != 0 ? [v => map(truss_node_data_id, values(added_nodes()))] : [])
+            node_loads = Dict(! iszero(v) ? [v => map(truss_node_data_id, values(added_nodes()))] : [])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
                 create_node(nds, node_id, p.x, p.y, p.z)
@@ -969,10 +969,10 @@ new_robot_analysis(process_results, create_truss, v=0) =
                 end
             end
             for (bar_family, bars_ids) in family_bars
-                if ! bar_family.created
+                if ! bar_family.created()
                     create_bar_material_label(bar_family.material...)
                     create_bar_tube_section_label(bar_family.section...)
-                    bar_family.created = true
+                    bar_family.created(true)
                 end
                 let selection = selections(struc)[I_OT_BAR]
                     ids = IOBuffer()

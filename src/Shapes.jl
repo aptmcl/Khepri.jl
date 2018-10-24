@@ -1170,7 +1170,7 @@ macro deffamily(name, parent, fields...)
     struct $struct_name <: $parent
       $(struct_fields...)
       based_on::Any #Family
-      ref::Parameter{Int}
+      ref::Parameter{Int} # This should not be done like this because not all backends use Int for references.
     end
     $(constructor_name)($(opt_params...);
                         $(key_params...),
@@ -1494,7 +1494,7 @@ realize(b::Backend, s::Ieslight) =
     radius::Real=0.03,
     section::Any=false,
     material::Any=false,
-    created::Bool=false)
+    created::Parameter{Bool}=Parameter(false)) # HACK: This should be merged with the lazy creation of families
 
 @defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
