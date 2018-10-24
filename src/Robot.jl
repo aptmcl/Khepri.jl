@@ -810,7 +810,7 @@ end
 @def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
 @def_com set_value IRobotBarSectionNonstdData attr::IRobotBarSectionNonstdDataValue value::Double Void
 #@def_com set_value IRobotBarSectionSpecialData attr::IRobotBarSectionSpecialDataValue value::Double Void
-@def_com CreateNonstd IRobotBarSectionData rel_pos::Double CreateNonstd
+@def_com CreateNonstd IRobotBarSectionData rel_pos::Double IRobotBarSectionNonstdData
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
 @def_com create_simple IRobotCaseServer number::Int name::String nature::IRobotCaseNature analize_type::IRobotCaseAnalizeType IRobotSimpleCase
 @def_com SaveToDBase IRobotMaterialData Void
@@ -1077,8 +1077,8 @@ create_bar_tube_section_label(name, material_name, iswood, specs) =
             bar_data -> begin
                         bar_data["Type"] = 4
                             #MaterialType(bar_data, I_BST_NS_TUBE)
-                        bar_data["ShapeType"] =
-                        shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
+                        bar_data["ShapeType"] = 93
+                            #shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
                             let (issolid, diameter, thickness) = spec
