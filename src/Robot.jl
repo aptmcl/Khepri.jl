@@ -700,12 +700,13 @@ end
 @def_com_type IRobotNodeResultServer
 @def_com_type IRobotBarResultServer
 @def_com_type IRobotCalcEngine
-@def_com_type IRobotSelection
 @def_com_type IRobotBarSectionConcreteData
 @def_com_type IRobotNodeDisplacementServer
 @def_com_type IRobotBarDisplacementServer
 @def_com_type IRobotBarStressServer
 @def_com_type IRobotBarStressData
+@def_com_type IRobotSelectionFactory
+@def_com_type IRobotSelection
 
 Double = Float64
 Long = Int64
@@ -721,7 +722,8 @@ Boolean = Bool
 @def_ro_property results IRobotStructure IRobotResultsServer
 @def_ro_property labels IRobotStructure IRobotLabelServer
 @def_ro_property cases IRobotStructure IRobotCaseServer
-@def_ro_property selections IRobotStructure IRobotSelection
+#ERROR @def_ro_property selections IRobotStructure IRobotSelection
+@def_ro_property selections IRobotStructure IRobotSelectionFactory
 @def_ro_property records IRobotSimpleCase IRobotLoadRecordMngr
 @def_ro_property objects IRobotLoadRecord IRobotSelection
 @def_ro_property data IRobotLabel IRobotNodeSuportData
@@ -805,6 +807,7 @@ end
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
 #@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
+@def_com (get_selection, Get) IRobotSelectionFactory typ::IRobotObjectType IRobotSelection
 @def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::Int name::String Void
 #@def_com set_value IRobotBarSectionConcreteData attr::IRobotBarSectionConcreteDataValue value::Double Void
 @def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
@@ -974,7 +977,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                     create_bar_tube_section_label(bar_family.section...)
                     bar_family.created(true)
                 end
-                let selection = selections(struc)[I_OT_BAR]
+                let selection = get_selection(selections(struc), I_OT_BAR)
                     ids = IOBuffer()
                     for bar_id in bars_ids
                         print(ids, bar_id, " ", ids)
