@@ -794,7 +794,7 @@ macro def_com(name, Type, params...)
   end
 end
 
-@def_com calculate IRobotCalcEngine Boolean
+@def_com calculate IRobotCalcEngine Int
 @def_com new IRobotProject typ::IRobotProjectType Void
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
