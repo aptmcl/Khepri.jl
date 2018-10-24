@@ -979,7 +979,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
                 let selection = get_selection(selections(struc), I_OT_BAR)
                     ids = IOBuffer()
                     for bar_id in bars_ids
-                        print(ids, bar_id, " ", ids)
+                        print(ids, bar_id, " ")
                     end
                     str = String(take!(ids))
                     from_text(selection, str)
