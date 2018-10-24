@@ -1122,18 +1122,14 @@ set_bar_section!(bar, label) =
             label)
 
 new_case(number, name, nature, analize_type, setup, process_results) =
-  begin
-    _case = create_simple(cases(structure(project(application()))),
+  let case = create_simple(cases(structure(project(application()))),
                           number,
                           name,
                           nature,
                           analize_type)
-    records = records(_case)
-    begin
-      @time(setup(records))
-      @time(calculate(calc_engine(project(application()))))
-      process_results(results(structure(project(application()))))
-    end
+    @time(setup(records(case)))
+    @time(calculate(calc_engine(project(application()))))
+    process_results(results(structure(project(application()))))
   end
 
 new_node_loads(records, loads) =
