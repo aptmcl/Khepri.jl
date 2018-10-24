@@ -856,7 +856,6 @@ new_label(typ, name, fn) =
 create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
   new_label(I_LT_NODE_SUPPORT, name,
     support_data -> begin
-      println("Creating Node Support Label:", name)
       UX(support_data, ux ? 1 : 0)
       UY(support_data, uy ? 1 : 0)
       UZ(support_data, uz ? 1 : 0)
@@ -953,8 +952,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
                                                   support.ux, support.uy, support.uz,
                                                   support.rx, support.ry, support.rz)
                         support.created = true
-                        set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
                     end
+                    set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
                 end
                 if node_load != 0
                     node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
