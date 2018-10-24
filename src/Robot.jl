@@ -808,7 +808,7 @@ end
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
 #@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (get_selection, Get) IRobotSelectionFactory typ::IRobotObjectType IRobotSelection
-@def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::Int name::String Void
+@def_com (set_selection_label, SetLabel) IRobotBarServer selection::IRobotSelection typ::IRobotLabelType name::String Void
 #@def_com set_value IRobotBarSectionConcreteData attr::IRobotBarSectionConcreteDataValue value::Double Void
 @def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
 @def_com set_value IRobotBarSectionNonstdData attr::IRobotBarSectionNonstdDataValue value::Double Void
@@ -984,8 +984,8 @@ new_robot_analysis(process_results, create_truss, v=0) =
                     end
                     str = String(take!(ids))
                     from_text(selection, str)
-                    let sec = bar_family.section
-                        set_selection_label(brs, selection, I_LT_BAR_SECTION, sec.name)
+                    let (name, material_name, wood, specs) = bar_family.section
+                        set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
                     end
                 end
             end
