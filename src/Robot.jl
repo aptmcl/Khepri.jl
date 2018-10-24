@@ -1,6 +1,9 @@
 export robot,
        create_node_support,
-       new_robot_analysis
+       new_robot_analysis,
+       node_displacement,
+       displacements,
+       nodes
 
 
 # generate code to test whether expr is in the given set of values
@@ -941,7 +944,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
         let struc = structure(project(application()))
             nds = nodes(struc)
             brs = bars(struc)
-            node_loads = Dict(! iszero(v) ? [v => map(truss_node_data_id, values(added_nodes()))] : [])
+            node_loads = Dict(v==0 ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
                 create_node(nds, node_id, p.x, p.y, p.z)
