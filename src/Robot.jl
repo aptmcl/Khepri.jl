@@ -694,7 +694,6 @@ end
 @def_com_type EndNode
 @def_com_type IRobotMaterialData
 @def_com_type IRobotMaterialTimberType
-#@def_com_type IRobotMaterialType
 @def_com_type IRobotCaseServer
 @def_com_type IRobotResultsServer
 @def_com_type IRobotNodeResultServer
@@ -775,7 +774,7 @@ Boolean = Bool
 @def_rw_property Steel_Thermal IRobotMaterialData Bool
 @def_rw_property Timber_Type IRobotMaterialData IRobotMaterialTimberType
 @def_rw_property (MaterialType, Type) IRobotMaterialData IRobotMaterialType
-@def_rw_property (MaterialType, Type) IRobotBarSectionData IRobotBarSectionType
+@def_rw_property (SectionType, Type) IRobotBarSectionData IRobotBarSectionType
 @def_ro_property Nodes IRobotResultsServer IRobotNodeResultServer
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
 @def_ro_property Displacements IRobotNodeResultServer IRobotNodeDisplacementServer
@@ -857,6 +856,7 @@ new_label(typ, name, fn) =
 create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
   new_label(I_LT_NODE_SUPPORT, name,
     support_data -> begin
+      println("Creating Node Support Label:", name)
       UX(support_data, ux ? 1 : 0)
       UY(support_data, uy ? 1 : 0)
       UZ(support_data, uz ? 1 : 0)
@@ -1057,8 +1057,8 @@ create_bar_material_label(name, _Type, _Name, _Nuance, _E, _NU, _Kirchoff, _RO, 
   new_label(I_LT_BAR_MATERIAL,
             name,
             bar_data -> begin
-                        bar_data["Type"] = 1
-                            #MaterialType(bar_data, _Type)
+                        #bar_data["Type"] = 1
+                        MaterialType(bar_data, _Type)
                         Name(bar_data, _Name)
                         Nuance(bar_data, _Nuance)
                         E(bar_data, _E)
@@ -1078,8 +1078,8 @@ create_bar_tube_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        bar_data["Type"] = 4
-                            #MaterialType(bar_data, I_BST_NS_TUBE)
+                        #bar_data["Type"] = 4
+                        SectionType(bar_data, I_BST_NS_TUBE)
                         bar_data["ShapeType"] = 93
                             #shape_type(bar_data, iswood ? I_BSST_WOOD_CIRC : I_BSST_TUBE)
                         MaterialName(bar_data, material_name)
@@ -1099,7 +1099,7 @@ create_bar_rectangle_section_label(name, material_name, iswood, specs) =
   new_label(I_LT_BAR_SECTION,
             name,
             bar_data -> begin
-                        MaterialType(bar_data, I_BST_NS_RECT)
+                        SectionType(bar_data, I_BST_NS_RECT)
                         shape_type(bar_data, iswood ? I_BSST_FRTG : I_BSST_RECT)
                         MaterialName(bar_data, material_name)
                         for (spec, relative) in zip(specs, division(0.0, 1.0, length(specs)))
