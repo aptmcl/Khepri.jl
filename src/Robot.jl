@@ -389,43 +389,41 @@ end
   I_BERV_ELASTIC_REDUCED_PLUS
   I_BERV_ELASTIC_REDUCED_MINUS
 end
+
 @enums IRobotBarSectionDataValue begin
-I_BSDV_SURFACE = 10 Painting area (perimeter).
-I_BSDV_WEIGHT = 11 Nominal weight per length unit.
-I_BSDV_D = 12 Section height - basic (maximum) vertical dimension of a
-section.
-I_BSDV_BF = 13 Section width - basic (maximum) horizontal dimension of a
-section.
-I_BSDV_TW = 14 Web thickness / vertical wall thickness.
-I_BSDV_TF = 15 Flange thickness / horizontal wall thickness.
-I_BSDV_RA = 16 Fillet radius.
-I_BSDV_RI = 17 Fillet radius.
-I_BSDV_S = 18 Spacing - distance between section elements (double
-angles).
-I_BSDV_ZY = 19 Section plasticity modulus - bending around Y axis.
-I_BSDV_ZZ = 20 Section plasticity modulus - bending around Z axis.
-I_BSDV_WX = 21 Section modulus for calculation of torsional stresses.
-I_BSDV_WY = 22 Section modulus for calculation of limit shear stresses along
-Y axis.
-I_BSDV_WZ = 23 Section modulus for calculation of limit shear stresses along
-Z axis.
-I_BSDV_GAMMA = 24 Angle between principal and main coordinate system axes.
-I_BSDV_IOMEGA = 25 First moment of area.
-I_BSDV_P1_LENGTH = 26 Length of plate 1 in the CROSS section type.
-I_BSDV_P1_THICKNESS = 27 Thickness of plate 1 in the CROSS section type.
-I_BSDV_P2_LENGTH = 28 Length of plate 2 in the CROSS section type.
-I_BSDV_P2_THICKNESS = 29 Thickness of plate 2 in the CROSS section type.
-I_BSDV_P3_LENGTH = 30 Length of plate 3 in the CROSS section type.
-I_BSDV_P3_THICKNESS = 31 Thickness of plate 3 in the CROSS section type.
-I_BSDV_P4_LENGTH = 32 Length of plate 4 in the CROSS section type.
-I_BSDV_P4_THICKNESS = 33 Thickness of plate 4 in the CROSS section type.
-I_BSDV_BF2 = 34 Second section width (compare I_BSDV_BF).
-I_BSDV_TF2 = 35 Second flange thickness (compare I_BSDV_TF).
-I_BSDV_DIM1 = 36 First dimension.
-I_BSDV_DIM2 = 37 Second dimension.
-I_BSDV_DIM3 = 38 Third dimension.
-I_BSDV_ANGLE1 = 39 Additional angle.
-I_BSDV_ANGLE2 = 40
+  I_BSDV_SURFACE = 10
+  I_BSDV_WEIGHT = 11
+  I_BSDV_D = 12
+  I_BSDV_BF = 13
+  I_BSDV_TW = 14
+  I_BSDV_TF = 15
+  I_BSDV_RA = 16
+  I_BSDV_RI = 17
+  I_BSDV_S = 18
+  I_BSDV_ZY = 19
+  I_BSDV_ZZ = 20
+  I_BSDV_WX = 21
+  I_BSDV_WY = 22
+  I_BSDV_WZ = 23
+  I_BSDV_GAMMA = 24
+  I_BSDV_IOMEGA = 25
+  I_BSDV_P1_LENGTH = 26
+  I_BSDV_P1_THICKNESS = 27
+  I_BSDV_P2_LENGTH = 28
+  I_BSDV_P2_THICKNESS = 29
+  I_BSDV_P3_LENGTH = 30
+  I_BSDV_P3_THICKNESS = 31
+  I_BSDV_P4_LENGTH = 32
+  I_BSDV_P4_THICKNESS = 33
+  I_BSDV_BF2 = 34
+  I_BSDV_TF2 = 35
+  I_BSDV_DIM1 = 36
+  I_BSDV_DIM2 = 37
+  I_BSDV_DIM3 = 38
+  I_BSDV_ANGLE1 = 39
+  I_BSDV_ANGLE2 = 40
+end
+
 @enums IRobotBarSectionNonstdDataValue begin
   I_BSNDV_BOX_H
   I_BSNDV_BOX_B
