@@ -387,3 +387,13 @@ meta_program(v::Vec) =
 # Conversions
 # We could accept some nice conversions
 # convert(::Type{Loc}, t::Tuple{Real,Real,Real}) = xyz(t[1], t[2], t[3])
+
+
+# Integration in standard protocols
+
+# iteration for destructuring into components
+Base.iterate(v::Vec) = Base.iterate(v.raw)
+Base.iterate(v::Vec, state) = Base.iterate(v.raw, state)
+
+Base.iterate(v::Loc) = Base.iterate(v.raw)
+Base.iterate(v::Loc, state) = Base.iterate(v.raw, state)
