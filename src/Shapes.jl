@@ -1499,6 +1499,9 @@ realize(b::Backend, s::Ieslight) =
 @defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
 
+realize(b::Backend, s::TrussNode) = sphere(s.p, s.family.radius)
+realize(b::Backend, s::TrussBar) = cylinder(s.p0, s.family.radius, s.p1)
+
 import Base.union
 export union, intersection, subtraction
 
