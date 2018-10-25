@@ -5,7 +5,8 @@ export robot,
        displacements,
        nodes,
        added_nodes,
-       added_bars
+       added_bars,
+       UX, UY, UZ
 
 
 # generate code to test whether expr is in the given set of values
