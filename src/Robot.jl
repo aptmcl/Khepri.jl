@@ -9,7 +9,8 @@ export robot,
        nodes,
        added_nodes,
        added_bars,
-       UX, UY, UZ
+       UX, UY, UZ,
+       show_truss_deformation
 
 
 # generate code to test whether expr is in the given set of values
@@ -832,7 +833,7 @@ end
 @def_com SaveToDBase IRobotMaterialData Void
 @def_com LoadFromDBase IRobotMaterialData name::String Boolean
 @def_com add_one IRobotSelection id::Int Void
-@def_com (node_displacement, Value) IRobotNodeDisplacementServer node::Int case::Int IRobotDisplacementData
+@def_com (node_displacement, Value) IRobotNodeDisplacementServer node::Int case::IRobotLoadRecordType IRobotDisplacementData
 @def_com (bar_displacement, Value) IRobotBarDisplacementServer bar::Int pos::Double case::Int IRobotDisplacementData
 @def_com (bar_stress, Value) IRobotBarStressServer bar::Int case::Int pos::Double IRobotBarStressData
 @def_com from_text IRobotSelection ids::String Void
@@ -1166,10 +1167,8 @@ new_node_loads(records, loads) =
     end
   end
 
-node_displacement_vector(results, id, case_id) =
-  let d = node_displacement(displacements(nodes(results)),
-                            id,
-                            case_id)
+node_displacement_vector(displacements, id, case_id) =
+  let d = node_displacement(displacements, id, case_id)
     vxyz(UX(d), UY(d), UZ(d))
   end
 
@@ -1211,3 +1210,24 @@ realize(b::ROBOT, s::TrussNode) =
 
 realize(b::ROBOT, s::TrussBar) =
     add_bar!(s.p0, s.p1, s.angle, s.family)
+
+show_truss_deformation(results; node_radius=0.04, bar_radius=0.02, factor=100, loaded_color=rgb()) =
+  let disps = displacements(nodes(results))
+      disp = (node) -> node_displacement_vector(disps, node.id, I_LRT_NODE_DISPLACEMENT)
+    for node in values(added_nodes())
+      d = disp(node)
+      p = node.loc
+      sphere(p, node_radius)
+      shape_color(sphere(p+d, node_radius), loaded_color)
+    end
+    for bar in values(added_bars())
+      let (node0, node1) = (bar.node0, bar.node1)
+        let (p0, p1) = (node0.loc, node1.loc)
+          cylinder(p0, bar_radius, p1)
+          let (d0, d1) = (disp(node0), disp(node1))
+            shape_color(cylinder(p0+d0, bar_radius, p1+d1), loaded_color)
+          end
+        end
+      end
+    end
+  end
