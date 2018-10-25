@@ -5,11 +5,11 @@ export robot,
        create_node_support,
        new_robot_analysis,
        node_displacement,
+       node_displacement_vector,
        displacements,
        nodes,
        added_nodes,
        added_bars,
-       UX, UY, UZ,
        show_truss_deformation
 
 
