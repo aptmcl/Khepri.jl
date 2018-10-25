@@ -1211,21 +1211,27 @@ realize(b::ROBOT, s::TrussNode) =
 realize(b::ROBOT, s::TrussBar) =
     add_bar!(s.p0, s.p1, s.angle, s.family)
 
-show_truss_deformation(results; node_radius=0.04, bar_radius=0.02, factor=100, loaded_color=rgb()) =
-  let disps = displacements(nodes(results))
+show_truss_deformation(results;
+    node_radius=0.04, bar_radius=0.02, factor=100, deformation_color=rgb(255, 0, 0)) =
+  let deformation_layer = create_layer("Deformation", deformation_color)
+      disps = displacements(nodes(results))
       disp = (node) -> node_displacement_vector(disps, node.id, I_LRT_NODE_DISPLACEMENT)
     for node in values(added_nodes())
       d = disp(node)
       p = node.loc
       sphere(p, node_radius)
-      shape_color(sphere(p+d, node_radius), loaded_color)
+      with(current_layer, deformation_layer) do
+        sphere(p+d, node_radius)
+      end
     end
     for bar in values(added_bars())
       let (node0, node1) = (bar.node0, bar.node1)
         let (p0, p1) = (node0.loc, node1.loc)
           cylinder(p0, bar_radius, p1)
           let (d0, d1) = (disp(node0), disp(node1))
-            shape_color(cylinder(p0+d0, bar_radius, p1+d1), loaded_color)
+            with(current_layer, deformation_layer) do
+              cylinder(p0+d0, bar_radius, p1+d1)
+            end
           end
         end
       end
