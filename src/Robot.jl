@@ -1200,11 +1200,11 @@ void_ref(b::ROBOT) = ROBOTNativeRef(-1)
 
 project_kind = Parameter(I_PT_SHELL)
 
-create_ROBOT_connection() = new_project(project_kind())
+create_ROBOT_connection() = new_project!(project_kind())
 
 const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
 
-delete_all_shapes(b::ROBOT) = new_project(project_kind())
+delete_all_shapes(b::ROBOT) = new_project!(project_kind())
 
 realize(b::ROBOT, s::TrussNode) =
     add_node!(s.p, s.family)
