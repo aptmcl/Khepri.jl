@@ -782,7 +782,7 @@ Boolean = Bool
 @def_rw_property (SectionType, Type) IRobotBarSectionData IRobotBarSectionType
 @def_ro_property Nodes IRobotResultsServer IRobotNodeResultServer
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
-@def_ro_property Displacements IRobotNodeResultServer IRobotNodeDisplacementServer
+@def_ro_property displacements IRobotNodeResultServer IRobotNodeDisplacementServer
 @def_ro_property Stresses IRobotBarResultServer IRobotBarStressServer
 
 macro def_com(name, Type, params...)
@@ -1155,7 +1155,7 @@ new_node_loads(records, loads) =
   end
 
 node_displacement_vector(results, id, case_id) =
-  let d = node_displacement(Displacements(nodes(results)),
+  let d = node_displacement(displacements(nodes(results)),
                             id,
                             case_id)
     vxyz(UX(d), UY(d), UZ(d))
