@@ -799,7 +799,7 @@ end
 
 @def_com calculate IRobotCalcEngine Int
 @def_com new IRobotProject typ::IRobotProjectType Void
-@def_com new IRobotLoadRecordMngr typ::IRobotLoadRecordType Int
+@def_com new IRobotLoadRecordMngr typ::IRobotLoadRecordType Long
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
@@ -808,6 +808,7 @@ end
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
+@def_com (get_record, Get) IRobotLoadRecordMngr idx::Int IRobotLoadRecord
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
 #@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (get_selection, Get) IRobotSelectionFactory typ::IRobotObjectType IRobotSelection
@@ -1139,7 +1140,7 @@ new_case(number, name, nature, analize_type, setup, process_results) =
 new_node_loads(records, loads) =
   for (vec, ids) in loads
     idx = new(records, I_LRT_NODE_FORCE)
-    record = get(records, idx)
+    record = get_record(records, idx)
     objects = objects(record)
     for node_id in ids
       add_one(objects, node_id)
