@@ -816,6 +816,7 @@ end
 #@def_com set_value IRobotBarSectionConcreteData attr::IRobotBarSectionConcreteDataValue value::Double Void
 @def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
 @def_com set_value IRobotBarSectionNonstdData attr::IRobotBarSectionNonstdDataValue value::Double Void
+@def_com set_value IRobotLoadRecord value_id::IRobotNodeForceRecordValues value::Double Void
 #@def_com set_value IRobotBarSectionSpecialData attr::IRobotBarSectionSpecialDataValue value::Double Void
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double IRobotBarSectionNonstdData
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
@@ -1139,15 +1140,16 @@ new_case(number, name, nature, analize_type, setup, process_results) =
 
 new_node_loads(records, loads) =
   for (vec, ids) in loads
-    idx = new(records, I_LRT_NODE_FORCE)
-    record = get_record(records, idx)
-    objects = objects(record)
-    for node_id in ids
-      add_one(objects, node_id)
+    let idx = new(records, I_LRT_NODE_FORCE)
+        record = get_record(records, idx)
+        objs = objects(record)
+      for node_id in ids
+        add_one(objs, node_id)
+      end
+      set_value(record, I_NFRV_FX, vec.x)
+      set_value(record, I_NFRV_FY, vec.y)
+      set_value(record, I_NFRV_FZ, vec.z)
     end
-    set_value(record, I_NFRV_FX, vec.x)
-    set_value(record, I_NFRV_FY, vec.y)
-    set_value(record, I_NFRV_FZ, vec.z)
   end
 
 node_displacement_vector(results, id, case_id) =
