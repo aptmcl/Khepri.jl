@@ -711,6 +711,7 @@ end
 @def_com_type IRobotBarStressData
 @def_com_type IRobotSelectionFactory
 @def_com_type IRobotSelection
+@def_com_type IRobotDisplacementData
 
 Double = Float64
 Long = Int64
