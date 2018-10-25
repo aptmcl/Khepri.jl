@@ -1,4 +1,7 @@
 export robot,
+       project_kind,
+       new_project!,
+       new_3d_project!,
        create_node_support,
        new_robot_analysis,
        node_displacement,
@@ -804,6 +807,7 @@ end
 @def_com calculate IRobotCalcEngine Int
 @def_com new IRobotProject typ::IRobotProjectType Void
 @def_com new IRobotLoadRecordMngr typ::IRobotLoadRecordType Long
+@def_com (close_project, Close) IRobotProject Void
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
@@ -849,6 +853,12 @@ function application()
         robot_app
     end
 end
+
+new_project!(typ::IRobotProjectType) =
+  let proj = project(application())
+    close_project(proj)
+    new(proj, typ)
+  end
 
 # Labels
 new_label(typ, name, fn) =
@@ -1188,12 +1198,13 @@ const ROBOT = COM_Backend{ROBOTKey, ROBOTId}
 
 void_ref(b::ROBOT) = ROBOTNativeRef(-1)
 
-create_ROBOT_connection() =
-    begin
-        application()
-    end
+project_kind = Parameter(I_PT_SHELL)
+
+create_ROBOT_connection() = new_project(project_kind())
 
 const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
+
+delete_all_shapes(b::ROBOT) = new_project(project_kind())
 
 realize(b::ROBOT, s::TrussNode) =
     add_node!(s.p, s.family)
