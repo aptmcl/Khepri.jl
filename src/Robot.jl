@@ -799,6 +799,7 @@ end
 
 @def_com calculate IRobotCalcEngine Int
 @def_com new IRobotProject typ::IRobotProjectType Void
+@def_com new IRobotLoadRecordMngr typ::IRobotLoadRecordType Int
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
