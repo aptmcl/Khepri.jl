@@ -734,9 +734,9 @@ Boolean = Bool
 @def_ro_property objects IRobotLoadRecord IRobotSelection
 @def_ro_property data IRobotLabel IRobotNodeSuportData
 #@def_ro_property data IRobotLabel IRobotBarSectionData
-@def_rw_property UX IRobotNodeSuportData Integer
-@def_rw_property UY IRobotNodeSuportData Integer
-@def_rw_property UZ IRobotNodeSuportData Integer
+@def_rw_property UX IRobotNodeSuportData Real
+@def_rw_property UY IRobotNodeSuportData Real
+@def_rw_property UZ IRobotNodeSuportData Real
 @def_rw_property RX IRobotNodeSuportData Integer
 @def_rw_property RY IRobotNodeSuportData Integer
 @def_rw_property RZ IRobotNodeSuportData Integer
