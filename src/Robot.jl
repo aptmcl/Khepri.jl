@@ -3,7 +3,9 @@ export robot,
        new_robot_analysis,
        node_displacement,
        displacements,
-       nodes
+       nodes,
+       added_nodes,
+       added_bars
 
 
 # generate code to test whether expr is in the given set of values
