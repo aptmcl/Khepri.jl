@@ -935,7 +935,7 @@ add_bar!(p0, p1, rotation, family) =
 
 current_bars_ids() = 0:bar_counter()
 
-new_robot_analysis(process_results, create_truss, v=0) =
+new_robot_analysis(process_results, create_truss, v=nothing) =
     with(node_counter, 0,
          added_nodes, Dict(),
          added_bars, Dict(),
@@ -944,7 +944,7 @@ new_robot_analysis(process_results, create_truss, v=0) =
         let struc = structure(project(application()))
             nds = nodes(struc)
             brs = bars(struc)
-            node_loads = Dict(v==0 ? [] : [v => map(n -> n.id, values(added_nodes()))])
+            node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
                 create_node(nds, node_id, p.x, p.y, p.z)
