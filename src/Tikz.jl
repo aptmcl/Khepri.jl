@@ -100,7 +100,13 @@ tikz_maybe_arc(out::IO, c::Loc, r::Real, ai::Real, da::Real, filled=false) =
   elseif abs(da) >= 2*pi
     tikz_circle(out, c, r, filled)
   else
-    tikz_arc(out, c, r, ai, ai + da, filled)
+    let af = ai + da
+      if af > ai
+        tikz_arc(out, c, r, ai, af, filled)
+      else
+        tikz_arc(out, c, r, af, ai, filled)
+      end
+    end
   end
 
 tikz_line(out::IO, pts::Locs) =
