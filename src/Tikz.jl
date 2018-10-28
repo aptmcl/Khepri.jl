@@ -92,21 +92,15 @@ tikz_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, filled=false) =
     println(out, ";")
   end
 
-tikz_maybe_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, filled=false) =
-  if r == 0
+tikz_maybe_arc(out::IO, c::Loc, r::Real, ai::Real, da::Real, filled=false) =
+  if iszero(r)
     tikz_point(out, c)
+  elseif iszero(da)
+    tikz_point(out, c + vpol(r, ai))
+  elseif abs(da) >= 2*pi
+    tikz_circle(out, c, r, filled)
   else
-    let a = af - ai
-      if iszero(a)
-        tikz_point(out, c + vpol(r, ai))
-      elseif abs(a) >= 2*pi
-        tikz_circle(out, c, r, filled)
-      elseif a > 0
-        tikz_arc(out, c, r, ai, af, filled)
-      else
-        tikz_arc(out, c, r, af, a1, filled)
-      end
-    end
+    tikz_arc(out, c, r, ai, ai + da, filled)
   end
 
 tikz_line(out::IO, pts::Locs) =
