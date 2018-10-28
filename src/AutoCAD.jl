@@ -854,47 +854,6 @@ backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::R
     ACADIESLight(connection(b), file, loc, loc + dir, vxyz(alpha, beta, gamma))
 
 # User Selection
-acad"public Point3d[] GetPosition(string prompt)"
-
-select_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    let ans = f(connection(b), prompt)
-      length(ans) > 0 && ans[1]
-    end
-  end
-
-select_position(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetPosition)
-
-acad"public ObjectId[] GetPoint(string prompt)"
-
-select_point(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetPoint)
-
-acad"public ObjectId[] GetCurve(string prompt)"
-
-select_curve(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetCurve)
-
-acad"public ObjectId[] GetSurface(string prompt)"
-
-select_surface(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetSurface)
-
-acad"public ObjectId[] GetSolid(string prompt)"
-
-select_solid(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetSolid)
-
-acad"public ObjectId[] GetShape(string prompt)"
-
-select_shape(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetShape)
-
-acad"public ObjectId[] GetAllShapes()"
-acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
-
 
 shape_from_ref(r, b::ACAD=current_backend()) =
     let c = connection(b)
@@ -948,6 +907,48 @@ shape_from_ref(r, b::ACAD=current_backend()) =
             #error("Unknown shape with code $(code)")
         end
     end
+#
+
+acad"public Point3d[] GetPosition(string prompt)"
+
+select_with_prompt(prompt::String, b::Backend, f::Function) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    let ans = f(connection(b), prompt)
+      length(ans) > 0 && shape_from_ref(ans[1], b)
+    end
+  end
+
+select_position(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetPosition)
+
+acad"public ObjectId[] GetPoint(string prompt)"
+
+select_point(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetPoint)
+
+acad"public ObjectId[] GetCurve(string prompt)"
+
+select_curve(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetCurve)
+
+acad"public ObjectId[] GetSurface(string prompt)"
+
+select_surface(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetSurface)
+
+acad"public ObjectId[] GetSolid(string prompt)"
+
+select_solid(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetSolid)
+
+acad"public ObjectId[] GetShape(string prompt)"
+
+select_shape(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetShape)
+
+acad"public ObjectId[] GetAllShapes()"
+acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
 
 # HACK: This should be filtered on the plugin, not here.
 all_shapes(b::ACAD) =
