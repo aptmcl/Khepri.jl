@@ -1212,7 +1212,7 @@ realize(b::ROBOT, s::TrussBar) =
     add_bar!(s.p0, s.p1, s.angle, s.family)
 
 show_truss_deformation(results;
-    node_radius=0.04, bar_radius=0.02, factor=100,
+    node_radius=0.08, bar_radius=0.02, factor=100,
     deformation_color=rgb(255, 0, 0),
     no_deformation_color=rgb(0, 255, 0)) =
   let deformation_layer = create_layer("Deformation", deformation_color)
