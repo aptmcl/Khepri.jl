@@ -53,7 +53,7 @@ tikz_circle(out::IO, c::Loc, r::Real, filled::Bool=false) =
   end
 
 
-tikz_point(out::IO, c::Loc) = circle(out, c, 0.01)
+tikz_point(out::IO, c::Loc) = tizk_circle(out, c, 0.01, true)
 
 tikz_ellipse(out::IO, c::Loc, r0::Real, r1::Real, fi::Real, filled=false) =
   begin
