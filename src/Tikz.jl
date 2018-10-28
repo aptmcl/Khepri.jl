@@ -8,7 +8,7 @@ tikz_e(out::IO, arg) =
     println(out, ";")
   end
 
-tikz_draw(out::IO, isfill=false) = print(out, isfill ? "\\fill " : "\\draw ")
+tikz_draw(out::IO, filled=false) = print(out, filled ? "\\fill " : "\\draw ")
 
 tikz_number(out::IO, x::Real) =
   isinteger(x) ? print(out, x) : (abs(x) < 0.0001 ? print(out, 0) : print(out, round(x*10000.0)/10000.0))
@@ -43,9 +43,9 @@ tikz_pgfpoint(out::IO, c::Loc) =
     print(out, "}")
   end
 
-tikz_circle(out::IO, c::Loc, r::Real, isfill::Bool=false) =
+tikz_circle(out::IO, c::Loc, r::Real, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     tikz_coord(out, c)
     print(out, "circle(")
     tikz_cm(out, r)
@@ -55,9 +55,9 @@ tikz_circle(out::IO, c::Loc, r::Real, isfill::Bool=false) =
 
 tikz_point(out::IO, c::Loc) = circle(out, c, 0.01)
 
-tikz_ellipse(out::IO, c::Loc, r0::Real, r1::Real, fi::Real, isfill=false) =
+tikz_ellipse(out::IO, c::Loc, r0::Real, r1::Real, fi::Real, filled=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     print(out, "[shift={")
     tikz_coord(out, c)
     print(out, "}]")
@@ -72,10 +72,10 @@ tikz_ellipse(out::IO, c::Loc, r0::Real, r1::Real, fi::Real, isfill=false) =
     tikz_e(out, ")")
   end
 
-tikz_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, isfill=false) =
+tikz_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, filled=false) =
   begin
-    tikz_draw(out, isfill)
-    if isfill
+    tikz_draw(out, filled)
+    if filled
       tikz_coord(out, c)
       print(out, "--")
     end
@@ -87,9 +87,26 @@ tikz_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, isfill=false) =
     print(out, ":")
     tikz_cm(out, r)
     print(out, ")")
-    if isfill
+    if filled
       tikz_e(out, "--cycle")    end
     println(out, ";")
+  end
+
+tikz_maybe_arc(out::IO, c::Loc, r::Real, ai::Real, af::Real, filled=false) =
+  if r == 0
+    tikz_point(out, c)
+  else
+    let a = af - ai
+      if iszero(a)
+        tikz_point(out, c + vpol(r, ai))
+      elseif abs(a) >= 2*pi
+        tikz_circle(out, c, r, filled)
+      elseif a > 0
+        tikz_arc(out, c, r, ai, af, filled)
+      else
+        tikz_arc(out, c, r, af, a1, filled)
+      end
+    end
   end
 
 tikz_line(out::IO, pts::Locs) =
@@ -103,9 +120,9 @@ tikz_line(out::IO, pts::Locs) =
     println(out, ";")
   end
 
-tikz_closed_line(out::IO, pts::Locs, isfill::Bool=false) =
+tikz_closed_line(out::IO, pts::Locs, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     for pt in pts
       tikz_coord(out, pt)
       print(out, "--")
@@ -113,9 +130,9 @@ tikz_closed_line(out::IO, pts::Locs, isfill::Bool=false) =
     tikz_e(out, "cycle")
   end
 
-tikz_spline(out::IO, pts::Locs, isfill::Bool=false) =
+tikz_spline(out::IO, pts::Locs, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     print(out, "plot [smooth,tension=1] coordinates {")
     for pt in pts
       tikz_coord(out, pt)
@@ -123,9 +140,9 @@ tikz_spline(out::IO, pts::Locs, isfill::Bool=false) =
     tikz_e(out, "}")
   end
 
-tikz_closed_spline(out::IO, pts::Locs, isfill::Bool=false) =
+tikz_closed_spline(out::IO, pts::Locs, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     print(out, "plot [smooth cycle,tension=1] coordinates {")
     for pt in pts
       tikz_coord(out, pt)
@@ -134,9 +151,9 @@ tikz_closed_spline(out::IO, pts::Locs, isfill::Bool=false) =
   end
 
 # HACK we need to handle the starting and ending vectors
-tikz_hobby_spline(out::IO, pts::Locs, isfill::Bool=false) =
+tikz_hobby_spline(out::IO, pts::Locs, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     print(out, "[hobby]")
     print(out, "plot coordinates {")
     for pt in pts
@@ -146,9 +163,9 @@ tikz_hobby_spline(out::IO, pts::Locs, isfill::Bool=false) =
   end
 
 # HACK we need to handle the starting and ending vectors
-tikz_hobby_closed_spline(out::IO, pts::Locs, isfill::Bool=false) =
+tikz_hobby_closed_spline(out::IO, pts::Locs, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     print(out, "[closed hobby]")
     print(out, "plot coordinates {")
     for pt in pts
@@ -157,9 +174,9 @@ tikz_hobby_closed_spline(out::IO, pts::Locs, isfill::Bool=false) =
     tikz_e(out, "}")
   end
 
-tikz_rectangle(out::IO, p::Loc, w::Real, h::Real, isfill::Bool=false) =
+tikz_rectangle(out::IO, p::Loc, w::Real, h::Real, filled::Bool=false) =
   begin
-    tikz_draw(out, isfill)
+    tikz_draw(out, filled)
     tikz_coord(out, p)
     print(out, "rectangle")
     tikz_coord(out, p+vxy(w, h))
@@ -278,48 +295,15 @@ realize(b::TikZ, s::SurfaceCircle) =
     tikz_circle(out, c, s.radius, true)
   end
 
-#=
 realize(b::TikZ, s::Arc) =
-  if s.radius == 0
-    TikZPoint(connection(b), s.center)
-  elseif s.amplitude == 0
-    TikZPoint(connection(b), s.center + vpol(s.radius, s.start_angle, s.center.cs))
-  elseif abs(s.amplitude) >= 2*pi
-    TikZCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
-  else
-    end_angle = s.start_angle + s.amplitude
-    if end_angle > s.start_angle
-      TikZArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)
-    else
-      TikZArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)
-    end
+  withTikZXForm(connection(b), s.center) do out, c
+    tikz_maybe_arc(out, c, s.radius, s.start_angle, s.amplitude, false)
   end
 
-  realize(b::TikZ, s::SurfaceArc) =
-        #TikZSurfaceArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
-        if s.radius == 0
-            TikZPoint(connection(b), s.center)
-        elseif s.amplitude == 0
-            TikZPoint(connection(b), s.center + vpol(s.radius, s.start_angle, s.center.cs))
-        elseif abs(s.amplitude) >= 2*pi
-            TikZSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
-        else
-            end_angle = s.start_angle + s.amplitude
-            if end_angle > s.start_angle
-                TikZSurfaceFromCurves(connection(b),
-                    [TikZArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle),
-                     TikZPolyLine(connection(b), [add_pol(s.center, s.radius, end_angle),
-                                                  add_pol(s.center, s.radius, s.start_angle)])])
-            else
-                TikZSurfaceFromCurves(connection(b),
-                    [TikZArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle),
-                     TikZPolyLine(connection(b), [add_pol(s.center, s.radius, s.start_angle),
-                                                  add_pol(s.center, s.radius, end_angle)])])
-            end
-        end
-
-
-=#
+realize(b::TikZ, s::SurfaceArc) =
+  withTikZXForm(connection(b), s.center) do out, c
+    tikz_maybe_arc(out, c, s.radius, s.start_angle, s.amplitude, true)
+  end
 
 realize(b::TikZ, s::Ellipse) =
   withTikZXForm(connection(b), s.center) do out, c
