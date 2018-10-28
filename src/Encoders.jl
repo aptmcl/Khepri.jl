@@ -8,6 +8,7 @@ export encode_String, decode_String,
        encode_bool, decode_bool,
        encode_byte, decode_byte,
        encode_int, decode_int, decode_int_or_error,
+       encode_long, decode_long, decode_long_or_error,
        encode_int_array, decode_int_array, decode_int_or_error_array,
        encode_double, decode_double,
        encode_double_array, decode_double_array,
@@ -97,6 +98,9 @@ decode_byte(c::IO) = convert(UInt8, read(c, UInt8))
 encode_int(c::IO, v::Int) = write(c, convert(Int32, v))
 decode_int(c::IO) = convert(Int, read(c, Int32))
 
+encode_long(c::IO, v::Int) = write(c, convert(Int64, v))
+decode_long(c::IO) = convert(Int, read(c, Int64))
+
 encode_double(c::IO, v::Real) = write(c, convert(Float64, v))
 decode_double(c::IO) =
     let d = read(c, Float64)
@@ -122,6 +126,17 @@ decode_int_or_error_numbered(err_num) = (c::IO) ->
   end
 
 decode_int_or_error = decode_int_or_error_numbered(-1)
+
+decode_long_or_error_numbered(err_num) = (c::IO) ->
+  let i = decode_long(c)
+    if i == err_num
+      error("Backend Error: $(decode_String(c))")
+    else
+      i
+    end
+  end
+
+decode_long_or_error = decode_long_or_error_numbered(-1)
 
 encode_string_array(c::IO, v::Vector) = begin
   encode_int(c, length(v))
