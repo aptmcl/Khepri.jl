@@ -1686,6 +1686,7 @@ end
 @defop select_point(prompt::String="Select a point")
 @defop select_curve(prompt::String="Select a curve")
 @defop select_surface(prompt::String="Select a surface")
+@defop select_solid(prompt::String="Select a solid")
 @defop select_shape(prompt::String="Select a shape")
 @defop highlight_shape(s::Shape)
 
