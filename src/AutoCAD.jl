@@ -174,9 +174,6 @@ acad"public void Move(ObjectId id, Vector3d v)"
 acad"public void Scale(ObjectId id, Point3d p, double s)"
 acad"public void Rotate(ObjectId id, Point3d p, Vector3d n, double a)"
 acad"public ObjectId Mirror(ObjectId id, Point3d p, Vector3d n, bool copy)"
-acad"public Point3d[] GetPoint(string prompt)"
-acad"public ObjectId[] GetAllShapes()"
-acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
 acad"public Point3d[] BoundingBox(ObjectId[] ids)"
 acad"public void ZoomExtents()"
 acad"public ObjectId CreateLayer(string name)"
@@ -255,6 +252,8 @@ create_ACAD_connection() =
     end
 
 const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection))
+
+backend_name(b::ACAD) = "AutoCAD"
 
 #current_backend(autocad)
 
@@ -857,12 +856,48 @@ backend_spotlight(b::ACAD, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
 backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::Real, gamma::Real) =
     ACADIESLight(connection(b), file, loc, loc + dir, vxyz(alpha, beta, gamma))
 
+# User Selection
+acad"public Point3d[] GetPosition(string prompt)"
 
-
-prompt_position(prompt::String, b::ACAD) =
-  let ans = ACADGetPoint(connection(b), prompt)
-    length(ans) > 0 && ans[1]
+select_with_prompt(prompt::String, b::Backend, f::Function) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    let ans = f(connection(b), prompt)
+      length(ans) > 0 && ans[1]
+    end
   end
+
+select_position(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetPosition)
+
+acad"public ObjectId[] GetPoint(string prompt)"
+
+select_point(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetPoint)
+
+acad"public ObjectId[] GetCurve(string prompt)"
+
+select_curve(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetCurve)
+
+acad"public ObjectId[] GetSurface(string prompt)"
+
+select_surface(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetSurface)
+
+acad"public ObjectId[] GetSolid(string prompt)"
+
+select_solid(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetSolid)
+
+acad"public ObjectId[] GetShape(string prompt)"
+
+select_shape(prompt::String, b::ACAD) =
+  select_with_prompt(prompt, b, ACADGetShape)
+
+acad"public ObjectId[] GetAllShapes()"
+acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
+
 
 shape_from_ref(r, b::ACAD=current_backend()) =
     let c = connection(b)

@@ -34,7 +34,9 @@ export Shape,
 
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
 abstract type Backend{K,R} end
-Base.show(io::IO, b::Backend{K,R}) where {K,R} = print(io, "Backend($(K))")
+Base.show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
+
+backend_name(b::Backend{K,R}) where {K,R} = "Backend"
 
 #References can be (single) native references or union or substraction of References
 #Unions and subtractions are needed because actual backends frequently fail those operations
@@ -1680,7 +1682,12 @@ dolly_effect_pull_back(delta) = begin
   dolly_effect(camera, target, lens, new_camera)
 end
 
-@defop prompt_position(prompt::String="Select position")
+@defop select_position(prompt::String="Select a position")
+@defop select_point(prompt::String="Select a point")
+@defop select_curve(prompt::String="Select a curve")
+@defop select_surface(prompt::String="Select a surface")
+@defop select_shape(prompt::String="Select a shape")
+@defop highlight_shape(s::Shape)
 
 
 """
