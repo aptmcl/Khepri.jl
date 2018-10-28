@@ -765,9 +765,6 @@ backend_wall_path(b::ACAD, path::OpenPolygonalPath, height, thickness) =
 backend_bounding_box(b::ACAD, shapes::Shapes) =
   ACADBoundingBox(connection(b), collect_ref(shapes))
 
-
-backend_name(b::ACAD) = "AutoCAD"
-
 set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
   ACADView(connection(b), camera, target, lens)
 
