@@ -1,4 +1,6 @@
-export autocad
+export autocad,
+       acad_shape,
+       capture_shape
 
 #=
 We need to ensure the AutoCAD plugin is properly installed.
@@ -946,6 +948,15 @@ acad"public ObjectId[] GetShape(string prompt)"
 
 select_shape(prompt::String, b::ACAD) =
   select_with_prompt(prompt, b, ACADGetShape)
+
+acad"public long GetHandleFromShape(Entity e)"
+acad"public ObjectId GetShapeFromHandle(long h)"
+
+acad_shape(handle) = shape_from_ref(ACADGetShapeFromHandle(handle))
+capture_shape(b::ACAD=current_backend()) =
+    let s = select_shape("Select shape to be captured", b)
+        println("acad_shape($(ACADGetHandleFromShape(s)))")
+    end
 
 acad"public ObjectId[] GetAllShapes()"
 acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
