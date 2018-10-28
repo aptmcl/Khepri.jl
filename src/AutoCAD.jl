@@ -955,7 +955,9 @@ acad"public ObjectId GetShapeFromHandle(long h)"
 acad_shape(handle) = shape_from_ref(ACADGetShapeFromHandle(handle))
 capture_shape(b::ACAD=current_backend()) =
     let s = select_shape("Select shape to be captured", b)
-        println("acad_shape($(ACADGetHandleFromShape(s)))")
+        if s != false
+            println("acad_shape($(ACADGetHandleFromShape(connection(b), ref(s))))")
+        end
     end
 
 acad"public ObjectId[] GetAllShapes()"
