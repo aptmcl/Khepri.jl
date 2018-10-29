@@ -450,8 +450,8 @@ extrusion(profile, h::Real) =
 
 @defproxy(sweep, Shape3D, path::Shape1D=circle(), profile::Shape=point(), rotation::Real=0, scale::Real=1)
 @defproxy(revolve, Shape3D, profile::Shape=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
-@defproxy(loft, Shape3D, profiles::Shapes=[], rails::Shapes=[], ruled::Bool=false, closed::Bool=false)
-loft_ruled(profiles::Shapes=[]) = loft(profiles, [], true, false)
+@defproxy(loft, Shape3D, profiles::Shapes=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false)
+loft_ruled(profiles::Shapes=Shape[]) = loft(profiles, Shape[], true, false)
 export loft_ruled
 
 @defproxy(move, Shape3D, shape::Shape=point(), v::Vec=vx())
@@ -1262,7 +1262,7 @@ realize(b::Backend, s::SlabOpening) =
 @deffamily(panel_family, Family,
     thickness::Real=0.02)
 
-@defproxy(panel, Shape3D, vertices::Locs=[], level::Any=default_level(), family::Any=default_panel_family())
+@defproxy(panel, Shape3D, vertices::Locs=Loc[], level::Any=default_level(), family::Any=default_panel_family())
 
 #TODO Pass the provided backend
 realize(b::Backend, s::Panel) =
@@ -1507,16 +1507,16 @@ realize(b::Backend, s::TrussBar) = cylinder(s.p0, s.family.radius, s.p1)
 import Base.union
 export union, intersection, subtraction
 
-@defproxy(union_shape, Shape3D, shapes::Shapes=[])
+@defproxy(union_shape, Shape3D, shapes::Shapes=Shape[])
 union(shapes::Shapes) = union_shape(shapes)
 union(shape::Shape, shapes...) = union_shape([shape, shapes...])
 
-@defproxy(intersection_shape, Shape3D, shapes::Shapes=[])
+@defproxy(intersection_shape, Shape3D, shapes::Shapes=Shape[])
 intersection(shapes::Shapes) = intersection_shape(shapes)
 intersection(shape::Shape, shapes...) = intersection_shape([shape, shapes...])
 
-@defproxy(subtraction_shape2D, Shape2D, shape::Shape=surface_circle(), shapes::Shapes=[])
-@defproxy(subtraction_shape3D, Shape3D, shape::Shape=surface_circle(), shapes::Shapes=[])
+@defproxy(subtraction_shape2D, Shape2D, shape::Shape=surface_circle(), shapes::Shapes=Shape[])
+@defproxy(subtraction_shape3D, Shape3D, shape::Shape=surface_circle(), shapes::Shapes=Shape[])
 subtraction(shape::Shape2D, shapes...) = subtraction_shape2D(shape, [shapes...])
 subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 
@@ -1563,7 +1563,7 @@ reset_backend(b::Socket_Backend) = reset(b.connection)
 bounding_box(shape::Shape) =
   bounding_box([shape])
 
-bounding_box(shapes::Shapes=[]) =
+bounding_box(shapes::Shapes=Shape[]) =
   if isempty(shapes)
     [u0(), u0()]
   else
@@ -1573,7 +1573,7 @@ bounding_box(shapes::Shapes=[]) =
 delete_shape(shape::Shape) =
   delete_shapes([shape])
 
-delete_shapes(shapes::Shapes=[]) =
+delete_shapes(shapes::Shapes=Shape[]) =
   if ! isempty(shapes)
     to_delete = filter(realized, shapes)
     backend_delete_shapes(backend(shapes[1]), to_delete)
