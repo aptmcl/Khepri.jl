@@ -30,7 +30,8 @@ export Shape,
        subpath,
        subpath_starting_at,
        subpath_ending_at,
-       bounding_box
+       bounding_box,
+       capture_shape
 
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
 abstract type Backend{K,R} end
@@ -1690,6 +1691,10 @@ end
 @defop select_shape(prompt::String="Select a shape")
 @defop highlight_shape(s::Shape)
 
+capture_shape(s=select_shape("Select shape to be captured")) =
+  if s != false
+    generate_captured_shape(s, backend(s))
+  end
 
 """
 
