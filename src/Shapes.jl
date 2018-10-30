@@ -449,11 +449,54 @@ cylinder(cb::Loc, r::Real, ct::Loc) =
 extrusion(profile, h::Real) =
   extrusion(profile, vz(h))
 
+realize(b::Backend, s::Extrusion) =
+  backend_extrusion(backend(s), s.profile, s.v)
+
+backend_extrusion(b::Backend, p::Point, v::Vec) =
+  realize_and_delete_shapes(line([p.position, p.position + v], backend=b), [p])
+
 @defproxy(sweep, Shape3D, path::Shape1D=circle(), profile::Shape=point(), rotation::Real=0, scale::Real=1)
+
+realize(b::Backend, s::Sweep) =
+  backend_sweep(backend(s), s.path, s.profile, s.rotation, s.scale)
+
 @defproxy(revolve, Shape3D, profile::Shape=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
 @defproxy(loft, Shape3D, profiles::Shapes=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false)
 loft_ruled(profiles::Shapes=Shape[]) = loft(profiles, Shape[], true, false)
 export loft_ruled
+
+realize(b::Backend, s::Loft) =
+    if all(is_point, s.profiles)
+      backend_loft_points(backend(s), s.profiles, s.rails, s.ruled, s.closed)
+    elseif all(is_curve, s.profiles)
+      backend_loft_curves(backend(s), s.profiles, s.rails, s.ruled, s.closed)
+    elseif all(is_surface, s.profiles)
+      backend_loft_surfaces(backend(s), s.profiles, s.rails, s.ruled, s.closed)
+    elseif length(s.profiles) == 2
+      let (p, sh) = if is_point(s.profiles[1])
+                     (s.profiles[1], s.profiles[2])
+                   elseif is_point(s.profiles[2])
+                     (s.profiles[2], s.profiles[1])
+                   else
+                     error("Cross sections are neither points nor curves nor surfaces")
+                   end
+        if is_curve(sh)
+          backend_loft_curve_point(backend(s), sh, p)
+        elseif is_surface(sh)
+          backend_loft_surface_point(backend(s), sh, p)
+        else
+          error("Can't loft the shapes")
+        end
+      end
+    else
+      error("Cross sections are neither points nor curves nor surfaces")
+    end
+
+backend_loft_points(b::Backend, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
+  let f = (ruled ? (closed ? polygon : line) : (closed ? closed_spline : spline))
+    and_delete_shapes(ref(f(map(point_position, profiles), backend=b)),
+                      vcat(profiles, rails))
+  end
 
 @defproxy(move, Shape3D, shape::Shape=point(), v::Vec=vx())
 @defproxy(scale, Shape3D, shape::Shape=point(), s::Real=1, p::Loc=u0())
@@ -1611,34 +1654,6 @@ realize(b::Backend, s::SubtractionShape2D) =
     subtract_ref(b, ref(s.shape), unite_refs(b, map(ref, s.shapes)))
 realize(b::Backend, s::SubtractionShape3D) =
     subtract_ref(b, ref(s.shape), unite_refs(b, map(ref, s.shapes)))
-
-
-realize(b::Backend, s::Loft) =
-    if all(is_point, s.profiles)
-      backend_loft_points(b, s.profiles, s.rails, s.ruled, s.closed)
-    elseif all(is_curve, s.profiles)
-      backend_loft_curves(b, s.profiles, s.rails, s.ruled, s.closed)
-    elseif all(is_surface, s.profiles)
-      backend_loft_surfaces(b, s.profiles, s.rails, s.ruled, s.closed)
-    elseif length(s.profiles) == 2
-      let (p, sh) = if is_point(s.profiles[1])
-                     (s.profiles[1], s.profiles[2])
-                   elseif is_point(s.profiles[2])
-                     (s.profiles[2], s.profiles[1])
-                   else
-                     error("Cross sections are neither points nor curves nor surfaces")
-                   end
-        if is_curve(sh)
-          backend_loft_curve_point(b, sh, p)
-        elseif is_surface(sh)
-          backend_loft_surface_point(b, sh, p)
-        else
-          error("Can't loft the shapes")
-        end
-      end
-    else
-      error("Cross sections are neither points nor curves nor surfaces")
-    end
 
 function startSketchup(port)
   ENV["ROSETTAPORT"] = port

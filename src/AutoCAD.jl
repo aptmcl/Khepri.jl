@@ -509,21 +509,12 @@ realize(b::ACAD, s::Cylinder) =
   ACADCylinder(connection(b), s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
 #realize(b::ACAD, s::Circle) = ACADCircle(connection(b),
 
-realize(b::Backend, s::Extrusion) =
-  backend_extrusion(b, s.profile, s.v)
-
-backend_extrusion(b::Backend, p::Point, v::Vec) =
-  realize_and_delete_shapes(line([p.position, p.position + v], backend=b), [p])
-
-backend_extrusion(b::Backend, s::Shape, v::Vec) =
+backend_extrusion(b::ACAD, s::Shape, v::Vec) =
     and_mark_deleted(
         map_ref(s) do r
             ACADExtrude(connection(b), r, v)
         end,
         s)
-
-realize(b::Backend, s::Sweep) =
-  backend_sweep(b, s.path, s.profile, s.rotation, s.scale)
 
 backend_sweep(b::ACAD, path::Shape, profile::Shape, rotation::Real, scale::Real) =
   map_ref(profile) do profile_r
@@ -538,12 +529,6 @@ realize(b::ACAD, s::Revolve) =
       ACADRevolve(connection(b), r, s.p, s.n, s.start_angle, s.amplitude)
     end,
     s.profile)
-
-backend_loft_points(b::Backend, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
-  let f = (ruled ? (closed ? polygon : line) : (closed ? closed_spline : spline))
-    and_delete_shapes(ref(f(map(point_position, profiles), backend=b)),
-                      vcat(profiles, rails))
-  end
 
 backend_loft_curves(b::ACAD, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
   and_delete_shapes(ACADLoft(connection(b),
