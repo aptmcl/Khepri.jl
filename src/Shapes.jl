@@ -279,7 +279,7 @@ macro defproxy(name, parent, fields...)
   key_params = map(mk_param, field_names, field_types, field_renames)
   constructor_name = esc(name)
   predicate_name = esc(Symbol("is_", name_str))
-  mk_convert(name,typ) = :(isa($(name), $(typ)) ? $(name) : throw(WrongTypeForParam($(QuoteNode(name)), $(name), $(typ))))
+  mk_convert(name,typ) = :(isa($(esc(name)), $(typ)) ? $(esc(name)) : throw(WrongTypeForParam($(QuoteNode(name)), $(esc(name)), $(typ))))
   field_converts = map(mk_convert, field_names, field_types)
   #selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
   quote
