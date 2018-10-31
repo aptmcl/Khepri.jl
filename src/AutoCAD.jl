@@ -944,6 +944,16 @@ captured_shape(b::ACAD, handle) =
 generate_captured_shape(s::Shape, b::ACAD) =
     println("captured_shape(autocad, $(ACADGetHandleFromShape(connection(b), ref(s).value)))")
 
+# Register for notification
+
+acad"public void RegisterForChanges(ObjectId id)"
+
+register_for_changes(s::Shape, b::ACAD) =
+    begin
+        ACADRegisterForChanges(ref(s).value)
+        s
+    end
+
 acad"public ObjectId[] GetAllShapes()"
 acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
 

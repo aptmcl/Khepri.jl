@@ -242,6 +242,15 @@ macro defop(name_params)
     end
 end
 
+macro defshapeop(name_params)
+    name, params = name_params.args[1], name_params.args[2:end]
+    quote
+        export $(esc(name))
+        $(esc(name))(s::Shape, $(map(esc,params)...), b::Backend=backend(s)) =
+            throw(UndefinedBackendException())
+    end
+end
+
 backend(backend::Backend) = switch_to_backend(current_backend(), backend)
 
 switch_to_backend(from::Backend, to::Backend) = current_backend(to)
@@ -1704,11 +1713,31 @@ end
 @defop select_surface(prompt::String="Select a surface")
 @defop select_solid(prompt::String="Select a solid")
 @defop select_shape(prompt::String="Select a shape")
-@defop highlight_shape(s::Shape)
+@defshapeop highlight()
+@defshapeop register_for_changes()
 
 capture_shape(s=select_shape("Select shape to be captured")) =
   if s != false
     generate_captured_shape(s, backend(s))
+  end
+
+register_for_changes(shapes::Shapes=Shape[]) =
+  map(shapes) do shape
+    register_for_changes(shape, backend(shape))
+  end
+
+on_change(f, shape::Shape) = on_change(f, [shape])
+on_change(f, shapes) =
+  let registered = register_for_changes(shapes)
+    try
+      while true
+        let changed = changed_shapes(shapes)
+          f()
+        end
+      end
+    finally
+      unregister_for_changes(registered)
+    end
   end
 
 """
