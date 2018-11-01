@@ -1755,6 +1755,20 @@ on_change(f, shapes) =
     end
   end
 
+#
+export with_shape_dependency
+with_shape_dependency(f, ss) =
+    let shapes = collecting_shapes() do
+                    f()
+                end
+        on_change(ss) do
+            delete_shapes(shapes)
+            shapes = collecting_shapes() do
+                f()
+            end
+        end
+    end
+
 """
 
 """
