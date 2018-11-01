@@ -911,6 +911,8 @@ select_position(prompt::String, b::ACAD) =
 
 acad"public ObjectId[] GetPoint(string prompt)"
 
+# HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
+
 select_point(prompt::String, b::ACAD) =
   select_with_prompt(prompt, b, ACADGetPoint)
 
@@ -947,12 +949,23 @@ generate_captured_shape(s::Shape, b::ACAD) =
 # Register for notification
 
 acad"public void RegisterForChanges(ObjectId id)"
+acad"public void UnregisterForChanges(ObjectId id)"
+acad"public ObjectId ChangedShapes()"
 
 register_for_changes(s::Shape, b::ACAD) =
     begin
-        ACADRegisterForChanges(ref(s).value)
+        ACADRegisterForChanges(connection(b), ref(s).value)
         s
     end
+
+unregister_for_changes(s::Shape, b::ACAD) =
+    begin
+        ACADUnregisterForChanges(connection(b), ref(s).value)
+        s
+    end
+
+changed_shape(ss::Shapes, b::ACAD) =
+    shape_from_ref(ACADChangedShape(connection(b)))
 
 acad"public ObjectId[] GetAllShapes()"
 acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"

@@ -327,11 +327,13 @@ Shapes1D = Vector{<:Any}
 @defproxy(universal_shape, Shape3D)
 @defproxy(point, Shape0D, position::Loc=u0())
 @defproxy(line, Shape1D, vertices::Locs=[u0(), ux()])
-line(v0, v1, vs...) = line([v0, v1, vs...])
+line(v0::Loc, v1::Loc, vs...) = line([v0, v1, vs...])
 @defproxy(closed_line, Shape1D, vertices::Locs=[u0(), ux(), uy()])
-closed_line(v0, v1, vs...) = closed_line([v0, v1, vs...])
+closed_line(v0::Loc, v1::Loc, vs...) = closed_line([v0, v1, vs...])
 @defproxy(spline, Shape1D, points::Locs=[u0(), ux(), uy()], v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false,
           interpolator::Any=LazyParameter(Any, () -> curve_interpolator(points)))
+spline(v0::Loc, v1::Loc, vs...) = spline([v0, v1, vs...])
+
 curve_interpolator(pts::Locs) =
     let pts = map(p -> in_world(p).raw, pts)
         Interpolations.scale(
@@ -343,6 +345,7 @@ curve_interpolator(pts::Locs) =
 
 # This needs to be improved to return a proper frame
 evaluate(s::Spline, t::Real) = xyz(s.interpolator()[t], world_cs)
+
 
 #(def-base-shape 1D-shape (spline* [pts : (Listof Loc) (list (u0) (ux) (uy))] [v0 : (U Boolean Vec) #f] [v1 : (U Boolean Vec) #f]))
 
@@ -1715,6 +1718,8 @@ end
 @defop select_shape(prompt::String="Select a shape")
 @defshapeop highlight()
 @defshapeop register_for_changes()
+@defshapeop unregister_for_changes()
+@defop changed_shape(shapes::Shapes)
 
 capture_shape(s=select_shape("Select shape to be captured")) =
   if s != false
@@ -1726,12 +1731,17 @@ register_for_changes(shapes::Shapes=Shape[]) =
     register_for_changes(shape, backend(shape))
   end
 
+unregister_for_changes(shapes::Shapes=Shape[]) =
+  map(shapes) do shape
+    unregister_for_changes(shape, backend(shape))
+  end
+
 on_change(f, shape::Shape) = on_change(f, [shape])
 on_change(f, shapes) =
   let registered = register_for_changes(shapes)
     try
       while true
-        let changed = changed_shapes(shapes)
+        let changed = changed_shape(shapes)
           f()
         end
       end
