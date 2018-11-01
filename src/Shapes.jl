@@ -1727,17 +1727,17 @@ capture_shape(s=select_shape("Select shape to be captured")) =
     generate_captured_shape(s, backend(s))
   end
 
-register_for_changes(shapes::Shapes=Shape[]) =
+register_for_changes(shapes::Shapes) =
   map(shapes) do shape
     register_for_changes(shape, backend(shape))
   end
 
-unregister_for_changes(shapes::Shapes=Shape[]) =
+unregister_for_changes(shapes::Shapes) =
   map(shapes) do shape
     unregister_for_changes(shape, backend(shape))
   end
 
-waiting_for_changes(shapes::Shapes=Shape[]) =
+waiting_for_changes(shapes::Shapes) =
   waiting_for_changes(shapes[1], backend(shapes[1]))
 
 export on_change
@@ -1745,7 +1745,7 @@ on_change(f, shape::Shape) = on_change(f, [shape])
 on_change(f, shapes) =
   let registered = register_for_changes(shapes)
     try
-      while waiting_for_changes()
+      while waiting_for_changes(shapes)
         let changed = changed_shape(shapes)
           f()
         end

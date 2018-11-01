@@ -979,7 +979,7 @@ changed_shape(ss::Shapes, b::ACAD) =
             changed =  ACADChangedShape(conn)
             sleep(0.1)
         end
-        if !ACADWasCanceled(conn)
+        if length(changed) > 0
             shape_from_ref(changed[1], b)
         else
             nothing
