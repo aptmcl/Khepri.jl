@@ -884,7 +884,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                 loc = ACADMTextPosition(c, r)
                 text(str, loc, height, backend=b, ref=ref)
             end
-        elseif code == 12 || code == 13
+        elseif 12 <= code <= 14
             surface(Shapes1D[], backend=b, ref=ref)
         elseif 103 <= code <= 106
             polygon(ACADLineVertices(c, r),
@@ -950,22 +950,41 @@ generate_captured_shape(s::Shape, b::ACAD) =
 
 acad"public void RegisterForChanges(ObjectId id)"
 acad"public void UnregisterForChanges(ObjectId id)"
-acad"public ObjectId ChangedShapes()"
+acad"public ObjectId[] ChangedShape()"
+acad"public void DetectCancel()"
+acad"public void UndetectCancel()"
+acad"public bool WasCanceled()"
 
 register_for_changes(s::Shape, b::ACAD) =
-    begin
-        ACADRegisterForChanges(connection(b), ref(s).value)
+    let conn = connection(b)
+        ACADRegisterForChanges(conn, ref(s).value)
+        ACADDetectCancel(conn)
         s
     end
 
 unregister_for_changes(s::Shape, b::ACAD) =
-    begin
-        ACADUnregisterForChanges(connection(b), ref(s).value)
+    let conn = connection(b)
+        ACADUnregisterForChanges(conn, ref(s).value)
+        ACADUndetectCancel(conn)
         s
     end
 
+waiting_for_changes(s::Shapes, b::ACAD) =
+    ! ACADWasCanceled(connection(b))
+
 changed_shape(ss::Shapes, b::ACAD) =
-    shape_from_ref(ACADChangedShape(connection(b)))
+    let conn = connection(b)
+        changed = []
+        while length(changed) == 0 && ! ACADWasCanceled(conn)
+            changed =  ACADChangedShape(conn)
+            sleep(0.1)
+        end
+        if !ACADWasCanceled(conn)
+            shape_from_ref(changed[1], b)
+        else
+            nothing
+        end
+    end
 
 acad"public ObjectId[] GetAllShapes()"
 acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"

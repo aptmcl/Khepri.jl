@@ -1719,6 +1719,7 @@ end
 @defshapeop highlight()
 @defshapeop register_for_changes()
 @defshapeop unregister_for_changes()
+@defshapeop waiting_for_changes()
 @defop changed_shape(shapes::Shapes)
 
 capture_shape(s=select_shape("Select shape to be captured")) =
@@ -1736,11 +1737,15 @@ unregister_for_changes(shapes::Shapes=Shape[]) =
     unregister_for_changes(shape, backend(shape))
   end
 
+waiting_for_changes(shapes::Shapes=Shape[]) =
+  waiting_for_changes(shapes[1], backend(shapes[1]))
+
+export on_change
 on_change(f, shape::Shape) = on_change(f, [shape])
 on_change(f, shapes) =
   let registered = register_for_changes(shapes)
     try
-      while true
+      while waiting_for_changes()
         let changed = changed_shape(shapes)
           f()
         end
