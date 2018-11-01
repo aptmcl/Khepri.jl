@@ -969,7 +969,7 @@ unregister_for_changes(s::Shape, b::ACAD) =
         s
     end
 
-waiting_for_changes(s::Shapes, b::ACAD) =
+waiting_for_changes(s::Shape, b::ACAD) =
     ! ACADWasCanceled(connection(b))
 
 changed_shape(ss::Shapes, b::ACAD) =
