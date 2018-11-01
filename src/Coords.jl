@@ -350,7 +350,7 @@ vxz(x::Real=1,z::Real=1,cs=current_cs()) = vxyz(x,0,z,cs)
 
 position_and_height(p, q) = loc_from_o_vz(p, q - p), distance(p, q)
 
-regular_polygon_vertices(edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, is_inscribed::Bool=false) = begin
+regular_polygon_vertices(edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, is_inscribed::Bool=true) = begin
   r = is_inscribed ? radius : radius/cos(pi/edges)
   [center + vpol(r, a, center.cs) for a in division(angle, angle + 2*pi, edges, false)]
 end
