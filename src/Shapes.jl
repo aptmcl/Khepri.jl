@@ -4,6 +4,7 @@ using Interpolations
 export Shape,
        Path,
        backend,
+       backend_name,
        current_backend,
        switch_to_backend,
        void_ref,
@@ -1762,7 +1763,10 @@ with_shape_dependency(f, ss) =
                     f()
                 end
         on_change(ss) do
-            delete_shapes(shapes)
+            try
+                delete_shapes(shapes)
+            catch e
+            end
             shapes = collecting_shapes() do
                 f()
             end
