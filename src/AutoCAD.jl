@@ -1021,6 +1021,12 @@ render_view(name::String, b::ACAD=current_backend()) =
                convert_render_quality(b, render_quality()),
                convert_render_exposure(b, render_exposure()))
 
+export mentalray_render_view
+mentalray_render_view(name::String) =
+    let conn = connection(current_backend())
+        ACADSetSystemVariableInt(conn,"SKYSTATUS", 2) # skystatus:background-and-illumination
+        ACADCommand(conn, "._-render H _R $(render_width()) $(render_height()) _yes $(prepare_for_saving_file(render_pathname(name)))\n")
+    end
 
 save_as(pathname::String, format::String, b::ACAD) =
     ACADSaveAs(connection(b), pathname, format)
