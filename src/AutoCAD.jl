@@ -898,6 +898,14 @@ shape_from_ref(r, b::ACAD=current_backend()) =
 
 acad"public Point3d[] GetPosition(string prompt)"
 
+select_position(prompt::String, b::ACAD) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    let ans = ACADGetPosition(connection(b), prompt)
+      length(ans) > 0 && ans[1]
+    end
+  end
+
 select_with_prompt(prompt::String, b::Backend, f::Function) =
   begin
     @info "$(prompt) on the $(b) backend."
@@ -905,9 +913,6 @@ select_with_prompt(prompt::String, b::Backend, f::Function) =
       length(ans) > 0 && shape_from_ref(ans[1], b)
     end
   end
-
-select_position(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetPosition)
 
 acad"public ObjectId[] GetPoint(string prompt)"
 
