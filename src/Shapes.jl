@@ -75,6 +75,7 @@ map_ref(b::Backend{K,T}, f::Function, r::SubtractionRef{K,T}) where {K,T} = Subt
 # currying
 collect_ref(b::Backend{K,T}) where {K,T} = r -> collect_ref(b, r)
 
+collect_ref(b::Backend{K,T}, r::EmptyRef{K,T}) where {K,T} = []
 collect_ref(b::Backend{K,T}, r::NativeRef{K,T}) where {K,T} = [r.value]
 collect_ref(b::Backend{K,T}, r::UnionRef{K,T}) where {K,T} = mapreduce(collect_ref(b), vcat, r.values, init=[])
 collect_ref(b::Backend{K,T}, r::SubtractionRef{K,T}) where {K,T} = vcat(collect_ref(b, r.value), mapreduce(collect_ref(b), vcat, r.values, init=[]))
