@@ -444,7 +444,7 @@ box(c0::Loc, c1::Loc) =
     box(c0, v.x, v.y, v.z)
   end
 @defproxy(cone, Shape3D, cb::Loc=u0(), r::Real=1, h::Real=1)
-cone(::Loc, r::Real, ct::Loc) =
+cone(cb::Loc, r::Real, ct::Loc) =
   let (c, h) = position_and_height(cb, ct)
     cone(c, r, h)
   end
