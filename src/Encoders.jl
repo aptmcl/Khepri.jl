@@ -10,6 +10,8 @@ export encode_String, decode_String,
        encode_int, decode_int, decode_int_or_error,
        encode_long, decode_long, decode_long_or_error,
        encode_int_array, decode_int_array, decode_int_or_error_array,
+       encode_float, decode_float,
+       encode_float_array, decode_float_array,
        encode_double, decode_double,
        encode_double_array, decode_double_array,
        encode_Point3d, decode_Point3d,
@@ -114,6 +116,21 @@ encode_double3(c::IO, v0::Real, v1::Real, v2::Real) = begin
     encode_double(c, v0)
     encode_double(c, v1)
     encode_double(c, v2)
+end
+
+encode_float(c::IO, v::Real) = write(c, convert(Float32, v))
+decode_float(c::IO) =
+    let d = read(c, Float32)
+        if isnan(d)
+            error("Backend Error: $(decode_String(c))")
+        else
+            convert(Float64, d)
+        end
+    end
+encode_float3(c::IO, v0::Real, v1::Real, v2::Real) = begin
+    encode_float(c, v0)
+    encode_float(c, v1)
+    encode_float(c, v2)
 end
 
 decode_int_or_error_numbered(err_num) = (c::IO) ->

@@ -101,6 +101,17 @@ function complete_rpc_call(conn, opcode, result)
     result
 end
 
+#=
+This does not play well with reset_backend because the opcode are in global
+scope and completely separated from the backend and, thus, the operation
+still tries to use the same opcode even after a reset. Must think about
+storing the generated functions on the backend itself, so that we can drop
+it and restart.
+
+Another option would be to have the table of generated methods separated
+from the channel on the backend side, but I'm afraid that will prevent multiple
+clients (not sure they are useful, though).
+=#
 function rpc(prefix, str)
     name, params, ret = parse_c_signature(str)
     func_name = Symbol(prefix, name)
