@@ -1611,13 +1611,18 @@ evaluate(s::SurfaceGrid, u::Real, v::Real) = xyz(s.interpolator()[u,v], world_cs
 #Backends might use different communication mechanisms, e.g., sockets, COM, RMI, etc
 
 #We start with socket-based communication
-struct Socket_Backend{K,T} <: Backend{K,T}
+struct SocketBackend{K,T} <: Backend{K,T}
   connection::LazyParameter{TCPSocket}
 end
 
-connection(b::Socket_Backend{K,T}) where {K,T} = b.connection()
-reset_backend(b::Socket_Backend) = reset(b.connection)
+connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
 
+
+reset_backend(b::SocketBackend) =
+  begin
+    close(b.connection())
+    reset(b.connection)
+  end
 bounding_box(shape::Shape) =
   bounding_box([shape])
 
@@ -1774,6 +1779,10 @@ with_shape_dependency(f, ss) =
         end
     end
 
-"""
-
-"""
+# Later, this will be used to create images.
+export to_render
+to_render(f, name) =
+  begin
+    delete_all_shapes()
+    f()
+  end

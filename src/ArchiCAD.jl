@@ -8,7 +8,7 @@ const ARCHIds = Vector{ARCHId}
 const ARCHRef = GenericRef{ARCHKey, ARCHId}
 const ARCHRefs = Vector{ARCHRef}
 const ARCHNativeRef = NativeRef{ARCHKey, ARCHId}
-const ARCH = Socket_Backend{ARCHKey, ARCHId}
+const ARCH = SocketBackend{ARCHKey, ARCHId}
 
 void_ref(b::ARCH) = ARCHNativeRef(-1)
 

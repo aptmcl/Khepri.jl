@@ -243,7 +243,7 @@ const ACADUniversalRef = UniversalRef{ACADKey, ACADId}
 const ACADNativeRef = NativeRef{ACADKey, ACADId}
 const ACADUnionRef = UnionRef{ACADKey, ACADId}
 const ACADSubtractionRef = SubtractionRef{ACADKey, ACADId}
-const ACAD = Socket_Backend{ACADKey, ACADId}
+const ACAD = SocketBackend{ACADKey, ACADId}
 
 void_ref(b::ACAD) = ACADNativeRef(-1)
 
@@ -497,6 +497,7 @@ realize(b::ACAD, s::IrregularPrism) =
   ACADIrregularPyramidFrustum(connection(b),
                               s.cbs,
                               map(p -> (p + s.v), s.cbs))
+## FIXME: deal with the rotation angle
 realize(b::ACAD, s::RightCuboid) =
   ACADCenteredBox(connection(b), s.cb, s.width, s.height, s.h)
 realize(b::ACAD, s::Box) =

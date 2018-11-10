@@ -55,7 +55,7 @@ const RVTIds = Vector{RVTId}
 const RVTRef = GenericRef{RVTKey, RVTId}
 const RVTRefs = Vector{RVTRef}
 const RVTNativeRef = NativeRef{RVTKey, RVTId}
-const RVT = Socket_Backend{RVTKey, RVTId}
+const RVT = SocketBackend{RVTKey, RVTId}
 
 void_ref(b::RVT) = RVTNativeRef(-1)
 
