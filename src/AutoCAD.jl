@@ -903,7 +903,7 @@ select_position(prompt::String, b::ACAD) =
   begin
     @info "$(prompt) on the $(b) backend."
     let ans = ACADGetPosition(connection(b), prompt)
-      length(ans) > 0 && ans[1]
+      length(ans) > 0 ? ans[1] : nothing
     end
   end
 
@@ -911,7 +911,7 @@ select_with_prompt(prompt::String, b::Backend, f::Function) =
   begin
     @info "$(prompt) on the $(b) backend."
     let ans = f(connection(b), prompt)
-      length(ans) > 0 && shape_from_ref(ans[1], b)
+      length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
     end
   end
 
