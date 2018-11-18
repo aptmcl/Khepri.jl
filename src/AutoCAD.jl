@@ -907,40 +907,67 @@ select_position(prompt::String, b::ACAD) =
     end
   end
 
-select_with_prompt(prompt::String, b::Backend, f::Function) =
+select_one_with_prompt(prompt::String, b::Backend, f::Function) =
   begin
     @info "$(prompt) on the $(b) backend."
     let ans = f(connection(b), prompt)
       length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
     end
   end
+#
+select_many_with_prompt(prompt::String, b::Backend, f::Function) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    map(id -> shape_from_ref(id, b), f(connection(b), prompt))
+  end
 
 acad"public ObjectId[] GetPoint(string prompt)"
+acad"public ObjectId[] GetPoints(string prompt)"
 
 # HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
 
 select_point(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetPoint)
+  select_one_with_prompt(prompt, b, ACADGetPoint)
+
+select_points(prompt::String, b::ACAD) =
+  select_many_with_prompt(prompt, b, ACADGetPoints)
 
 acad"public ObjectId[] GetCurve(string prompt)"
+acad"public ObjectId[] GetCurves(string prompt)"
 
 select_curve(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetCurve)
+  select_one_with_prompt(prompt, b, ACADGetCurve)
+
+select_curves(prompt::String, b::ACAD) =
+  select_many_with_prompt(prompt, b, ACADGetCurves)
 
 acad"public ObjectId[] GetSurface(string prompt)"
+acad"public ObjectId[] GetSurfaces(string prompt)"
 
 select_surface(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetSurface)
+  select_one_with_prompt(prompt, b, ACADGetSurface)
+
+select_surfaces(prompt::String, b::ACAD) =
+  select_many_with_prompt(prompt, b, ACADGetSurfaces)
 
 acad"public ObjectId[] GetSolid(string prompt)"
+acad"public ObjectId[] GetSolids(string prompt)"
 
 select_solid(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetSolid)
+  select_one_with_prompt(prompt, b, ACADGetSolid)
+
+select_solids(prompt::String, b::ACAD) =
+  select_many_with_prompt(prompt, b, ACADGetSolids)
 
 acad"public ObjectId[] GetShape(string prompt)"
+acad"public ObjectId[] GetShapes(string prompt)"
 
 select_shape(prompt::String, b::ACAD) =
-  select_with_prompt(prompt, b, ACADGetShape)
+  select_one_with_prompt(prompt, b, ACADGetShape)
+
+select_shapes(prompt::String, b::ACAD) =
+  select_many_with_prompt(prompt, b, ACADGetShapes)
+
 
 acad"public long GetHandleFromShape(Entity e)"
 acad"public ObjectId GetShapeFromHandle(long h)"
