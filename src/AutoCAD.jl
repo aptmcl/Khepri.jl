@@ -1,6 +1,4 @@
-export autocad,
-       capture_shape,
-       captured_shape
+export autocad
 
 #=
 We need to ensure the AutoCAD plugin is properly installed.
@@ -975,9 +973,25 @@ acad"public ObjectId GetShapeFromHandle(long h)"
 captured_shape(b::ACAD, handle) =
   shape_from_ref(ACADGetShapeFromHandle(connection(b), handle),
                  b)
+#
+captured_shapes(b::ACAD, handles) =
+  map(handles) do handle
+      shape_from_ref(ACADGetShapeFromHandle(connection(b), handle),
+                     b)
+  end
 
 generate_captured_shape(s::Shape, b::ACAD) =
     println("captured_shape(autocad, $(ACADGetHandleFromShape(connection(b), ref(s).value)))")
+
+generate_captured_shapes(ss::Shapes, b::ACAD) =
+  begin
+    print("captured_shapes(autocad, [")
+    for s in ss
+      print(ACADGetHandleFromShape(connection(b), ref(s).value))
+      print(", ")
+    end
+    println("])")
+  end
 
 # Register for notification
 

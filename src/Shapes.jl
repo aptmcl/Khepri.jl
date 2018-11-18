@@ -8,8 +8,7 @@ export Shape,
        current_backend,
        switch_to_backend,
        void_ref,
-       delete_shape,
-       delete_shapes,
+       delete_shape, delete_shapes,
        delete_all_shapes,
        set_length_unit,
        collecting_shapes,
@@ -32,7 +31,9 @@ export Shape,
        subpath_starting_at,
        subpath_ending_at,
        bounding_box,
-       capture_shape
+       capture_shape, capture_shapes,
+       captured_shape, captured_shapes
+
 
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
 abstract type Backend{K,R} end
@@ -1754,9 +1755,12 @@ end
 @defop changed_shape(shapes::Shapes)
 
 capture_shape(s=select_shape("Select shape to be captured")) =
-  if s != false
+  if s != nothing
     generate_captured_shape(s, backend(s))
   end
+
+capture_shapes(ss=select_shapes("Select shapes to be captured")) =
+    generate_captured_shapes(ss, backend(ss[1]))
 
 register_for_changes(shapes::Shapes) =
   map(shapes) do shape
