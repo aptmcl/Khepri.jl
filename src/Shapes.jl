@@ -137,6 +137,10 @@ abstract type Proxy end
 backend(s::Proxy) = s.ref.backend
 realized(s::Proxy) = s.ref.created == s.ref.deleted + 1
 mark_deleted(s::Proxy) = realized(s) ? s.ref.deleted += 1 : error("Inconsistent creation and deletion")
+# We also need to propagate this to all dependencies
+mark_deleted(ss::Array{<:Proxy}) = foreach(mark_deleted, ss)
+mark_deleted(s::Any) = nothing
+
 ref(s::Proxy) =
   if s.ref.created == s.ref.deleted
     s.ref.value = ensure_ref(s.ref.backend, realize(s.ref.backend, s))
@@ -290,7 +294,8 @@ macro defproxy(name, parent, fields...)
   key_params = map(mk_param, field_names, field_types, field_renames)
   constructor_name = esc(name)
   predicate_name = esc(Symbol("is_", name_str))
-  mk_convert(name,typ) = :(isa($(esc(name)), $(typ)) ? $(esc(name)) : throw(WrongTypeForParam($(QuoteNode(name)), $(esc(name)), $(typ))))
+  #mk_convert(name,typ) = :(isa($(esc(name)), $(typ)) ? $(esc(name)) : throw(WrongTypeForParam($(QuoteNode(name)), $(esc(name)), $(typ))))
+  mk_convert(name,typ) = :($(esc(name)))
   field_converts = map(mk_convert, field_names, field_types)
   #selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
   quote
@@ -305,6 +310,10 @@ macro defproxy(name, parent, fields...)
     $(predicate_name)(v::Any) = false
 #    $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
 #          selector_names, field_names)...)
+    Khepri.mark_deleted(v::$(struct_name)) =
+      begin
+        $(map(field_name -> :(mark_deleted(v.$(field_name))), field_names)...)
+      end
     Khepri.meta_program(v::$(struct_name)) =
         Expr(:call, $(Expr(:quote, name)), $(map(field_name -> :(meta_program(v.$(field_name))), field_names)...))
   end
@@ -1032,6 +1041,14 @@ convert(::Type{ClosedPolygonalPath}, path::RectangularPath) =
         dy = path.dy
         closed_polygonal_path([p, add_x(p, dx), add_xy(p, dx, dy), add_y(p, dy)])
     end
+# The next one is looses precision. It converts from a circular to a polygonal path
+# Note that the level of detail is hardwired. Maybe it will be good to make this a parameter
+convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
+    let c = path.center
+        r = path.radius
+        closed_polygonal_path([c + vpol(r, phi) for phi in division(0, 2pi, 64, false)])
+    end
+
 convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
     open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
@@ -1041,8 +1058,7 @@ convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
 
 path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
-path_vertices(path::RectangularPath) = path_vertices(convert(ClosedPolygonalPath, path))
-
+path_vertices(path::Path) = path_vertices(convert(ClosedPolygonalPath, path))
 export path_vertices
 
 #####################################################################
@@ -1256,17 +1272,17 @@ ref(family::Family) = family.ref()==-1 ? family.ref(backend_get_family(current_b
 
 @defproxy(slab, Shape3D, contour::ClosedPath=rectangular_path(),
           level::Level=default_level(), family::SlabFamily=default_slab_family(),
-          openings::Vector{ClosedPath}=ClosedPath[])
+          openings::Vector{<:ClosedPath}=ClosedPath[])
 
 # Default implementation: dispatch on the slab elements
 realize(b::Backend, s::Slab) =
-    realize_slab(b, s.contour, s.level, s.family)
+    realize_slab(b, s.contour, s.openings, s.level, s.family)
 
-realize_slab(b::Backend, contour::ClosedPath, level::Level, family::SlabFamily) =
+realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::SlabFamily) =
     let base = vz(level.height + family.coating_thickness - family.thickness),
         thickness = family.coating_thickness + family.thickness
         # Change this to a better named protocol?
-        backend_slab(b, translate(contour, base), thickness)
+        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness)
     end
 
 #
@@ -1594,6 +1610,9 @@ surface_interpolator(pts::AbstractMatrix{<:Loc}) =
             range(0,stop=1,length=size(pts, 1)),
             range(0,stop=1,length=size(pts, 2)))
     end
+
+convert(::Type{AbstractMatrix{<:Loc}}, pts::Vector{<:Vector{<:Loc}}) =
+  permutedims(hcat(pts...))
 
 # This needs to be improved to return a proper frame
 evaluate(s::SurfaceGrid, u::Real, v::Real) = xyz(s.interpolator()[u,v], world_cs)
