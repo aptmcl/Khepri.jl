@@ -1,4 +1,5 @@
-export unity
+export unity,
+       unity_material_family
 
 macro unity_str(str)
     rpc("Unity", str)
@@ -10,12 +11,21 @@ decode_GameObject = decode_int_or_error
 encode_GameObject_array = encode_int_array
 decode_GameObject_array = decode_int_array
 
+encode_Material = encode_int
+decode_Material = decode_int_or_error
+
 # Must convert from local to world coordinates
 encode_Vector3(c::IO, v::Union{XYZ, VXYZ}) = begin
   v = in_world(v)
-  encode_float3(c, v.x, v.y, v.z)
+#  encode_float3(c, v.x, v.y, v.z)
+  encode_float3(c, v.x, v.z, v.y)
 end
-decode_Vector3(c::IO) = xyz(decode_float(c), decode_float(c), decode_float(c), world_cs)
+decode_Vector3(c::IO) =
+  let x = decode_float(c)
+      z = decode_float(c)
+      y = decode_float(c)
+    xyz(x, y, z, world_cs)
+  end
 encode_Vector3_array(c::IO, v::Vector) = begin
   encode_int(c, length(v))
   for e in v encode_Vector3(c, e) end
@@ -29,14 +39,30 @@ decode_Vector3_array(c::IO) = begin
   r
 end
 
+encode_Vector3_array_array(c::IO, v::Vector) = begin
+  encode_int(c, length(v))
+  for e in v encode_Vector3_array(c, e) end
+end
+decode_Vector3_array_array(c::IO) = begin
+  len = decode_int_or_error(c)
+  r = Vector{Vector{XYZ}}(undef, len)
+  for i in 1:len
+    r[i] = decode_Vector3_array(c)
+  end
+  r
+end
+
+
+#=
 encode_Quaternion(c::IO, pv::Union{XYZ, VXYZ}) =
   let tr = pv.cs.transform
     for i in 1:3
       for j in 1:3
-        encode_float(c, tr[j,i])
+        encode_float(c, tr[i,j])
       end
     end
   end
+=#
 
 abstract type UnityKey end
 const UnityId = Int
@@ -154,8 +180,13 @@ realize(b::Unity, s::SurfaceArc) =
 
 #realize(b::Unity, s::SurfaceElliptic_Arc) = UnityCircle(connection(b),
 #realize(b::Unity, s::SurfaceEllipse) = UnityCircle(connection(b),
+=#
+
+unity"public GameObject SurfacePolygon(Vector3[] ps)"
+
 realize(b::Unity, s::SurfacePolygon) =
-  UnitySurfaceClosedPolyLine(connection(b), s.vertices)
+  UnitySurfacePolygon(connection(b), reverse(s.vertices))
+#=
 realize(b::Unity, s::SurfaceRegularPolygon) =
   UnitySurfaceClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::Unity, s::SurfaceRectangle) =
@@ -235,48 +266,57 @@ realize(b::Unity, s::Sphere) =
 #=
 realize(b::Unity, s::Torus) =
   UnityTorus(connection(b), s.center, vz(1, s.center.cs), s.re, s.ri)
+=#
+
+unity"public GameObject Pyramid(Vector3[] ps, Vector3 q)"
+unity"public GameObject PyramidFrustum(Vector3[] ps, Vector3[] qs)"
+
 realize(b::Unity, s::Cuboid) =
-  UnityIrregularPyramidFrustum(connection(b), [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
+  UnityPyramidFrustum(connection(b), [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
+
 realize(b::Unity, s::RegularPyramidFrustum) =
-    UnityIrregularPyramidFrustum(connection(b),
-                                regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                                regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed))
+    UnityPyramidFrustum(connection(b),
+                        regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+                        regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed))
+
 realize(b::Unity, s::RegularPyramid) =
-  UnityIrregularPyramid(connection(b),
-                          regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                          add_z(s.cb, s.h))
+  UnityPyramid(connection(b),
+               regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+               add_z(s.cb, s.h))
+
 realize(b::Unity, s::IrregularPyramid) =
-  UnityIrregularPyramid(connection(b), s.cbs, s.ct)
+  UnityPyramid(connection(b), s.cbs, s.ct)
+
 realize(b::Unity, s::RegularPrism) =
   let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-    UnityIrregularPyramidFrustum(connection(b),
-                                   cbs,
-                                   map(p -> add_z(p, s.h), cbs))
+    UnityPyramidFrustum(connection(b),
+                        cbs,
+                        map(p -> add_z(p, s.h), cbs))
   end
+
 realize(b::Unity, s::IrregularPyramidFustrum) =
-    UnityIrregularPyramidFrustum(connection(b), s.cbs, s.cts)
+    UnityPyramidFrustum(connection(b), s.cbs, s.cts)
 
 realize(b::Unity, s::IrregularPrism) =
-  UnityIrregularPyramidFrustum(connection(b),
-                              s.cbs,
-                              map(p -> (p + s.v), s.cbs))
-=#
+  UnityPyramidFrustum(connection(b),
+                      s.cbs,
+                      map(p -> (p + s.v), s.cbs))
 
-unity"public GameObject CenteredBox(Vector3 position, Quaternion rotation, float dx, float dy, float dz, float angle)"
+unity"public GameObject RightCuboid(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle)"
 
 realize(b::Unity, s::RightCuboid) =
-  UnityCenteredBox(connection(b), s.cb, s.cb, s.width, s.height, s.h, s.angle)
+  UnityRightCuboid(connection(b), s.cb, vz(1, s.cb.cs), vx(1, s.cb.cs), s.height, s.width, s.h, s.angle)
 
-unity"public GameObject Box(Vector3 position, Quaternion rotation, float dx, float dy, float dz)"
+unity"public GameObject Box(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz)"
 
 realize(b::Unity, s::Box) =
-  UnityBox(connection(b), s.c, s.c, s.dx, s.dy, s.dz)
-#=
+  UnityBox(connection(b), s.c, vz(1, s.c.cs), vx(1, s.c.cs), s.dy, s.dx, s.dz)
+
 realize(b::Unity, s::Cone) =
-  UnityCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
+  UnityPyramid(connection(b), regular_polygon_vertices(64, s.cb, s.r), add_z(s.cb, s.h))
+
 realize(b::Unity, s::ConeFrustum) =
-  UnityConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
-=#
+  UnityPyramidFrustum(connection(b), regular_polygon_vertices(64, cb, s.rb), regular_polygon_vertices(64, s.cb + vz(s.h, s.cb.cs), s.rt))
 
 unity"public GameObject Cylinder(Vector3 bottom, float radius, Vector3 top)"
 
@@ -438,100 +478,131 @@ backend_frame_at(b::Unity, c::Shape1D, t::Real) = UnityCurveFrameAt(connection(b
 
 backend_frame_at(b::Unity, s::Shape2D, u::Real, v::Real) = UnitySurfaceFrameAt(connection(b), ref(s).value, u, v)
 
+=#
+
 # BIM
+
+# Families
+#=
+
+Revit families are divided into
+1. System Families (for walls, roofs, floors, pipes)
+2. Loadable Families (for building components that have an associated file)
+3. In-Place Families (for unique elements created just for the current project)
+
+=#
+
+abstract type UnityFamily <: Family end
+
+struct UnityMaterialFamily <: UnityFamily
+  name::String
+  parameter_map::Dict{Symbol,String}
+  ref::Parameter{Int}
+end
+
+unity_material_family(name, pairs...) = UnityMaterialFamily(name, Dict(pairs...), Parameter(-1))
+
+backend_get_family(b::Unity, f::UnityMaterialFamily) = UnityLoadMaterial(connection(b), f.name)
+
+backend_get_family(b::Unity, f::Family) =
+  let unity_family = f.based_on # This needs to be fixed
+      backend_get_family(b, unity_family)
+  end
+
+#
+
+unity_wall_family = wall_family(based_on=unity_material_family("Materials/Concrete"))
+unity_slab_family = slab_family(based_on=unity_material_family("Materials/Concrete"))
+unity_beam_family = beam_family(based_on=unity_material_family("Materials/Metal"))
+unity_column_family = column_family(based_on=unity_material_family("Materials/Concrete"))
+
+switch_to_backend(from::Backend, to::Unity) =
+    let height = 0
+        current_backend(to)
+        default_slab_family(unity_slab_family)
+        default_wall_family(unity_wall_family)
+        default_beam_family(unity_beam_family)
+        default_column_family(unity_column_family)
+        to
+    end
+
+unity"public GameObject LoadResource(String name)"
+unity"public Material LoadMaterial(String name)"
+unity"public void SetCurrentMaterial(Material material)"
+
+unity"public GameObject InstantiateResource(GameObject family, Vector3 pos, Vector3 vx, Vector3 vy, float scale)"
+unity"public GameObject InstantiateBIMElement(GameObject family, Vector3 pos, float angle)"
+
+unity"public GameObject Window(Vector3 position, Quaternion rotation, float dx, float dy, float dz)"
+unity"public GameObject Shelf(Vector3 position, int rowLength, int lineLength, float cellWidth, float cellHeight, float cellDepth)"
+
+
 backend_get_family(b::Unity, f::TableFamily) =
-    UnityCreateRectangularTableFamily(connection(b), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
+    UnityLoadResource(connection(b), "ModernTable")
+
 backend_get_family(b::Unity, f::ChairFamily) =
-    UnityCreateChairFamily(connection(b), f.length, f.width, f.height, f.seat_height, f.thickness)
+    UnityLoadResource(connection(b), "ModernChair")
+
 backend_get_family(b::Unity, f::TableChairFamily) =
-    UnityCreateRectangularTableAndChairsFamily(connection(b),
-        ref(f.table_family), ref(f.chair_family),
-        f.table_family.length, f.table_family.width,
-        f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
-        f.spacing)
+    UnityLoadResource(connection(b), "ModernTableChair")
 
 backend_rectangular_table(b::Unity, c, angle, family) =
-    UnityTable(connection(b), c, angle, ref(family))
+    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
 
 backend_chair(b::Unity, c, angle, family) =
-    UnityChair(connection(b), c, angle, ref(family))
+    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
 
-backend_rectangular_table_and_chairs(b::Unity, c, angle, family) =
-    UnityTableAndChairs(connection(b), c, angle, ref(family))
+backend_rectangular_table_and_chairs(b::Khepri.Unity, c, angle, family) =
+    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
 
-backend_slab(b::Unity, profile, thickness) =
-    map_ref(b,
-            r->UnityExtrude(connection(b), r, vz(thickness)),
-            ensure_ref(b, backend_fill(b, profile)))
+unity"public GameObject Slab(Vector3[] contour, Vector3[][] holes, float h, Material material)"
+
+backend_slab(b::Unity, profile, holes, thickness, family) =
+  let bot_vs = path_vertices(profile)
+      c = connection(b)
+    UnitySlab(c, bot_vs, map(path_vertices, holes), thickness, ref(family))
+  end
+
+unity"public GameObject BeamRectSection(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle, Material material)"
+unity"public GameObject BeamCircSection(Vector3 bot, float radius, Vector3 top, Material material)"
 
 #Beams are aligned along the top axis.
 realize(b::Unity, s::Beam) =
-    let o = loc_from_o_phi(s.cb, s.angle)
-        UnityCenteredBox(connection(b), add_y(o, -s.family.height/2), s.family.width, s.family.height, s.h)
-    end
-#    UnityCenteredBox(connection(b), s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h)
+  let c = s.cb #add_y(s.cb, -s.family.height/2)
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, s.angle, ref(s.family))
+  end
 
 #Columns are aligned along the center axis.
 realize(b::Unity, s::Column) =
-    let o = loc_from_o_phi(s.cb, s.angle)
-        UnityCenteredBox(connection(b), o, s.family.width, s.family.height, s.h)
-    end
+  let c = s.cb #add_y(s.cb, -s.family.height/2)
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, s.angle, ref(s.family))
+  end
 
-backend_wall(b::Unity, path, height, thickness) =
-    let conn = connection(b)
-        UnityThicken(conn,
-                    UnityExtrude(conn,
-                                backend_stroke(b, path),
-                                vz(height)),
-                    thickness)
-    end
-#=
-backend_wall(b::Unity, path, height, thickness) =
-    let conn = connection(b)
-        UnitySweep(conn,
-                  backend_stroke(b, path),
-                  UnityPolyLine(conn, [xy(thickness/-2,0), xy(thickness/+2,0)]),
-                  0,
-                  1)
-    end
-=#
 ###
-#=
-sweep_fractions(conn, b, verts, thickness) =
-    begin
-        UnitySweep(conn,
-                  UnityPolyLine(conn, verts[1:2]),
-                  UnityPolyLine(conn, [xy(thickness/-2,0), xy(thickness/+2,0)]),
-                  0,
-                  1)
-        if verts.length >= 2
-            sweep_fractions(conn, b, verts[1:end], thickness)
-        end
-    end
 
-#
-sweep_fractions(b, verts, thickness) =
-    let p = verts[1]
-        q = verts[2]
-        o = loc_from_o_phi(p, pol_phi(q-p))
-        if length(verts) == 2
-            stroke(rectangular_path(add_y(o, thickness/-2), distance(p, q), thickness), b)
+sweep_fractions(b, verts, height, thickness) =
+    let p = add_z(verts[1], height/2)
+        q = add_z(verts[2], height/2)
+        (c, h) = position_and_height(p, q)
+        s = UnityNativeRef(UnityRightCuboid(connection(b), c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0))
+        if length(verts) > 2
+          (s, sweep_fractions(b, verts[2:end], height, thickness)...)
         else
-            sweep_fractions(b, verts[2:end], thickness)
+          (s, )
         end
     end
 
-backend_wall(b::Unity, path, height, thickness) =
+backend_wall(b::Unity, path, height, thickness, family) =
+  let c = connection(b)
+    UnitySetCurrentMaterial(c, ref(family))
     backend_wall_path(b, path, height, thickness)
+  end
 
-backend_wall_path(b::Unity, path::RectangularPath, height, thickness) =
-    stroke(path, b)
 backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
-    sweep_fractions(b, path.vertices, thickness)
-=#
+    UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
 
 ############################################
-
+#=
 backend_bounding_box(b::Unity, shapes::Shapes) =
   UnityBoundingBox(connection(b), collect_ref(shapes))
 
@@ -591,20 +662,21 @@ create_layer(name::String, color::RGB, b::Unity=current_backend()) =
     UnitySetLayerColor(connection(b), layer, color.r, color.g, color.b)
     layer
   end
+=#
 
 # Blocks
+
+unity"public GameObject CreateBlockInstance(GameObject block, Vector3 position, Vector3 vx, Vector3 vy)"
+unity"public GameObject CreateBlockFromShapes(String name, GameObject[] objs)"
 
 realize(b::Unity, s::Block) =
     UnityCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes))
 
-backend_create_block(name::String, shapes::Shapes, b::Unity=current_backend()) =
-    UnityCreateBlockFromShapes(connection(b), name, collect_ref(shapes))
-
 realize(b::Unity, s::BlockInstance) =
     UnityCreateBlockInstance(
         connection(b),
-        collect_ref(s.block)[1],
-        center_scaled_cs(s.loc, s.scale, s.scale, s.scale))
+        ref(s).value,
+        s.loc, vx(1, s.loc.cs), vy(1, s.loc.cs), s.scale)
 
 #=
 
@@ -618,7 +690,7 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 @time for i in 1:1000 Khepri.instantiate_block("Foo", x(i*10), 0) end
 
 =#
-
+#=
 # Lights
 Unity"public Entity SpotLight(Point3d position, double hotspot, double falloff, Point3d target)"
 Unity"public Entity IESLight(String webFile, Point3d position, Point3d target, Vector3d rotation)"
