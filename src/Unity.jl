@@ -667,6 +667,24 @@ create_layer(name::String, color::RGB, b::Unity=current_backend()) =
   end
 =#
 
+# Materials
+
+UnityMaterial = Int
+
+unity"public Material LoadMaterial(String name)"
+unity"public void SetCurrentMaterial(Material material)"
+unity"public Material CurrentMaterial()"
+
+current_material(b::Unity=current_backend())::UnityMaterial =
+  UnityCurrentMaterial(connection(b))
+
+current_material(material::UnityMaterial, b::Unity=current_backend()) =
+  UnitySetCurrentMaterial(connection(b), material)
+
+get_material(name::String, b::Unity=current_backend()) =
+  UnityGetMaterial(connection(b), name)
+
+
 # Blocks
 
 unity"public GameObject CreateBlockInstance(GameObject block, Vector3 position, Vector3 vx, Vector3 vy, float scale)"

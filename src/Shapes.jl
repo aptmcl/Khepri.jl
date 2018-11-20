@@ -15,8 +15,10 @@ export Shape,
        surface_boundary,
        curve_domain,
        surface_domain,
-       create_layer,
+       create_layer, # Change to get_layer ?
        current_layer,
+       get_material,
+       current_material,
        create_block,
        instantiate_block,
        reset_backend,
@@ -1469,6 +1471,7 @@ add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_windo
 #
 # We need to redefine the default method (maybe add an option to the macro to avoid defining the meta_program)
 # This needs to be fixed for windows
+#=
 meta_program(w::Wall) =
     if isempty(w.doors)
         Expr(:call, :wall,
@@ -1484,6 +1487,7 @@ meta_program(w::Wall) =
                  meta_program(door.family))
         end
     end
+=#
 
 # Beam
 # Beams are mainly horizontal elements. A beam has its top axis aligned with a line defined by two points
