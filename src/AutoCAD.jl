@@ -675,10 +675,14 @@ backend_chair(b::ACAD, c, angle, family) =
 backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
     ACADTableAndChairs(connection(b), c, angle, ref(family))
 
-backend_slab(b::ACAD, profile, thickness) =
-    map_ref(b,
-            r->ACADExtrude(connection(b), r, vz(thickness)),
-            ensure_ref(b, backend_fill(b, profile)))
+backend_slab(b::ACAD, profile, holes, thickness, family) =
+  let c = connection(b)
+      slab(profile) = map_ref(b, r->ACADExtrude(c, r, vz(thickness)),
+                              ensure_ref(b, backend_fill(b, profile)))
+      main_body = slab(profile)
+      holes_bodies = map(slab, holes)
+    foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
+  end
 
 #Beams are aligned along the top axis.
 realize(b::ACAD, s::Beam) =
