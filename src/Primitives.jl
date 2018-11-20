@@ -51,16 +51,16 @@ circle = (op = request_operation("Circle");
 =#
 
 function parse_c_signature(sig)
-  m = match(r"^ *(public|) *(\w+) *(\[\])? +(\w+) *\( *(.*) *\)", sig)
+  m = match(r"^ *(public|) *(\w+) *([\[\]]*) +(\w+) *\( *(.*) *\)", sig)
   ret = Symbol(m.captures[2])
-  ret_is_array = m.captures[3]=="[]"
+  array_level = count(c -> c=='[', something(m.captures[3], ""))
   name = Symbol(m.captures[4])
   params = split(m.captures[5], r" *, *", keepempty=false)
   function parse_c_decl(decl)
-    m = match(r"^ *(\w+) *(\[\])? *(\w+)$", decl)
-    (Symbol(m.captures[1]), m.captures[2]=="[]", Symbol(m.captures[3]))
+    m = match(r"^ *(\w+) *([\[\]]*) *(\w+)$", decl)
+    (Symbol(m.captures[1]), count(c -> c=='[', something(m.captures[2], "")), Symbol(m.captures[3]))
   end
-  (name, [parse_c_decl(decl) for decl in params], (ret, ret_is_array))
+  (name, [parse_c_decl(decl) for decl in params], (ret, array_level))
 end
 
 #=
@@ -126,9 +126,9 @@ function rpc(prefix, str)
                   initiate_rpc_call(conn, opcode, $(string(name)))
                   take!(buf) # Reset the buffer just in case there was an encoding error on a previous call
                   write(buf, opcode)
-                  $([:($(Symbol("encode_", p[1], p[2] ? "_array" : ""))(buf, $(p[3]))) for p in params]...)
+                  $([:($(Symbol("encode_", p[1], "_array"^p[2]))(buf, $(p[3]))) for p in params]...)
                   write(conn, take!(buf))
-                  complete_rpc_call(conn, opcode, $(Symbol("decode_", ret[1], ret[2] ? "_array" : ""))(conn))
+                  complete_rpc_call(conn, opcode, $(Symbol("decode_", ret[1], "_array"^ret[2]))(conn))
                 end
                 $func_name(conn, $([:($(p[3])) for p in params]...))
           end
