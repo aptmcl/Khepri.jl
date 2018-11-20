@@ -682,7 +682,7 @@ current_material(material::UnityMaterial, b::Unity=current_backend()) =
   UnitySetCurrentMaterial(connection(b), material)
 
 get_material(name::String, b::Unity=current_backend()) =
-  UnityGetMaterial(connection(b), name)
+  UnityLoadMaterial(connection(b), name)
 
 
 # Blocks
