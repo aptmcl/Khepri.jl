@@ -807,9 +807,6 @@ create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
 realize(b::ACAD, s::Block) =
     ACADCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes))
 
-backend_create_block(name::String, shapes::Shapes, b::ACAD=current_backend()) =
-    ACADCreateBlockFromShapes(connection(b), name, collect_ref(shapes))
-
 realize(b::ACAD, s::BlockInstance) =
     ACADCreateBlockInstance(
         connection(b),
