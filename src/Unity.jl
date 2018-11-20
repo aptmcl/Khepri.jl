@@ -606,6 +606,9 @@ backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
 backend_bounding_box(b::Unity, shapes::Shapes) =
   UnityBoundingBox(connection(b), collect_ref(shapes))
 =#
+
+unity"public void SetView(Vector3 position, Vector3 target, float lens)"
+
 set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
   UnitySetView(connection(b), camera, target, lens)
 #=
