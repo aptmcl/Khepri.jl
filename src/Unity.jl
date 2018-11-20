@@ -669,7 +669,7 @@ create_layer(name::String, color::RGB, b::Unity=current_backend()) =
 
 # Blocks
 
-unity"public GameObject CreateBlockInstance(GameObject block, Vector3 position, Vector3 vx, Vector3 vy)"
+unity"public GameObject CreateBlockInstance(GameObject block, Vector3 position, Vector3 vx, Vector3 vy, float scale)"
 unity"public GameObject CreateBlockFromShapes(String name, GameObject[] objs)"
 
 realize(b::Unity, s::Block) =
