@@ -137,7 +137,9 @@ abstract type Proxy end
 
 backend(s::Proxy) = s.ref.backend
 realized(s::Proxy) = s.ref.created == s.ref.deleted + 1
-mark_deleted(s::Proxy) = realized(s) ? s.ref.deleted += 1 : error("Inconsistent creation and deletion")
+# This is so stupid. We need call-next-method.
+really_mark_deleted(s::Proxy) = realized(s) ? s.ref.deleted += 1 : error("Inconsistent creation and deletion")
+mark_deleted(s::Proxy) = really_mark_deleted(s)
 # We also need to propagate this to all dependencies
 mark_deleted(ss::Array{<:Proxy}) = foreach(mark_deleted, ss)
 mark_deleted(s::Any) = nothing
@@ -313,6 +315,7 @@ macro defproxy(name, parent, fields...)
 #          selector_names, field_names)...)
     Khepri.mark_deleted(v::$(struct_name)) =
       begin
+        really_mark_deleted(v)
         $(map(field_name -> :(mark_deleted(v.$(field_name))), field_names)...)
       end
     Khepri.meta_program(v::$(struct_name)) =
@@ -1283,7 +1286,7 @@ realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level
     let base = vz(level.height + family.coating_thickness - family.thickness),
         thickness = family.coating_thickness + family.thickness
         # Change this to a better named protocol?
-        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness)
+        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, family)
     end
 
 #
@@ -1398,7 +1401,7 @@ realize_wall_no_openings(b::Backend, w::Wall) =
         w_height = w.top_level.height - w_base_height,
         w_path = translate(w.path, vz(w_base_height))
         w_thickness = w.family.thickness
-        ensure_ref(b, backend_wall(b, w_path, w_height, w_thickness))
+        ensure_ref(b, backend_wall(b, w_path, w_height, w_thickness, w.family))
     end
 
 realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
@@ -1407,18 +1410,18 @@ realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
         w_path = translate(w.path, vz(w_base_height))
         w_thickness = w.family.thickness
         for opening in openings
-            w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening)
+            w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
             realize(b, opening)
         end
         w_ref
     end
 
-realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op) =
+realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
     let op_base_height = op.loc.y
         op_height = op.family.height
         op_thickness = op.family.thickness
         op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height))
-        op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1))
+        op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, w, family))
         ensure_ref(b, subtract_ref(b, w_ref, op_ref))
     end
 
@@ -1427,7 +1430,7 @@ realize(b::Backend, s::Door) =
       height = s.family.height,
       subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
       # we emulate a door using a small wall
-      backend_wall(b, subpath, height, s.family.thickness)
+      backend_wall(b, subpath, height, s.family.thickness, s.family)
   end
 
 realize(b::Backend, s::Window) =
@@ -1435,7 +1438,7 @@ realize(b::Backend, s::Window) =
       height = s.family.height,
       subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
       # we emulate a window using a small wall
-      backend_wall(b, subpath, height, s.family.thickness)
+      backend_wall(b, subpath, height, s.family.thickness, s.family)
   end
 
 ##
