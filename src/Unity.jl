@@ -900,26 +900,17 @@ enable_update(b::Unity) =
     UnityEnableUpdate(connection(b))
 # Render
 
-Unity"public void Render(int width, int height, string path, int levels, double exposure)"
+=#
+unity"public void SetResolution(int width, int height)"
+unity"public void ScreenShot(String path)"
+
 #render exposure: [-3, +3] -> [-6, 21]
 convert_render_exposure(b::Unity, v::Real) = -4.05*v + 8.8
 #render quality: [-1, +1] -> [+1, +50]
 convert_render_quality(b::Unity, v::Real) = round(Int, 25.5 + 24.5*v)
 
 render_view(name::String, b::Unity=current_backend()) =
-    UnityRender(connection(b),
-               render_width(), render_height(),
-               prepare_for_saving_file(render_pathname(name)),
-               convert_render_quality(b, render_quality()),
-               convert_render_exposure(b, render_exposure()))
-
-export mentalray_render_view
-mentalray_render_view(name::String) =
-    let conn = connection(current_backend())
-        UnitySetSystemVariableInt(conn,"SKYSTATUS", 2) # skystatus:background-and-illumination
-        UnityCommand(conn, "._-render P _R $(render_width()) $(render_height()) _yes $(prepare_for_saving_file(render_pathname(name)))\n")
+    let c = connection(b)
+      UnitySetResolution(c, render_width(), render_height())
+      UnityScreenShot(c, render_pathname(name))
     end
-
-save_as(pathname::String, format::String, b::Unity) =
-    UnitySaveAs(connection(b), pathname, format)
-=#
