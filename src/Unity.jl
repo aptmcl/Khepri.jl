@@ -678,9 +678,8 @@ realize(b::Unity, s::Block) =
 realize(b::Unity, s::BlockInstance) =
     UnityCreateBlockInstance(
         connection(b),
-        ref(s).value,
+        ref(s.block).value,
         s.loc, vx(1, s.loc.cs), vy(1, s.loc.cs), s.scale)
-
 #=
 
 # Manual process
