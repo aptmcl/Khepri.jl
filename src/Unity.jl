@@ -506,7 +506,11 @@ backend_get_family(b::Unity, f::UnityMaterialFamily) = UnityLoadMaterial(connect
 
 backend_get_family(b::Unity, f::Family) =
   let unity_family = f.based_on # This needs to be fixed
+    if unity_family == nothing
+      error("Missing Unity family for $f")
+    else
       backend_get_family(b, unity_family)
+    end
   end
 
 #
@@ -515,6 +519,7 @@ unity_wall_family = wall_family(based_on=unity_material_family("Materials/Concre
 unity_slab_family = slab_family(based_on=unity_material_family("Materials/Concrete"))
 unity_beam_family = beam_family(based_on=unity_material_family("Materials/Metal"))
 unity_column_family = column_family(based_on=unity_material_family("Materials/Concrete"))
+unity_door_family = door_family(based_on=unity_material_family("Materials/Wood1"))
 
 switch_to_backend(from::Backend, to::Unity) =
     let height = 0
@@ -523,6 +528,7 @@ switch_to_backend(from::Backend, to::Unity) =
         default_wall_family(unity_wall_family)
         default_beam_family(unity_beam_family)
         default_column_family(unity_column_family)
+        default_door_family(unity_door_family)
         to
     end
 
