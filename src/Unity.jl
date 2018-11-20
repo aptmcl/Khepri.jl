@@ -605,10 +605,10 @@ backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
 #=
 backend_bounding_box(b::Unity, shapes::Shapes) =
   UnityBoundingBox(connection(b), collect_ref(shapes))
-
+=#
 set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
-  UnityView(connection(b), camera, target, lens)
-
+  UnitySetView(connection(b), camera, target, lens)
+#=
 get_view(b::Unity) =
   let c = connection(b)
     UnityViewCamera(c), UnityViewTarget(c), UnityViewLens(c)
