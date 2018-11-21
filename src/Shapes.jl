@@ -1493,7 +1493,8 @@ meta_program(w::Wall) =
 # Beams are mainly horizontal elements. A beam has its top axis aligned with a line defined by two points
 @deffamily(beam_family, Family,
     width::Real=1.0,
-    height::Real=2.0)
+    height::Real=2.0,
+    profile::ClosedPath=rectangular_path(xy(-width/2,-height), width, height))
 
 @defproxy(beam, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::BeamFamily=default_beam_family())
 beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); angle::Real=Angle, family::BeamFamily=Family) =
