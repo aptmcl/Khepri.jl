@@ -574,14 +574,14 @@ unity"public GameObject BeamCircSection(Vector3 bot, float radius, Vector3 top, 
 
 #Beams are aligned along the top axis.
 realize(b::Unity, s::Beam) =
-  let c = s.cb #add_y(s.cb, -s.family.height/2)
-    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, s.angle, ref(s.family))
+  let c = add_y(s.cb, -s.family.height/2)
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, -s.angle, ref(s.family))
   end
 
 #Columns are aligned along the center axis.
 realize(b::Unity, s::Column) =
   let c = s.cb #add_y(s.cb, -s.family.height/2)
-    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, s.angle, ref(s.family))
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, -s.angle, ref(s.family))
   end
 
 ###
