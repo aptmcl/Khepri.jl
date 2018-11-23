@@ -546,6 +546,7 @@ export open_path,
        arc_path,
        circular_path,
        rectangular_path,
+       centered_rectangular_path,
        open_polygonal_path,
        closed_polygonal_path,
        path_set,
@@ -585,6 +586,9 @@ struct RectangularPath <: ClosedPath
     dy::Real
 end
 rectangular_path(corner::Loc=u0(), dx::Real=1, dy::Real=1) = RectangularPath(corner, dx, dy)
+centered_rectangular_path(p, dx, dy) =
+  rectangular_path(p-vxy(dx/2, dy/2), dx, dy)
+
 
 struct OpenPolygonalPath <: OpenPath
     vertices::Locs
@@ -1492,9 +1496,9 @@ meta_program(w::Wall) =
 # Beam
 # Beams are mainly horizontal elements. By default, a beam is aligned along its top axis
 @deffamily(beam_family, Family,
-    width::Real=1.0,
-    height::Real=2.0,
-    profile::ClosedPath=rectangular_path(xy(-width/2,-height), width, height))
+    profile::ClosedPath=rectangular_path(xy(-0.5,-2), 1.0, 2.0))
+beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
+  beam_family(rectangular_path(xy(-width/2,-height), width, height))
 
 @defproxy(beam, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::BeamFamily=default_beam_family())
 beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); angle::Real=Angle, family::BeamFamily=Family) =
