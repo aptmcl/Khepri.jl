@@ -1490,7 +1490,7 @@ meta_program(w::Wall) =
 =#
 
 # Beam
-# Beams are mainly horizontal elements. A beam has its top axis aligned with a line defined by two points
+# Beams are mainly horizontal elements. By default, a beam is aligned along its top axis
 @deffamily(beam_family, Family,
     width::Real=1.0,
     height::Real=2.0,

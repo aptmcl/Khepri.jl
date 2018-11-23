@@ -572,11 +572,11 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
 unity"public GameObject BeamRectSection(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle, Material material)"
 unity"public GameObject BeamCircSection(Vector3 bot, float radius, Vector3 top, Material material)"
 
-#Beams are aligned along the top axis.
 realize(b::Unity, s::Beam) =
-  let profile_u0 = s.family.profile.corner
-      c = add_xy(s.cb, -profile_u0.x, -profile_u0.y)
-    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.profile.height, s.family.profile.width, s.h, -s.angle, ref(s.family))
+  let profile = s.family.profile
+      profile_u0 = profile.corner
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, s.h, -s.angle, ref(s.family))
   end
 
 #Columns are aligned along the center axis.
