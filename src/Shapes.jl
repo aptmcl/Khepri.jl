@@ -1761,6 +1761,7 @@ end
 @defop get_view()
 @defop zoom_extents()
 @defop view_top()
+@defop render_view(name::String)
 
 angle_of_view(size, focal_length) = 2atan(size/2focal_length)
 
