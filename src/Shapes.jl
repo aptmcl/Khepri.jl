@@ -140,7 +140,7 @@ abstract type Proxy end
 backend(s::Proxy) = s.ref.backend
 realized(s::Proxy) = s.ref.created == s.ref.deleted + 1
 # This is so stupid. We need call-next-method.
-really_mark_deleted(s::Proxy) = realized(s) ? s.ref.deleted += 1 : error("Inconsistent creation and deletion")
+really_mark_deleted(s::Proxy) = s.ref.deleted = s.ref.created
 mark_deleted(s::Proxy) = really_mark_deleted(s)
 # We also need to propagate this to all dependencies
 mark_deleted(ss::Array{<:Proxy}) = foreach(mark_deleted, ss)
@@ -302,7 +302,7 @@ macro defproxy(name, parent, fields...)
   #mk_convert(name,typ) = :(isa($(esc(name)), $(typ)) ? $(esc(name)) : throw(WrongTypeForParam($(QuoteNode(name)), $(esc(name)), $(typ))))
   mk_convert(name,typ) = :($(esc(name)))
   field_converts = map(mk_convert, field_names, field_types)
-  #selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
+  selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
   quote
     export $(constructor_name), $(struct_name), $(predicate_name) #, $(selector_names...)
     struct $struct_name <: $parent
@@ -313,8 +313,8 @@ macro defproxy(name, parent, fields...)
       create($(struct_name)(ref, $(field_converts...)))
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
-#    $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
-#          selector_names, field_names)...)
+    $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
+          selector_names, field_names)...)
     Khepri.mark_deleted(v::$(struct_name)) =
       begin
         really_mark_deleted(v)
@@ -1526,8 +1526,8 @@ meta_program(w::Wall) =
   width::Real=1.0,
   height::Real=2.0,
   profile::ClosedPath=rectangular_path(xy(-width/2,-height), width, height))
-beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
-  beam_family(rectangular_path(xy(-width/2,-height), width, height))
+#beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
+#  beam_family(rectangular_path(xy(-width/2,-height), width, height))
 
 @defproxy(beam, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::BeamFamily=default_beam_family())
 beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); angle::Real=Angle, family::BeamFamily=Family) =
