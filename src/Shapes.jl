@@ -388,6 +388,10 @@ rectangle(p::Loc, q::Loc) =
 surface_polygon(v0, v1, vs...) = surface_polygon([v0, v1, vs...])
 @defproxy(surface_regular_polygon, Shape2D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=true)
 @defproxy(surface_rectangle, Shape2D, corner::Loc=u0(), dx::Real=1, dy::Real=1)
+surface_rectangle(p::Loc, q::Loc) =
+  let v = in_cs(q - p, p.cs)
+    surface_rectangle(p, v.x, v.y)
+  end
 @defproxy(surface, Shape2D, frontier::Shapes1D=[circle()])
 surface(c0::Shape, cs...) = surface([c0, cs...])
 #To be removed
@@ -1255,15 +1259,15 @@ macro deffamily(name, parent, fields...)
     export $(constructor_name), $(instance_name), $(default_name), $(predicate_name), $(struct_name)
     struct $struct_name <: $parent
       $(struct_fields...)
-      based_on::Any #Family
-      ref::Parameter{Int} # This should not be done like this because not all backends use Int for references.
+      based_on::Dict{Backend, Family}
+      ref::Parameter{Any}
     end
     $(constructor_name)($(opt_params...);
                         $(key_params...),
-                        based_on=nothing) =
-      $(struct_name)($(field_names...), based_on, Parameter(-1))
-    $(instance_name)(family:: Family #=$(struct_name)=#; $(instance_params...), based_on=family) =
-      $(struct_name)($(field_names...), based_on, Parameter(-1))
+                        based_on=Dict{Backend, Family}()) =
+      $(struct_name)($(field_names...), based_on, Parameter{Any}(nothing))
+    $(instance_name)(family:: Family #=$(struct_name)=#; $(instance_params...), based_on=family.based_on) =
+      $(struct_name)($(field_names...), based_on, Parameter{Any}(missing))
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
@@ -1274,7 +1278,30 @@ macro deffamily(name, parent, fields...)
   end
 end
 
-ref(family::Family) = family.ref()==-1 ? family.ref(backend_get_family(current_backend(), family)) : family.ref()
+# When dispatching a BIM operation to a backend, we also need to dispatch the family
+# If a backend does not specify a based_on family, we create one.
+backend_family(b::Backend, family::Family) =
+  get!(family.based_on, b) do
+      copy_struct(family)
+  end
+
+copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
+
+# Backends will install their own families on top of the default families, e.g.,
+# set_backend_family(default_beam_family(), revit, revit_beam_family)
+set_backend_family(family::Family, backend::Backend, backend_family::Family) =
+    family.based_on[backend]=backend_family
+
+# Finally, we can implement a generic backend caching mechanism for families
+
+realize(b::Backend, f::Family) =
+  if f.ref() == nothing
+    f.ref(backend_get_family(b, f))
+  else
+    f.ref()
+  end
+
+export backend_family, set_backend_family
 
 @deffamily(slab_family, Family,
     thickness::Real=0.2,
@@ -1288,11 +1315,11 @@ ref(family::Family) = family.ref()==-1 ? family.ref(backend_get_family(current_b
 realize(b::Backend, s::Slab) =
     realize_slab(b, s.contour, s.openings, s.level, s.family)
 
-realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::SlabFamily) =
+realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::Family) =
     let base = vz(level.height + family.coating_thickness - family.thickness),
         thickness = family.coating_thickness + family.thickness
         # Change this to a better named protocol?
-        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, family)
+        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, backend_family(b, family))
     end
 
 #
@@ -1496,7 +1523,9 @@ meta_program(w::Wall) =
 # Beam
 # Beams are mainly horizontal elements. By default, a beam is aligned along its top axis
 @deffamily(beam_family, Family,
-    profile::ClosedPath=rectangular_path(xy(-0.5,-2), 1.0, 2.0))
+  width::Real=1.0,
+  height::Real=2.0,
+  profile::ClosedPath=rectangular_path(xy(-width/2,-height), width, height))
 beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
   beam_family(rectangular_path(xy(-width/2,-height), width, height))
 

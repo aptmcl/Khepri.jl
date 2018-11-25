@@ -482,62 +482,32 @@ backend_frame_at(b::Unity, s::Shape2D, u::Real, v::Real) = UnitySurfaceFrameAt(c
 
 # BIM
 
-# Families
-#=
-
-Revit families are divided into
-1. System Families (for walls, roofs, floors, pipes)
-2. Loadable Families (for building components that have an associated file)
-3. In-Place Families (for unique elements created just for the current project)
-
-=#
-
-abstract type UnityFamily <: Family end
-
-struct UnityMaterialFamily <: UnityFamily
-  name::String
-  parameter_map::Dict{Symbol,String}
-  ref::Parameter{Int}
-end
-
-unity_material_family(name, pairs...) = UnityMaterialFamily(name, Dict(pairs...), Parameter(-1))
-
-backend_get_family(b::Unity, f::UnityMaterialFamily) = UnityLoadMaterial(connection(b), f.name)
-
-backend_get_family(b::Unity, f::Family) =
-  let unity_family = f.based_on # This needs to be fixed
-    if unity_family == nothing
-      error("Missing Unity family for $f")
-    else
-      backend_get_family(b, unity_family)
-    end
-  end
-
-#
-
-unity_wall_family = wall_family(based_on=unity_material_family("Materials/Concrete"))
-unity_slab_family = slab_family(based_on=unity_material_family("Materials/Concrete"))
-unity_beam_family = beam_family(based_on=unity_material_family("Materials/Metal"))
-unity_column_family = column_family(based_on=unity_material_family("Materials/Concrete"))
-unity_door_family = door_family(based_on=unity_material_family("Materials/Wood1"))
-
-switch_to_backend(from::Backend, to::Unity) =
-    let height = 0
-        current_backend(to)
-        default_slab_family(unity_slab_family)
-        default_wall_family(unity_wall_family)
-        default_beam_family(unity_beam_family)
-        default_column_family(unity_column_family)
-        default_door_family(unity_door_family)
-        to
-    end
-
 unity"public GameObject LoadResource(String name)"
 unity"public Material LoadMaterial(String name)"
 unity"public void SetCurrentMaterial(Material material)"
 
 unity"public GameObject InstantiateResource(GameObject family, Vector3 pos, Vector3 vx, Vector3 vy, float scale)"
 unity"public GameObject InstantiateBIMElement(GameObject family, Vector3 pos, float angle)"
+
+# Families
+
+abstract type UnityFamily <: Family end
+
+struct UnityMaterialFamily <: UnityFamily
+  name::String
+  parameter_map::Dict{Symbol,String}
+  ref::Parameter{Any}
+end
+
+unity_material_family(name, pairs...) = UnityMaterialFamily(name, Dict(pairs...), Parameter{Any}(nothing))
+backend_get_family(b::Unity, f::UnityMaterialFamily) = UnityLoadMaterial(connection(b), f.name)
+backend_get_family(b::Unity, f::Family) = error("Missing Unity family for $f")
+
+set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Concrete"))
+set_backend_family(default_slab_family(), unity, unity_material_family("Materials/Concrete"))
+set_backend_family(default_beam_family(), unity, unity_material_family("Materials/Metal"))
+set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete"))
+set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood1"))
 
 unity"public GameObject Window(Vector3 position, Quaternion rotation, float dx, float dy, float dz)"
 unity"public GameObject Shelf(Vector3 position, int rowLength, int lineLength, float cellWidth, float cellHeight, float cellDepth)"
@@ -553,20 +523,20 @@ backend_get_family(b::Unity, f::TableChairFamily) =
     UnityLoadResource(connection(b), "ModernTableChair")
 
 backend_rectangular_table(b::Unity, c, angle, family) =
-    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
+    UnityInstantiateBIMElement(connection(b), realize(b, family), c, -angle)
 
 backend_chair(b::Unity, c, angle, family) =
-    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
+    UnityInstantiateBIMElement(connection(b), realize(b, family), c, -angle)
 
 backend_rectangular_table_and_chairs(b::Khepri.Unity, c, angle, family) =
-    UnityInstantiateBIMElement(connection(b), ref(family), c, -angle)
+    UnityInstantiateBIMElement(connection(b), realize(b, family), c, -angle)
 
 unity"public GameObject Slab(Vector3[] contour, Vector3[][] holes, float h, Material material)"
 
 backend_slab(b::Unity, profile, holes, thickness, family) =
   let bot_vs = path_vertices(profile)
       c = connection(b)
-    UnitySlab(c, bot_vs, map(path_vertices, holes), thickness, ref(family))
+    UnitySlab(c, bot_vs, map(path_vertices, holes), thickness, realize(b, family))
   end
 
 unity"public GameObject BeamRectSection(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle, Material material)"
@@ -576,13 +546,13 @@ realize(b::Unity, s::Beam) =
   let profile = s.family.profile
       profile_u0 = profile.corner
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, s.h, -s.angle, ref(s.family))
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, s.h, -s.angle, realize(b, s.family))
   end
 
 #Columns are aligned along the center axis.
 realize(b::Unity, s::Column) =
   let c = s.cb #add_y(s.cb, -s.family.height/2)
-    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, -s.angle, ref(s.family))
+    UnityBeamRectSection(connection(b), c, vz(1, c.cs), vx(1, c.cs), s.family.height, s.family.width, s.h, -s.angle, realize(b, s.family))
   end
 
 ###
@@ -601,7 +571,7 @@ sweep_fractions(b, verts, height, thickness) =
 
 backend_wall(b::Unity, path, height, thickness, family) =
   let c = connection(b)
-    UnitySetCurrentMaterial(c, ref(family))
+    UnitySetCurrentMaterial(c, realize(b, family))
     backend_wall_path(b, path, height, thickness)
   end
 

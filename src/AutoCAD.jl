@@ -661,19 +661,19 @@ backend_get_family(b::ACAD, f::ChairFamily) =
     ACADCreateChairFamily(connection(b), f.length, f.width, f.height, f.seat_height, f.thickness)
 backend_get_family(b::ACAD, f::TableChairFamily) =
     ACADCreateRectangularTableAndChairsFamily(connection(b),
-        ref(f.table_family), ref(f.chair_family),
+        realize(b, f.table_family), realize(b, f.chair_family),
         f.table_family.length, f.table_family.width,
         f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
         f.spacing)
 
 backend_rectangular_table(b::ACAD, c, angle, family) =
-    ACADTable(connection(b), c, angle, ref(family))
+    ACADTable(connection(b), c, angle, realize(b, family))
 
 backend_chair(b::ACAD, c, angle, family) =
-    ACADChair(connection(b), c, angle, ref(family))
+    ACADChair(connection(b), c, angle, realize(b, family))
 
 backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
-    ACADTableAndChairs(connection(b), c, angle, ref(family))
+    ACADTableAndChairs(connection(b), c, angle, realize(b, family))
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
   let c = connection(b)
