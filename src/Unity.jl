@@ -652,13 +652,13 @@ unity"public Material LoadMaterial(String name)"
 unity"public void SetCurrentMaterial(Material material)"
 unity"public Material CurrentMaterial()"
 
-current_material(b::Unity=current_backend())::UnityMaterial =
+current_material(b::Unity)::UnityMaterial =
   UnityCurrentMaterial(connection(b))
 
-current_material(material::UnityMaterial, b::Unity=current_backend()) =
+current_material(material::UnityMaterial, b::Unity) =
   UnitySetCurrentMaterial(connection(b), material)
 
-get_material(name::String, b::Unity=current_backend()) =
+get_material(name::String, b::Unity) =
   UnityLoadMaterial(connection(b), name)
 
 

@@ -806,6 +806,19 @@ create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
     layer
   end
 
+
+# Materials
+ACADMaterial = Int
+
+current_material(b::ACAD)::ACADMaterial =
+  nothing #ACADCurrentMaterial(connection(b))
+
+current_material(material::ACADMaterial, b::ACAD) =
+  nothing #ACADSetCurrentMaterial(connection(b), material)
+
+get_material(name::String, b::ACAD) =
+  nothing #ACADCreateMaterial(connection(b), name)
+
 # Blocks
 
 realize(b::ACAD, s::Block) =

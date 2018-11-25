@@ -18,6 +18,7 @@ export Shape,
        create_layer, # Change to get_layer ?
        current_layer,
        get_material,
+       create_material,
        current_material,
        create_block,
        instantiate_block,
@@ -242,7 +243,7 @@ Base.show(io::IO, e::UndefinedBackendException) = print(io, "No current backend.
 # Note that according to Julia semantics the previous definition actually generates two different ones:
 # delete_all_shapes() = delete_all_shapes(current_backend())
 # delete_all_shapes(backend::Backend) = throw(UndefinedBackendException())
-# Hopefully, backends will specially the function for each specific backend
+# Hopefully, backends will specialize the function for each specific backend
 
 macro defop(name_params)
     name, params = name_params.args[1], name_params.args[2:end]
@@ -1762,6 +1763,12 @@ end
 @defop zoom_extents()
 @defop view_top()
 @defop render_view(name::String)
+@defop create_layer(name::String)
+@defop current_layer()
+@defop current_layer(layer)
+@defop create_material(name::String)
+@defop current_material()
+@defop current_material(material)
 
 angle_of_view(size, focal_length) = 2atan(size/2focal_length)
 
