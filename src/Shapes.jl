@@ -1268,7 +1268,7 @@ macro deffamily(name, parent, fields...)
                         based_on=Dict{Backend, Family}()) =
       $(struct_name)($(field_names...), based_on, Parameter{Any}(nothing))
     $(instance_name)(family:: Family #=$(struct_name)=#; $(instance_params...), based_on=family.based_on) =
-      $(struct_name)($(field_names...), based_on, Parameter{Any}(missing))
+      $(struct_name)($(field_names...), based_on, Parameter{Any}(nothing))
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
