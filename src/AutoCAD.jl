@@ -791,13 +791,13 @@ dimension(p0::Loc, p1::Loc, sep::Real, scale::Real, style::Symbol, b::ACAD=curre
 # Layers
 ACADLayer = Int
 
-current_layer(b::ACAD=current_backend())::ACADLayer =
+current_layer(b::ACAD)::ACADLayer =
   ACADCurrentLayer(connection(b))
 
-current_layer(layer::ACADLayer, b::ACAD=current_backend()) =
+current_layer(layer::ACADLayer, b::ACAD) =
   ACADSetCurrentLayer(connection(b), layer)
 
-create_layer(name::String, b::ACAD=current_backend()) =
+create_layer(name::String, b::ACAD) =
   ACADCreateLayer(connection(b), name)
 
 create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
