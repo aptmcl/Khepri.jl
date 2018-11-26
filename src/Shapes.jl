@@ -15,10 +15,13 @@ export Shape,
        surface_boundary,
        curve_domain,
        surface_domain,
-       create_layer, # Change to get_layer ?
+       get_layer,
+       create_layer,
+       get_or_create_layer,
        current_layer,
        get_material,
        create_material,
+       get_or_create_material,
        current_material,
        create_block,
        instantiate_block,
@@ -1763,9 +1766,11 @@ end
 @defop zoom_extents()
 @defop view_top()
 @defop render_view(name::String)
+@defop get_layer(name::String)
 @defop create_layer(name::String)
 @defop current_layer()
 @defop current_layer(layer)
+@defop get_material(name::String)
 @defop create_material(name::String)
 @defop current_material()
 @defop current_material(material)
