@@ -597,6 +597,18 @@ rectangular_path(corner::Loc=u0(), dx::Real=1, dy::Real=1) = RectangularPath(cor
 centered_rectangular_path(p, dx, dy) =
   rectangular_path(p-vxy(dx/2, dy/2), dx, dy)
 
+# Sections also use paths, but they are centered at the origin
+export rectangular_profile,
+       circular_profile
+
+rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=height) =
+  centered_rectangular_path(u0(), width, height)
+
+circular_profile(Radius::Real=1; center::Real=Radius) =
+  circular_path(u0(), radius)
+
+
+
 
 struct OpenPolygonalPath <: OpenPath
     vertices::Locs
@@ -1527,9 +1539,9 @@ meta_program(w::Wall) =
 # Beam
 # Beams are mainly horizontal elements. By default, a beam is aligned along its top axis
 @deffamily(beam_family, Family,
-  width::Real=1.0,
-  height::Real=2.0,
-  profile::ClosedPath=rectangular_path(xy(-width/2,-height), width, height))
+#  width::Real=1.0,
+#  height::Real=2.0,
+  profile::ClosedPath=rectangular_profile(1, 2))
 #beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
 #  beam_family(rectangular_path(xy(-width/2,-height), width, height))
 

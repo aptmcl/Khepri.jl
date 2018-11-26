@@ -684,10 +684,13 @@ backend_slab(b::ACAD, profile, holes, thickness, family) =
     foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
   end
 
-#Beams are aligned along the top axis.
 realize(b::ACAD, s::Beam) =
-    let o = loc_from_o_phi(s.cb, s.angle)
-        ACADCenteredBox(connection(b), add_y(o, -s.family.height/2), s.family.width, s.family.height, s.h)
+let profile = s.family.profile
+    profile_u0 = profile.corner
+    c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+    # need to test whether it is rotation on center or on axis
+    o = loc_from_o_phi(s.cb, s.angle)
+        ACADCenteredBox(connection(b), add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h)
     end
 #    ACADCenteredBox(connection(b), s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h)
 
