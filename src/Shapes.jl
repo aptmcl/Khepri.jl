@@ -599,7 +599,8 @@ centered_rectangular_path(p, dx, dy) =
 
 # Sections also use paths, but they are centered at the origin
 export rectangular_profile,
-       circular_profile
+       circular_profile,
+       top_aligned_rectangular_profile
 
 rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   centered_rectangular_path(u0(), width, height)
@@ -607,8 +608,8 @@ rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Re
 circular_profile(Radius::Real=1; center::Real=Radius) =
   circular_path(u0(), radius)
 
-
-
+top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
+  rectangular_path(xy(-width/2,-height), width, height)
 
 struct OpenPolygonalPath <: OpenPath
     vertices::Locs
@@ -1297,9 +1298,10 @@ end
 # When dispatching a BIM operation to a backend, we also need to dispatch the family
 # If a backend does not specify a based_on family, we create one.
 backend_family(b::Backend, family::Family) =
-  get!(family.based_on, b) do
-      copy_struct(family)
-  end
+  get!(family.based_on, b, family)
+  #get!(family.based_on, b) do
+  #    copy_struct(family)
+  #end
 
 copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 
@@ -1541,7 +1543,7 @@ meta_program(w::Wall) =
 @deffamily(beam_family, Family,
 #  width::Real=1.0,
 #  height::Real=2.0,
-  profile::ClosedPath=rectangular_profile(1, 2))
+  profile::ClosedPath=top_aligned_rectangular_profile(1, 2))
 #beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
 #  beam_family(rectangular_path(xy(-width/2,-height), width, height))
 
