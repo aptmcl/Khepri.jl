@@ -55,7 +55,7 @@ end
 encode_Color(c::IO, v::RGB) = begin
   encode_float3(c, v.r, v.g, v.b)
 end
-decode_Vector3(c::IO) =
+decode_Color(c::IO) =
   let r = decode_float(c)
       g = decode_float(c)
       b = decode_float(c)
@@ -709,7 +709,7 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 =#
 
 # Lights
-Unity"public GameObject PointLight(Vector3 position, Color color, float range, float intensity)"
+unity"public GameObject PointLight(Vector3 position, Color color, float range, float intensity)"
 
 backend_pointlight(b::Unity, loc::Loc, color::RGB, range::Real, intensity::Real) =
     UnitySpotLight(connection(b), loc, color, range, intensity)
