@@ -605,7 +605,7 @@ export rectangular_profile,
 rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   centered_rectangular_path(u0(), width, height)
 
-circular_profile(Radius::Real=1; center::Real=Radius) =
+circular_profile(Radius::Real=1; radius::Real=Radius) =
   circular_path(u0(), radius)
 
 top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
