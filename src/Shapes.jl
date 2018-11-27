@@ -1767,6 +1767,7 @@ end
 # CAD
 @defop all_shapes()
 @defop all_shapes_in_layer(layer)
+@defop delete_all_shapes_in_layer(layer)
 
 # BIM
 @defop all_levels()

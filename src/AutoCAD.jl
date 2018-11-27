@@ -96,7 +96,6 @@ decode_ObjectId = decode_int_or_error
 encode_ObjectId_array = encode_int_array
 decode_ObjectId_array = decode_int_array
 
-acad"public int DeleteAll()"
 acad"public void SetLengthUnit(String unit)"
 acad"public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)"
 acad"public void View(Point3d position, Point3d target, double lens)"
@@ -106,8 +105,6 @@ acad"public Point3d ViewTarget()"
 acad"public double ViewLens()"
 acad"public byte Sync()"
 acad"public byte Disconnect()"
-acad"public void Delete(ObjectId id)"
-acad"public void DeleteMany(ObjectId[] ids)"
 acad"public ObjectId Copy(ObjectId id)"
 
 acad"public Entity Point(Point3d p)"
@@ -700,7 +697,7 @@ realize(b::ACAD, s::Column) =
         ACADCenteredBox(connection(b), o, s.family.width, s.family.height, s.h)
     end
 
-backend_wall(b::ACAD, path, height, thickness) =
+backend_wall(b::ACAD, path, height, thickness, family) =
     let conn = connection(b)
         ACADThicken(conn,
                     ACADExtrude(conn,
@@ -770,10 +767,24 @@ zoom_extents(b::ACAD) = ACADZoomExtents(connection(b))
 
 view_top(b::ACAD) = ACADViewTop(connection(b))
 
+
+acad"public void DeleteAll()"
+acad"public void DeleteAllInLayer(ObjectId layerId)"
+acad"public void Delete(ObjectId id)"
+acad"public void DeleteMany(ObjectId[] ids)"
+
 backend_delete_shapes(b::ACAD, shapes::Shapes) =
   ACADDeleteMany(connection(b), collect_ref(shapes))
 
-delete_all_shapes(b::ACAD) = ACADDeleteAll(connection(b))
+delete_all_shapes(b::ACAD) =
+  ACADDeleteAll(connection(b))
+
+delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
+  ACADDeleteAllShapesInLayer(connection(b), layer)
+
+
+
+
 set_length_unit(unit::String, b::ACAD) = ACADSetLengthUnit(connection(b), unit)
 
 # Dimensions
