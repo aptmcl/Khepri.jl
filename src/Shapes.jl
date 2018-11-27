@@ -1609,10 +1609,10 @@ realize(b::Backend, s::TableAndChairs) =
 
 # Lights
 
-@defproxy(pointlight, Shape3D, loc::Loc=z(3), color::RGB=rgb(255,255,255), range::Real=10, intensity::Real=4)
+@defproxy(pointlight, Shape3D, loc::Loc=z(3), color::RGB=rgb(255,255,255), range::Real=10, intensity::Real=4, level::Level=default_level())
 
 realize(b::Backend, s::Pointlight) =
-    backend_pointlight(b, s.loc, s.color, s.range, s.intensity)
+    backend_pointlight(b, add_z(s.loc, s.level.height), s.color, s.range, s.intensity)
 
 @defproxy(spotlight, Shape3D, loc::Loc=z(3), dir::Vec=vz(-1), hotspot::Real=pi/4, falloff::Real=pi/3)
 
