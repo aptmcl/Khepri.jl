@@ -52,6 +52,15 @@ decode_Vector3_array_array(c::IO) = begin
   r
 end
 
+encode_Color(c::IO, v::RGB) = begin
+  encode_float3(c, v.r, v.g, v.b)
+end
+decode_Vector3(c::IO) =
+  let r = decode_float(c)
+      g = decode_float(c)
+      b = decode_float(c)
+    rgb(r, g, b)
+  end
 
 #=
 encode_Quaternion(c::IO, pv::Union{XYZ, VXYZ}) =
@@ -698,11 +707,13 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 @time for i in 1:1000 Khepri.instantiate_block("Foo", x(i*10), 0) end
 
 =#
-#=
-# Lights
-Unity"public Entity SpotLight(Point3d position, double hotspot, double falloff, Point3d target)"
-Unity"public Entity IESLight(String webFile, Point3d position, Point3d target, Vector3d rotation)"
 
+# Lights
+Unity"public GameObject PointLight(Vector3 position, Color color, float range, float intensity)"
+
+backend_pointlight(b::Unity, loc::Loc, color::RGB, range::Real, intensity::Real) =
+    UnitySpotLight(connection(b), loc, color, range, intensity)
+#=
 backend_spotlight(b::Unity, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
     UnitySpotLight(connection(b), loc, hotspot, falloff, loc + dir)
 
