@@ -779,12 +779,6 @@ backend_delete_shapes(b::ACAD, shapes::Shapes) =
 delete_all_shapes(b::ACAD) =
   ACADDeleteAll(connection(b))
 
-delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
-  ACADDeleteAllShapesInLayer(connection(b), layer)
-
-
-
-
 set_length_unit(unit::String, b::ACAD) = ACADSetLengthUnit(connection(b), unit)
 
 # Dimensions
@@ -820,6 +814,8 @@ create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
     layer
   end
 
+delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
+  ACADDeleteAllShapesInLayer(connection(b), layer)
 
 # Materials
 ACADMaterial = Int
