@@ -581,7 +581,8 @@ sweep_fractions(b, verts, height, thickness) =
 
 backend_wall(b::Unity, path, height, thickness, family) =
   let c = connection(b)
-    UnitySetCurrentMaterial(c, realize(b, family))
+      unity_family = backend_family(b, family)
+    UnitySetCurrentMaterial(c, realize(b, unity_family))
     backend_wall_path(b, path, height, thickness)
   end
 
