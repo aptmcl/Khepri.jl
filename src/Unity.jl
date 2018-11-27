@@ -712,7 +712,7 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 unity"public GameObject PointLight(Vector3 position, Color color, float range, float intensity)"
 
 backend_pointlight(b::Unity, loc::Loc, color::RGB, range::Real, intensity::Real) =
-    UnitySpotLight(connection(b), loc, color, range, intensity)
+    UnityPointLight(connection(b), loc, color, range, intensity)
 #=
 backend_spotlight(b::Unity, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
     UnitySpotLight(connection(b), loc, hotspot, falloff, loc + dir)
