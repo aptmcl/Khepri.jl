@@ -388,9 +388,9 @@ intersect_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     ensure_ref(b, UnityIntersect(connection(b), r0.value, r1.value))
 
 subtract_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
-    begin
-      UnitySubtractFrom(connection(b), r0.value, r1.value)
-      r0
+    let r = UnitySubtract(connection(b), r0.value, r1.value)
+      UnityDeleteMany(connection(b), [r0.value, r1.value])
+      r
     end
 
 #=
