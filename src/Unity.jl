@@ -378,6 +378,7 @@ backend_loft_surface_point(b::Unity, profile::Shape, point::Shape) =
 unity"public GameObject Unite(GameObject s0, GameObject s1)"
 unity"public GameObject Intersect(GameObject s0, GameObject s1)"
 unity"public GameObject Subtract(GameObject s0, GameObject s1)"
+unity"public void SubtractFrom(GameObject s0, GameObject s1)"
 
 ###
 unite_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
@@ -387,7 +388,10 @@ intersect_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     ensure_ref(b, UnityIntersect(connection(b), r0.value, r1.value))
 
 subtract_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
-    ensure_ref(b, UnitySubtract(connection(b), r0.value, r1.value))
+    begin
+      UnitySubtractFrom(connection(b), r0.value, r1.value)
+      r0
+    end
 
 #=
 slice_ref(b::Unity, r::UnityNativeRef, p::Loc, v::Vec) =
@@ -629,7 +633,7 @@ view_top(b::Unity) = UnityViewTop(connection(b))
 =#
 
 unity"public void DeleteAll()"
-unity"public void DeleteShapes(GameObject[] objs)"
+unity"public void DeleteMany(GameObject[] objs)"
 delete_all_shapes(b::Unity) = UnityDeleteAll(connection(b))
 
 backend_delete_shapes(b::Unity, shapes::Shapes) =

@@ -1462,6 +1462,7 @@ realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
         w_thickness = w.family.thickness
         for opening in openings
             w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
+            # This must be saved in the wall
             realize(b, opening)
         end
         w_ref
@@ -1480,9 +1481,13 @@ realize(b::Backend, s::Door) =
   let base_height = s.wall.bottom_level.height + s.loc.y,
       height = s.family.height,
       subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
-      # we emulate a door using a small wall
-      backend_wall(b, subpath, height, s.family.thickness, s.family)
+      backend_door(b, subpath, height, s.family.thickness, s.family)
   end
+
+backend_door(b::Backend, path, height, thickness, family) =
+  # we emulate a door using a small wall
+  backend_wall(b::Backend, path, height, thickness, family)
+
 
 realize(b::Backend, s::Window) =
   let base_height = s.wall.bottom_level.height + s.loc.y,
@@ -1655,7 +1660,7 @@ intersection(shapes::Shapes) = intersection_shape(shapes)
 intersection(shape::Shape, shapes...) = intersection_shape([shape, shapes...])
 
 @defproxy(subtraction_shape2D, Shape2D, shape::Shape=surface_circle(), shapes::Shapes=Shape[])
-@defproxy(subtraction_shape3D, Shape3D, shape::Shape=surface_circle(), shapes::Shapes=Shape[])
+@defproxy(subtraction_shape3D, Shape3D, shape::Shape=surface_sphere(), shapes::Shapes=Shape[])
 subtraction(shape::Shape2D, shapes...) = subtraction_shape2D(shape, [shapes...])
 subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 
@@ -1724,7 +1729,7 @@ delete_shapes(shapes::Shapes=Shape[]) =
   if ! isempty(shapes)
     to_delete = filter(realized, shapes)
     backend_delete_shapes(backend(shapes[1]), to_delete)
-    foreach(mark_deleted, to_delete)
+    foreach(mark_deleted, shapes)
   end
 
 and_delete_shape(r::Any, shape::Shape) =
