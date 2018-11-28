@@ -400,14 +400,15 @@ slice_ref(b::Unity, r::UnityUnionRef, p::Loc, v::Vec) =
 unite_refs(b::Unity, refs::Vector{<:UnityRef}) =
     UnityUnionRef(tuple(refs...))
 
-#=
 realize(b::Unity, s::IntersectionShape) =
-    foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes), init=UnityUniversalRef())
+  let r = foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes),
+                init=UnityUniversalRef())
+    delete_shapes(s.shapes)
+    r
+  end
 
 realize(b::Unity, s::Slice) =
   slice_ref(b, ref(s.shape), s.p, s.n)
-
-=#
 
 unity"public void Move(GameObject s, Vector3 v)"
 unity"public void Scale(GameObject s, Vector3 p, float scale)"
@@ -625,14 +626,14 @@ zoom_extents(b::Unity) = UnityZoomExtents(connection(b))
 
 view_top(b::Unity) = UnityViewTop(connection(b))
 
-backend_delete_shapes(b::Unity, shapes::Shapes) =
-  UnityDeleteMany(connection(b), collect_ref(shapes))
 =#
 
 unity"public void DeleteAll()"
-
+unity"public void DeleteShapes(GameObject[] objs)"
 delete_all_shapes(b::Unity) = UnityDeleteAll(connection(b))
 
+backend_delete_shapes(b::Unity, shapes::Shapes) =
+  UnityDeleteMany(connection(b), collect_ref(shapes))
 
 #=
 set_length_unit(unit::String, b::Unity) = UnitySetLengthUnit(connection(b), unit)
