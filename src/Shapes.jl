@@ -1472,7 +1472,7 @@ realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
         op_height = op.family.height
         op_thickness = op.family.thickness
         op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height))
-        op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, w, family))
+        op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, family))
         ensure_ref(b, subtract_ref(b, w_ref, op_ref))
     end
 
