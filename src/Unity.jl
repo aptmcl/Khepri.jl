@@ -374,6 +374,10 @@ backend_loft_curve_point(b::Unity, profile::Shape, point::Shape) =
 backend_loft_surface_point(b::Unity, profile::Shape, point::Shape) =
     backend_loft_curve_point(b, profile, point)
 
+=#
+
+unity"public GameObject Subtract(GameObject s0, GameObject s1)"
+###
 unite_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     ensure_ref(b, UnityUnite(connection(b), r0.value, r1.value))
 
@@ -383,6 +387,7 @@ intersect_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
 subtract_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     ensure_ref(b, UnitySubtract(connection(b), r0.value, r1.value))
 
+#=
 slice_ref(b::Unity, r::UnityNativeRef, p::Loc, v::Vec) =
     (UnitySlice(connection(b), r.value, p, v); r)
 
