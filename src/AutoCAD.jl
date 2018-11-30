@@ -627,8 +627,8 @@ realize(b::ACAD, s::UnionMirror) =
 realize(b::ACAD, s::SurfaceGrid) =
     ACADSurfaceFromGrid(
         connection(b),
-        size(s.points,1),
         size(s.points,2),
+        size(s.points,1),
         reshape(s.points,:),
         s.closed_u,
         s.closed_v,
