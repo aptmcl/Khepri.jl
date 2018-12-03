@@ -932,20 +932,6 @@ select_position(prompt::String, b::ACAD) =
     end
   end
 
-select_one_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    let ans = f(connection(b), prompt)
-      length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
-    end
-  end
-#
-select_many_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    map(id -> shape_from_ref(id, b), f(connection(b), prompt))
-  end
-
 acad"public ObjectId[] GetPoint(string prompt)"
 acad"public ObjectId[] GetPoints(string prompt)"
 

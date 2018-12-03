@@ -1897,3 +1897,19 @@ to_render(f, name) =
     delete_all_shapes()
     f()
   end
+
+# Seletion
+
+select_one_with_prompt(prompt::String, b::Backend, f::Function) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    let ans = f(connection(b), prompt)
+      length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
+    end
+  end
+
+select_many_with_prompt(prompt::String, b::Backend, f::Function) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    map(id -> shape_from_ref(id, b), f(connection(b), prompt))
+  end

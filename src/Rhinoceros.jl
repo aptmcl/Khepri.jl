@@ -595,22 +595,19 @@ backend_wall(b::RH, path, height, thickness) =
 backend_bounding_box(b::RH, shapes::Shapes) =
   RHBoundingBox(connection(b), collect_ref(shapes))
 
-
-current_backend_name(b::RH=current_backend()) = "AutoCAD"
-
 import Base.view
-view(camera::XYZ, target::XYZ, lens::Real, b::RH=current_backend()) =
+set_view(camera::XYZ, target::XYZ, lens::Real, b::RH) =
   RHView(connection(b), camera, target, lens)
 
-get_view(b::RH=current_backend()) =
+get_view(b::RH) =
   let c = connection(b)
     RHViewCamera(c), RHViewTarget(c), RHViewLens(c)
   end
 
-zoom_extents(b::RH=current_backend()) =
+zoom_extents(b::RH) =
   RHZoomExtents(connection(b))
 
-view_top(b::RH=current_backend()) =
+view_top(b::RH) =
     RHViewTop(connection(b))
 
 #
@@ -622,7 +619,7 @@ rhino"public void DeleteMany(Guid[] ids)"
 backend_delete_shapes(b::RH, shapes::Shapes) =
   RHDeleteMany(connection(b), collect_ref(shapes))
 
-delete_all_shapes(b::RH=current_backend()) =
+delete_all_shapes(b::RH) =
   RHDeleteAll(connection(b))
 
 # Layers
@@ -636,16 +633,16 @@ rhino"public void SetShapeLayer(RhinoObject objId, String layerId)"
 
 RHLayer = String
 
-current_layer(b::RH=current_backend())::RHLayer =
+current_layer(b::RH)::RHLayer =
   RHCurrentLayer(connection(b))
 
-current_layer(layer::RHLayer, b::RH=current_backend()) =
+current_layer(layer::RHLayer, b::RH) =
   RHSetCurrentLayer(connection(b), layer)
 
-create_layer(name::String, b::RH=current_backend()) =
+create_layer(name::String, b::RH) =
   RHCreateLayer(connection(b), name)
 
-create_layer(name::String, color::RGB, b::RH=current_backend()) =
+create_layer(name::String, color::RGB, b::RH) =
   let layer = RHCreateLayer(connection(b), name)
     RHSetLayerColor(connection(b), layer, color.r, color.g, color.b)
     layer
@@ -654,7 +651,7 @@ create_layer(name::String, color::RGB, b::RH=current_backend()) =
 delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
   RHDeleteAllInLayer(connection(b), layer)
 
-shape_from_ref(r, b::RH=current_backend()) =
+shape_from_ref(r, b::RH) =
   let c = connection(b)
     let code = RHShapeCode(c, r)
         ref = LazyRef(b, RHNativeRef(r))
@@ -726,20 +723,6 @@ select_position(prompt::String, b::RH) =
     let ans = RHGetPosition(connection(b), prompt)
       length(ans) > 0 ? ans[1] : nothing
     end
-  end
-
-select_one_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    let ans = f(connection(b), prompt)
-      length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
-    end
-  end
-#
-select_many_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    map(id -> shape_from_ref(id, b), f(connection(b), prompt))
   end
 
 rhino"public Guid[] GetPoint(string prompt)"
