@@ -50,9 +50,7 @@ rhino"public Entity Point(Point3d p)"
 rhino"public Point3d PointPosition(Entity ent)"
 =#
 rhino"public Guid PolyLine(Point3d[] pts)"
-#=
-rhino"public Point3d[] LineVertices(ObjectId id)"
-=#
+rhino"public Point3d[] LineVertices(RhinoObject id)"
 rhino"public Guid Spline(Point3d[] pts)"
 #=
 rhino"public Entity InterpSpline(Point3d[] pts, Vector3d tan0, Vector3d tan1)"
