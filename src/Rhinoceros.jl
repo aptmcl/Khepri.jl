@@ -442,8 +442,13 @@ backend_loft_curve_point(b::RH, profile::Shape, point::Shape) =
 backend_loft_surface_point(b::RH, profile::Shape, point::Shape) =
   backend_loft_curve_point(b, profile, point)
 =#
+unite_refs(b::RH, refs::Vector{<:RHRef}) =
+    RHUnionRef(tuple(refs...))
+
 unite_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
   (RHUnite(connection(b), r0.value, r1.value); r0)
+
+
 
 intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
     let refs = RHIntersect(connection(b), r0.value, r1.value)
@@ -466,6 +471,10 @@ subtract_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
             refs
         end
     end
+
+subtract_ref(b::RH, r0::RHGenericRef, r1::RHUnionRef) =
+  foldr((r0,r1)->subtract_ref(b,r0,r1), r1.values, init=r0)
+
 #=
 slice_ref(b::RH, r::RHNativeRef, p::Loc, v::Vec) =
   (RHSlice(connection(b), r.value, p, v); r)
@@ -474,8 +483,6 @@ slice_ref(b::RH, r::RHUnionRef, p::Loc, v::Vec) =
   map(r->slice_ref(b, r, p, v), r.values)
 
 =#
-unite_refs(b::RH, refs::Vector{<:RHRef}) =
-    RHUnionRef(tuple(refs...))
 
 #=
 realize(b::RH, s::IntersectionShape) =
