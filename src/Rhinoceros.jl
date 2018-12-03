@@ -472,7 +472,7 @@ subtract_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
         end
     end
 
-subtract_ref(b::RH, r0::RHGenericRef, r1::RHUnionRef) =
+subtract_ref(b::RH, r0::RHRef, r1::RHUnionRef) =
   foldr((r0,r1)->subtract_ref(b,r0,r1), r1.values, init=r0)
 
 #=
