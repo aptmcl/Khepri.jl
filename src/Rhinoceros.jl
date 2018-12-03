@@ -195,9 +195,9 @@ reset_rhino_connection() = reset(rhino.connection)
 backend_name(b::RH) = "Rhino"
 
 realize(b::RH, s::EmptyShape) =
-  EmptyRef{RHId}()
+  RHEmptyRef()
 realize(b::RH, s::UniversalShape) =
-  UniversalRef{RHId}()
+  RHUniversalRef()
 
 backend_stroke(b::RH, path::CircularPath) =
     RHCircle(connection(b), path.center, vz(1, path.center.cs), path.radius)
@@ -391,20 +391,14 @@ realize(b::RH, s::Cylinder) =
   RHCylinder(connection(b), s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
 
 #realize(b::RH, s::Circle) = RHCircle(connection(b),
-#=
-realize(b::Backend, s::Extrusion) =
-  backend_extrusion(b, s.profile, s.v)
 
-backend_extrusion(b::Backend, p::Point, v::Vec) =
-  realize_and_delete_shapes(line([p.position, p.position + v], backend=b), [p])
-
-backend_extrusion(b::Backend, s::Shape, v::Vec) =
+backend_extrusion(b::RH, s::Shape, v::Vec) =
     and_mark_deleted(
         map_ref(s) do r
-            RHExtrude(connection(b), r, v)
+            RHExtrusion(connection(b), r, v)
         end,
         s)
-
+#=
 realize(b::Backend, s::Sweep) =
   backend_sweep(b, s.path, s.profile, s.rotation, s.scale)
 
