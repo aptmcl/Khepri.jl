@@ -201,8 +201,6 @@ realize(b::RH, s::EmptyShape) =
 realize(b::RH, s::UniversalShape) =
   UniversalRef{RHId}()
 
-delete_all_shapes(b::RH) = RHDeleteAll(connection(b))
-
 backend_stroke(b::RH, path::CircularPath) =
     RHCircle(connection(b), path.center, vz(1, path.center.cs), path.radius)
 backend_stroke(b::RH, path::RectangularPath) =
@@ -797,8 +795,8 @@ generate_captured_shapes(ss::Shapes, b::RH) =
 rhino"public Guid[] GetAllShapes()"
 rhino"public Guid[] GetAllShapesInLayer(String name)"
 
-all_shapes(b::RH=current_backend()) =
+all_shapes(b::RH) =
   [shape_from_ref(r) for r in RHGetAllShapes(connection(b))]
 
-all_shapes_in_layer(layer, b::RH=current_backend()) =
+all_shapes_in_layer(layer, b::RH) =
   [shape_from_ref(r) for r in RHGetAllShapesInLayer(connection(b), layer)]
