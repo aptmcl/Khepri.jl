@@ -445,18 +445,21 @@ backend_loft_surface_point(b::RH, profile::Shape, point::Shape) =
 unite_refs(b::RH, refs::Vector{<:RHRef}) =
     RHUnionRef(tuple(refs...))
 
+unite_refs(b::RH, r::RHUnionRef) =
+  r
+
 unite_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
   (RHUnite(connection(b), r0.value, r1.value); r0)
-
-
 
 intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
     let refs = RHIntersect(connection(b), r0.value, r1.value)
         n = length(refs)
         if n == 0
             RHEmptyRef()
+        elseif n == 1
+            RHNativeRef(refs[1])
         else
-            refs
+            RHUnionRef(map(RHNativeRef, tuple(refs...)))
         end
     end
 
@@ -465,15 +468,19 @@ subtract_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
         n = length(refs)
         if n == 0
             RHEmptyRef()
-        elseif n == 1 && is_empty_guid(refs[1]) # failed
-            RHSubtractionRef(r0, tuple(r1))
+        elseif n == 1
+            if is_empty_guid(refs[1]) # failed
+                RHSubtractionRef(r0, tuple(r1))
+            else
+                RHNativeRef(refs[1])
+            end
         else
-            refs
+            RHUnionRef(map(RHNativeRef, tuple(refs...)))
         end
     end
 
 subtract_ref(b::RH, r0::RHRef, r1::RHUnionRef) =
-  foldr((r0,r1)->subtract_ref(b,r0,r1), r1.values, init=r0)
+  foldl((r0,r1)->subtract_ref(b,r0,r1), r1.values, init=r0)
 
 #=
 slice_ref(b::RH, r::RHNativeRef, p::Loc, v::Vec) =
