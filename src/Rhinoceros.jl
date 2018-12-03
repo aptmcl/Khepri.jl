@@ -233,6 +233,7 @@ backend_fill(b::RH, path::RectangularPath) =
         SurfaceClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
 =#
+
 backend_fill_curves(b::RH, gs::Guids) = RHSurfaceFromCurves(connection(b), gs)
 backend_fill_curves(b::RH, g::Guid) = RHSurfaceFromCurves(connection(b), [g])
 
@@ -252,9 +253,10 @@ realize(b::RH, s::Point) =
 
 realize(b::RH, s::Line) =
   RHPolyLine(connection(b), s.vertices)
-#=
+
 realize(b::RH, s::Polygon) =
   RHClosedPolyLine(connection(b), s.vertices)
+#=
 realize(b::RH, s::Spline) =
   if (s.v0 == false) && (s.v1 == false)
     RHSpline(connection(b), s.points)
