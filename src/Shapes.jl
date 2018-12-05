@@ -1696,7 +1696,7 @@ evaluate(s::SurfaceGrid, u::Real, v::Real) =
 
 # Blocks
 
-@defproxy(block, Shape, name::String="Block", shapes::Shapes = [circle()])
+@defproxy(block, Shape, name::String="Block", shapes::Shapes = Shape[])
 @defproxy(block_instance, Shape, block::Block=required(), loc::Loc=u0(), scale::Real=1.0)
 
 ################################################################################

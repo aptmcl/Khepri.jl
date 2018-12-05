@@ -712,6 +712,8 @@ unity"public GameObject CreateBlockInstance(GameObject block, Vector3 position, 
 unity"public GameObject CreateBlockFromShapes(String name, GameObject[] objs)"
 
 realize(b::Unity, s::Block) =
+  s.shapes == [] ?
+    UnityLoadResource(connection(b), s.name) :
     UnityCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes))
 
 realize(b::Unity, s::BlockInstance) =
