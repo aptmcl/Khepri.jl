@@ -394,6 +394,14 @@ subtract_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     end
 
 #=
+subtract_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
+    begin
+      UnitySubtractFrom(connection(b), r0.value, r1.value)
+      r0.value
+    end
+=#
+
+#=
 slice_ref(b::Unity, r::UnityNativeRef, p::Loc, v::Vec) =
     (UnitySlice(connection(b), r.value, p, v); r)
 
@@ -619,7 +627,11 @@ backend_bounding_box(b::Unity, shapes::Shapes) =
 unity"public void SetView(Vector3 position, Vector3 target, float lens)"
 
 set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
-  UnitySetView(connection(b), camera, target, lens)
+  let c = connection(b)
+    UnitySetView(c, camera, target, lens)
+    interrupt_processing(c)
+  end
+
 #=
 get_view(b::Unity) =
   let c = connection(b)
