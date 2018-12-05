@@ -250,17 +250,18 @@ start_film(name::String) =
         film_active(true)
         film_filename(name)
         film_frame(0)
+
     end
 
 frame_filename(filename::String, i::Integer) =
     "$(filename)-frame-$(lpad(i,3,'0'))"
 
 save_film_frame(obj::Any=true) =
-    with(render_kind_dir, "Film") do
-        render_view(frame_filename(film_filename(), film_frame()))
-        film_frame(film_frame() + 1)
-        obj
-    end
+  with(render_kind_dir, "Film") do
+    render_view(prepare_for_saving_file(frame_filename(film_filename(), film_frame())))
+    film_frame(film_frame() + 1)
+    obj
+  end
 
 rendering_with(f;
     dir=render_dir(),
