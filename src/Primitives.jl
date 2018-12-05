@@ -23,6 +23,7 @@ function request_operation(conn::IO, name)
   end
 end
 
+interrupt_processing(conn::IO) = write(conn, Int32(-1))
 #=
 create_op(name::ASCIIString, argtypes::Array{DataType}, rettype::DataType) = (
   op = request_operation(name);
