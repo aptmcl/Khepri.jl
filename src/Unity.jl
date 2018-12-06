@@ -609,11 +609,13 @@ sweep_fractions(b, verts, height, thickness) =
     end
 
 backend_wall(b::Unity, path, height, thickness, family) =
-  let c = connection(b)
+  curve_length(path) < 1e-9  ? # HACK!!!!!
+    UnityEmptyRef() :
+    let c = connection(b)
       unity_family = backend_family(b, family)
-    UnitySetCurrentMaterial(c, realize(b, unity_family))
-    backend_wall_path(b, path, height, thickness)
-  end
+      UnitySetCurrentMaterial(c, realize(b, unity_family))
+      backend_wall_path(b, path, height, thickness)
+    end
 
 backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
     UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
