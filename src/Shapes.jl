@@ -747,17 +747,20 @@ subpath_starting_at(path::OpenPolygonalPath, d::Real) =
         for i in 2:length(pts)
             p2 = pts[i]
             delta = distance(p1, p2)
-            if d == delta
-                return open_polygonal_path(pts[i:end])
-            elseif d < delta
+            diff = d - delta
+            if diff < 0
                 mp = p1 + (p2 - p1)*d/delta
                 return open_polygonal_path([mp, pts[i:end]...])
+            elseif abs(diff) < 1e-9
+                return open_polygonal_path(i == length(pts) ? [pts[i], pts[i]] : pts[i:end])
             else
                 p1 = p2
                 d -= delta
             end
         end
-        error("Exceeded path length")
+        abs(d) < 1e-9 ?
+          path :
+          error("Exceeded path length")
     end
 
 subpath_ending_at(path::OpenPolygonalPath, d::Real) =
@@ -766,17 +769,20 @@ subpath_ending_at(path::OpenPolygonalPath, d::Real) =
         for i in 2:length(pts)
             p2 = pts[i]
             delta = distance(p1, p2)
-            if d == delta
-                return open_polygonal_path(pts[1:i])
-            elseif d < delta
+            diff = d - delta
+            if diff < 0
                 mp = p1 + (p2 - p1)*d/delta
                 return open_polygonal_path([pts[1:i-1]..., mp])
+            elseif abs(diff) < 1e-9
+                return open_polygonal_path(pts[1:i])
             else
-                p1 = p2
-                d -= delta
+              p1 = p2
+              d -= delta
             end
         end
-        error("Exceeded path length")
+        abs(d) < 1e-9 ?
+          path :
+          error("Exceeded path length")
     end
 
 #=
