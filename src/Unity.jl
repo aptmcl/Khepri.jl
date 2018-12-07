@@ -597,6 +597,7 @@ realize(b::Unity, s::Column) =
   end
 
 unity"public GameObject Panel(Vector3[] pts, Vector3 n, Material material)"
+
 realize(b::Unity, s::Panel) =
     let p1 = s.vertices[1],
         p2 = s.vertices[2],
@@ -604,7 +605,8 @@ realize(b::Unity, s::Panel) =
         n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
         UnityPanel(
           connection(b),
-          map(p -> p - n, s.vertices, n*2),
+          map(p -> p - n, s.vertices),
+          n*2,
           realize(b, backend_family(b, s.family)))
     end
 
