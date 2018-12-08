@@ -139,7 +139,9 @@ export default_lens,
        panning,
        lens_zoom,
        dolly_effect_back,
-       dolly_effect_forth
+       dolly_effect_forth,
+       set_view_save_frame,
+       set_view_save_frames
 
 
 default_lens = Parameter(50)
@@ -163,17 +165,6 @@ track_still_target(camera_path, target, lens=default_lens()) =
     set_view_save_frame(camera, target, lens)
   end
 
-# Camera paths
-rotation_path(center, r, start_phi, stop_phi, h, frames) =
-  map(fi -> center+vcyl(r, fi, h),
-      division(start_phi, stop_phi, frames))
-
-spiral_path(center, r, r_delta, start_phi, stop_phi, h, h_delta, frames) =
-  map((fi, r, h) -> center+vcyl(r, fi, h),
-      division(start_phi, stop_phi, frames),
-      division(r, r*r_delta, frames),
-      division(h, h*h_delta, frames))
-
 # Moving camera and target
 
 # target object moves and the camera makes a similar movement
@@ -191,11 +182,6 @@ track_moving_target(camera, target_path, lens=default_lens()) =
   let v = camera - target_path[1]
       camera_path = twin_path(target_path, v)
     set_view_save_frames(camera_path, target_path, lens)
-  end
-
-linear_path(p1, p2, frames) =
-  let v = p2 - p1
-    map_division(t -> p1 + v*t, 0, 1, frames)
   end
 
 # Walkthroughs
