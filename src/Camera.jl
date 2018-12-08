@@ -58,11 +58,18 @@ prepare_for_saving_file(path::String) =
         p
     end
 
-export film_active, film_filename, film_frame, start_film, frame_filename, save_film_frame
+export film_active,
+       film_filename,
+       film_frame,
+       start_film,
+       frame_filename,
+       save_film_frame,
+       saving_film_frames
 
 const film_active = Parameter(false)
 const film_filename = Parameter("")
 const film_frame = Parameter(0)
+const saving_film_frames = Parameter(true)
 
 start_film(name::String) =
     begin
@@ -76,9 +83,13 @@ frame_filename(filename::String, i::Integer) =
     "$(filename)-frame-$(lpad(i,3,'0'))"
 
 save_film_frame(obj::Any=true) =
-  with(render_kind_dir, "Film") do
-    render_view(prepare_for_saving_file(frame_filename(film_filename(), film_frame())))
-    film_frame(film_frame() + 1)
+  begin
+    if saving_film_frames()
+      with(render_kind_dir, "Film") do
+        render_view(prepare_for_saving_file(frame_filename(film_filename(), film_frame())))
+        film_frame(film_frame() + 1)
+      end
+    end
     obj
   end
 
@@ -135,7 +146,7 @@ default_lens = Parameter(50)
 
 set_view_save_frame(camera, target, lens=default_lens()) =
   begin
-    view(camera, target, lens)
+    set_view(camera, target, lens)
     save_film_frame()
   end
 
