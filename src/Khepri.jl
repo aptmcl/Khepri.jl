@@ -17,6 +17,7 @@ include("Rhinoceros.jl")
 #include("ArchiCAD.jl")
 #include("Radiance.jl")
 include("Unity.jl")
+include("Camera.jl")
 #const com = PyNULL()
 
 #include("Robot.jl")
