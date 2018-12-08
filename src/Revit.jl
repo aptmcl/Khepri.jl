@@ -129,29 +129,26 @@ backend_get_family(b::RVT, f::Family) =
     end
 
 #
-
-revit_wall_family = wall_family(based_on=revit_system_family())
+set_backend_family(default_wall_family(), revit, wall_family(based_on=revit_system_family()))
+set_backend_family(default_slab_family(), unity, slab_family(based_on=revit_system_family()))
+set_backend_family(default_beam_family(), unity,
+  beam_family_element(
+    beam_family(based_on=revit_file_family(
+      "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
+      :width=>"b", :height=>"d")),
+    width=0.2, height=0.3))
+#set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
+#set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
+#set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass"))
 
 # This should go into switch_to_backend
-
-
-revit_beam_family =
-    beam_family_element(
-        beam_family(
-            based_on=revit_file_family(
-                "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-                :width=>"b", :height=>"d")),
-        width=0.2, height=0.3)
 
 # We need to install families
 
 switch_to_backend(from::Backend, to::RVT) =
     let height = level_height(default_level())
-
         current_backend(to)
         default_level(level(height))
-        default_wall_family(revit_wall_family) # Adjust to the former values?
-        default_beam_family(revit_beam_family)
     end
 
 
