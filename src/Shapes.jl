@@ -1896,6 +1896,17 @@ with_shape_dependency(f, ss) =
         end
     end
 
+#
+export internalize_shape, internalize_shapes
+
+internalize_shape(s=select_shape("Select shape to be internalized")) =
+  if s != nothing
+    println(meta_program(s))
+  end
+
+internalize_shapes(ss=select_shapes("Select shapes to be internalized")) =
+    println(meta_program(ss))
+
 # Later, this will be used to create images.
 export to_render
 to_render(f, name) =
