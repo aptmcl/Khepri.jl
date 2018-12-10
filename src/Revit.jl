@@ -102,6 +102,14 @@ end
 
 revit_file_family(path, pairs...) = RevitFileFamily(path, Dict(pairs...), Parameter(-1))
 
+struct RevitFamilyElement <: RevitFamily
+    family::RevitFamily
+    parameters::Dict
+end
+
+revit_family_element(revit_family, pairs...) =
+    RevitFamilyElement(revit_family, Dict(pairs))
+
 # This is for future use
 struct RevitInPlaceFamily <: RevitFamily
     parameter_map::Dict{Symbol,String}
@@ -114,22 +122,19 @@ rvt"public ElementId FamilyElement(ElementId familyId, string[] namesList, Lengt
 
 backend_get_family(b::RVT, f::RevitSystemFamily) = 0 #Convention for system families
 backend_get_family(b::RVT, f::RevitFileFamily) = RVTLoadFamily(connection(b), f.path)
-backend_get_family(b::RVT, f::Family) =
-    let revit_family = f.based_on # This needs to be fixed
-        param_map = revit_family.parameter_map
-        params = keys(param_map)
-        if isempty(param_map) # no parameters, just use the system family
-            0
-        else
-            RVTFamilyElement(connection(b),
-                             ref(revit_family),
-                             [param_map[param] for param in params],
-                             [getfield(f, param) for param in params])
-        end
-    end
+backend_get_family(b::RVT, f::RevitFamilyElement) =
+  let revit_family = f.family
+      param_map = revit_family.parameter_map
+      params = keys(param_map)
+    RVTFamilyElement(connection(b),
+                     ref(revit_family),
+                     [param_map[param] for param in params],
+                     [getfield(f, param) for param in params])
+  end
 
 #=
-set_backend_family(default_wall_family(), revit, wall_family(based_on=revit_system_family()))
+
+set_backend_family(default_wall_family(), revit_system_family()))
 set_backend_family(default_slab_family(), unity, slab_family(based_on=revit_system_family()))
 set_backend_family(default_beam_family(), unity,
   beam_family_element(
