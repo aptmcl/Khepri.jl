@@ -477,6 +477,8 @@ realize(b::Unity, s::UnionMirror) =
           end
     UnionRef((r0,r1))
   end
+=#
+unity"public GameObject SurfaceFromGrid(int m, int n, Vector3[] pts, bool closedM, bool closedN, int level)"
 
 realize(b::Unity, s::SurfaceGrid) =
     UnitySurfaceFromGrid(
@@ -487,7 +489,7 @@ realize(b::Unity, s::SurfaceGrid) =
         s.closed_u,
         s.closed_v,
         2)
-
+#=
 realize(b::Unity, s::Thicken) =
   and_delete_shape(
     map_ref(s.shape) do r
