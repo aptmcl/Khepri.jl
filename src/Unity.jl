@@ -107,8 +107,8 @@ unity"public void SetApplyColliders(bool apply)"
 
 create_fast_Unity_connection() =
   let c = create_backend_connection("Unity", 11002)
-    UnitySetApplyMaterials(false)
-    UnitySetApplyColliders(false)
+    UnitySetApplyMaterials(c, false)
+    UnitySetApplyColliders(c, false)
     c
   end
 
