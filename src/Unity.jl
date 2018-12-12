@@ -1,4 +1,4 @@
-export unity,
+export unity, fast_unity,
        unity_material_family
 
 macro unity_str(str)
@@ -101,6 +101,18 @@ realize(b::Unity, s::EmptyShape) =
   UnityEmptyRef()
 realize(b::Unity, s::UniversalShape) =
   UnityUniversalRef()
+
+unity"public void SetApplyMaterials(bool apply)"
+unity"public void SetApplyColliders(bool apply)"
+
+create_fast_Unity_connection() =
+  let c = create_backend_connection("Unity", 11002)
+    UnitySetApplyMaterials(false)
+    UnitySetApplyColliders(false)
+    c
+  end
+
+const fast_unity = Unity(LazyParameter(TCPSocket, create_fast_Unity_connection))
 
 #=
 realize(b::Unity, s::Point) =
