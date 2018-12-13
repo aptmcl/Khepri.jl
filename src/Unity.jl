@@ -105,14 +105,12 @@ realize(b::Unity, s::UniversalShape) =
 unity"public void SetApplyMaterials(bool apply)"
 unity"public void SetApplyColliders(bool apply)"
 
-create_fast_Unity_connection() =
-  let c = create_backend_connection("Unity", 11002)
+fast_unity() =
+  let c = connection(unity)
     UnitySetApplyMaterials(c, false)
     UnitySetApplyColliders(c, false)
     c
   end
-
-const fast_unity = Unity(LazyParameter(TCPSocket, create_fast_Unity_connection))
 
 #=
 realize(b::Unity, s::Point) =
