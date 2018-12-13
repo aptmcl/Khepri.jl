@@ -591,23 +591,21 @@ realize(b::Unity, s::Beam) =
   let profile = s.family.profile
       profile_u0 = profile.corner
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-      unity_family = backend_family(b, s.family)
     UnityBeamRectSection(
       connection(b),
       c, vz(1, c.cs), vx(1, c.cs),
       profile.dy, profile.dx, s.h, -s.angle,
-      realize(b, unity_family))
+      realize(b, s.family))
   end
 
 #Columns are aligned along the center axis.
 realize(b::Unity, s::Column) =
   let c = s.cb #add_y(s.cb, -s.family.height/2)
-      unity_family = backend_family(b, s.family)
     UnityBeamRectSection(
       connection(b),
       c, vz(1, c.cs), vx(1, c.cs),
       s.family.height, s.family.width, s.h, -s.angle,
-      realize(b, unity_family))
+      realize(b, s.family))
   end
 
 unity"public GameObject Panel(Vector3[] pts, Vector3 n, Material material)"
@@ -621,7 +619,7 @@ realize(b::Unity, s::Panel) =
           connection(b),
           map(p -> p - n, s.vertices),
           n*2,
-          realize(b, backend_family(b, s.family)))
+          realize(b, s.family))
     end
 
 ###
@@ -642,8 +640,7 @@ backend_wall(b::Unity, path, height, thickness, family) =
   curve_length(path) < 1e-9  ? # HACK!!!!!
     UnityEmptyRef() :
     let c = connection(b)
-      unity_family = backend_family(b, family)
-      UnitySetCurrentMaterial(c, realize(b, unity_family))
+      UnitySetCurrentMaterial(c, realize(b, family))
       backend_wall_path(b, path, height, thickness)
     end
 

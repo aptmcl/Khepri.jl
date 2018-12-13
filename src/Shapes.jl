@@ -1343,7 +1343,7 @@ realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level
     let base = vz(level.height + family.coating_thickness - family.thickness),
         thickness = family.coating_thickness + family.thickness
         # Change this to a better named protocol?
-        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, backend_family(b, family))
+        backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, family)
     end
 
 #
