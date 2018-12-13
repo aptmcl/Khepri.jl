@@ -962,8 +962,9 @@ convert_render_exposure(b::Unity, v::Real) = -4.05*v + 8.8
 #render quality: [-1, +1] -> [+1, +50]
 convert_render_quality(b::Unity, v::Real) = round(Int, 25.5 + 24.5*v)
 
-render_view(name::String, b::Unity) =
+render_view(path::String, b::Unity) =
     let c = connection(b)
       UnitySetResolution(c, render_width(), render_height())
-      UnityScreenShot(c, render_pathname(name))
+      interrupt_processing(c)
+      UnityScreenShot(c, path)
     end

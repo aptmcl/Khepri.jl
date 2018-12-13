@@ -1074,10 +1074,10 @@ convert_render_exposure(b::ACAD, v::Real) = -4.05*v + 8.8
 #render quality: [-1, +1] -> [+1, +50]
 convert_render_quality(b::ACAD, v::Real) = round(Int, 25.5 + 24.5*v)
 
-render_view(name::String, b::ACAD) =
+render_view(path::String, b::ACAD) =
     ACADRender(connection(b),
                render_width(), render_height(),
-               prepare_for_saving_file(render_pathname(name)),
+               path,
                convert_render_quality(b, render_quality()),
                convert_render_exposure(b, render_exposure()))
 

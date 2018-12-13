@@ -1320,7 +1320,7 @@ set_backend_family(family::Family, backend::Backend, backend_family::Family) =
 
 realize(b::Backend, f::Family) =
   if f.ref() == nothing
-    f.ref(backend_get_family(b, f))
+    f.ref(backend_get_family(b, backend_family(b, f)))
   else
     f.ref()
   end
@@ -1800,7 +1800,6 @@ end
 @defop get_view()
 @defop zoom_extents()
 @defop view_top()
-@defop render_view(name::String)
 @defop get_layer(name::String)
 @defop create_layer(name::String)
 @defop current_layer()
@@ -1929,4 +1928,11 @@ select_many_with_prompt(prompt::String, b::Backend, f::Function) =
   begin
     @info "$(prompt) on the $(b) backend."
     map(id -> shape_from_ref(id, b), f(connection(b), prompt))
+  end
+
+export render_view
+render_view(name::String) =
+  let path = prepare_for_saving_file(render_pathname(name))
+    render_view(path, current_backend())
+    path
   end
