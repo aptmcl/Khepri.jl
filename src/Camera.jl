@@ -46,14 +46,12 @@ const render_exposure = Parameter{Real}(0)  # [-3, +3]
 const render_floor_width = Parameter(1000)
 const render_floor_height = Parameter(1000)
 
-set_render_dir(val::String) = render_dir(realpath(val))
-
 render_size(width::Integer, heigth::Integer) =
     (render_width(width), render_height(heigth))
 
 prepare_for_saving_file(path::String) =
-    let p = abspath(path)
-        mkpath(dirname(path))
+    let p = realpath(path)
+        mkpath(dirname(p))
         rm(p, force=true)
         p
     end
@@ -86,7 +84,8 @@ save_film_frame(obj::Any=true) =
   begin
     if saving_film_frames()
       with(render_kind_dir, "Film") do
-        render_view(prepare_for_saving_file(frame_filename(film_filename(), film_frame())))
+        render_view(prepare_for_saving_file(render_pathname(frame_filename(film_filename(), film_frame()))),
+                    current_backend())
         film_frame(film_frame() + 1)
       end
     end
