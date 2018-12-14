@@ -729,7 +729,7 @@ select_position(prompt::String, b::RH) =
   end
 
 select_positions(prompt::String, b::RH) =
-  let ps = Loc[]()
+  let ps = Loc[]
       p = nothing
     @info "$(prompt) on the $(b) backend."
     while length(p = RHGetPosition(connection(b), prompt)) > 0
