@@ -32,7 +32,6 @@ decode_ChairFamily = decode_int
 encode_TableChairFamily = encode_int
 decode_TableChairFamily = decode_int
 
-rhino"public int DeleteAll()"
 #=
 rhino"public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)"
 rhino"public void View(Point3d position, Point3d target, double lens)"
@@ -658,7 +657,7 @@ delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
 shape_from_ref(r, b::RH) =
   let c = connection(b)
     let code = RHShapeCode(c, r)
-        ref = LazyRef(b, RHNativeRef(r))
+        ref = LazyRef(b, RHNativeRef(RHClone(connection(b), r))) # HACK CLONING!!!!!
       if code == 1
         point(RHPointPosition(c, r),
               backend=b, ref=ref)
@@ -727,6 +726,16 @@ select_position(prompt::String, b::RH) =
     let ans = RHGetPosition(connection(b), prompt)
       length(ans) > 0 ? ans[1] : nothing
     end
+  end
+
+select_positions(prompt::String, b::RH) =
+  let ps = Loc[]()
+      p = nothing
+    @info "$(prompt) on the $(b) backend."
+    while length(p = RHGetPosition(connection(b), prompt)) > 0
+        push!(ps, p...)
+    end
+    ps
   end
 
 rhino"public Guid[] GetPoint(string prompt)"

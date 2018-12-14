@@ -1826,6 +1826,7 @@ dolly_effect_pull_back(delta) = begin
 end
 
 @defop select_position(prompt::String="Select a position")
+@defop select_positions(prompt::String="Select positions")
 @defop select_point(prompt::String="Select a point")
 @defop select_points(prompt::String="Select points")
 @defop select_curve(prompt::String="Select a curve")
