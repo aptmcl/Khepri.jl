@@ -132,19 +132,20 @@ backend_get_family(b::RVT, f::RevitFamilyElement) =
                      [getfield(f, param) for param in params])
   end
 
+#AML This must be defined in the backend
+rvt"public String InstalledLibraryPath(String name)"
+# C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\
+
 #=
 
-set_backend_family(default_wall_family(), revit_system_family()))
-set_backend_family(default_slab_family(), unity, slab_family(based_on=revit_system_family()))
-set_backend_family(default_beam_family(), unity,
-  beam_family_element(
-    beam_family(based_on=revit_file_family(
-      "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-      :width=>"b", :height=>"d")),
-    width=0.2, height=0.3))
-set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
-set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
-set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass"))
+set_backend_family(default_wall_family(), revit, revit_system_family())
+set_backend_family(default_slab_family(), revit, revit_system_family())
+set_backend_family(default_beam_family(), revit, revit_file_family(
+      RVTInstalledLibraryPath(connection(revit)), "Structural Framing\\Wood\\M_Timber.rfa"),
+      :width=>"b", :height=>"d"))
+#set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
+#set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
+#set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass"))
 
 =#
 
@@ -273,14 +274,14 @@ realize(b::RVT, s::Wall) =
             convert(OpenPolygonalPath, s.path).vertices,
             ref(s.bottom_level).value,
             s.top_level.height - s.bottom_level.height,
-            ref(s.family))
+            realize(b, s.family))
     else
         RVTCreateLineWall(
             connection(b),
             convert(OpenPolygonalPath, s.path).vertices,
             ref(s.bottom_level).value,
             ref(s.top_level).value,
-            ref(s.family))
+            realize(b, s.family))
     end
 
 ############################################
