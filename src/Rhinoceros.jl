@@ -250,8 +250,6 @@ realize(b::RH, s::Point) =
 realize(b::RH, s::Line) =
   RHPolyLine(connection(b), s.vertices)
 
-realize(b::RH, s::Polygon) =
-  RHClosedPolyLine(connection(b), s.vertices)
 #=
 realize(b::RH, s::Spline) =
   if (s.v0 == false) && (s.v1 == false)
@@ -268,8 +266,10 @@ realize(b::RH, s::Spline) =
 realize(b::RH, s::ClosedSpline) =
   RHInterpClosedSpline(connection(b), s.points)
 =#
+
 realize(b::RH, s::Circle) =
   RHCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+
 realize(b::RH, s::Arc) =
   if s.radius == 0
     RHPoint(connection(b), s.center)
@@ -285,31 +285,35 @@ realize(b::RH, s::Arc) =
       RHArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)
     end
   end
+
 realize(b::RH, s::Ellipse) =
     RHEllipse(connection(b), s.center, vz(1, s.center.cs), s.radius_x, s.radius_y)
-#=
+
 realize(b::RH, s::EllipticArc) =
   error("Finish this")
 
 realize(b::RH, s::Polygon) =
   RHClosedPolyLine(connection(b), s.vertices)
+
 realize(b::RH, s::RegularPolygon) =
   RHClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
+
 realize(b::RH, s::Rectangle) =
   RHClosedPolyLine(connection(b), [s.c, add_x(s.c, s.dx), add_xy(s.c, s.dx, s.dy), add_y(s.c, s.dy)])
-=#
 
 rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
 
 realize(b::RH, s::SurfaceCircle) =
   RHSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
 
-#=
 realize(b::RH, s::SurfaceArc) =
   RHSurfaceArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
-#realize(b::RH, s::SurfaceElliptic_Arc) = RHCircle(connection(b),
-#realize(b::RH, s::SurfaceEllipse) = RHCircle(connection(b),
-=#
+
+realize(b::RH, s::SurfaceElliptic_Arc) =
+  error("Finish this")
+
+realize(b::RH, s::SurfaceEllipse) =
+    RHSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), s.radius_x, s.radius_y)
 
 rhino"public Guid SurfaceClosedPolyLine(Point3d[] pts)"
 
