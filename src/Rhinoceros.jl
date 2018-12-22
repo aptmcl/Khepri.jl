@@ -309,7 +309,7 @@ realize(b::RH, s::SurfaceCircle) =
 realize(b::RH, s::SurfaceArc) =
   RHSurfaceArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
 
-realize(b::RH, s::SurfaceElliptic_Arc) =
+realize(b::RH, s::SurfaceEllipticArc) =
   error("Finish this")
 
 realize(b::RH, s::SurfaceEllipse) =
