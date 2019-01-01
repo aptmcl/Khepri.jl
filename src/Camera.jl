@@ -27,7 +27,7 @@ const render_kind_dir = Parameter("Render")
 # and with subdirectories for white, black, and colored renders
 const render_color_dir = Parameter(".")
 # containing files with different extensions
-const render_ext = Parameter("png")
+const render_ext = Parameter(".png")
 
 render_pathname(name::String) =
     realpath(
@@ -37,7 +37,7 @@ render_pathname(name::String) =
             render_backend_dir(),
             render_kind_dir(),
             render_color_dir(),
-            "$(name).$(render_ext())"))
+            "$(name)$(render_ext())"))
 
 const render_width = Parameter(1024)
 const render_height = Parameter(768)
@@ -289,5 +289,28 @@ dolly_effect_forth(delta, camera, target, lens, frames) =
     else
       set_view_save_frame(camera, target, lens)
       dolly_effect_forth(delta, new_camera, target, new_lens, frames-1)
+    end
+  end
+
+#=
+
+To generate the actual film from the set of frames, we need ffmpeg.
+
+=#
+
+create_mp4_from_frames(name=film_filename()) =
+  with(render_kind_dir, "Film") do
+    with(film_filename, name) do
+      with(render_ext, "-film.mp4") do
+        let film_path = prepare_for_saving_file(render_pathname(name))
+          with(render_ext, "-frame*.png") do
+            let frames_path = render_pathname(name)
+              println(frames_path)
+              println(film_path)
+              println("`ffmpeg -pattern_type glob -i '$(frames_path)' -c:v libx264 -vf fps=25 -pix_fmt yuv420p $(film_path)`")
+            end
+          end
+        end
+      end
     end
   end
