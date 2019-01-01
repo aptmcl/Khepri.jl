@@ -567,7 +567,7 @@ unite_refs(b::ACAD, refs::Vector{<:ACADRef}) =
 realize(b::ACAD, s::IntersectionShape) =
   let r = foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes),
                 init=ACADUniversalRef())
-    delete_shapes(s.shapes)
+    mark_deleted(s.shapes)
     r
   end
 
