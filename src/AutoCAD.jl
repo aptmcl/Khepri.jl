@@ -118,7 +118,8 @@ acad"public Entity InterpSpline(Point3d[] pts, Vector3d tan0, Vector3d tan1)"
 acad"public Entity ClosedPolyLine(Point3d[] pts)"
 acad"public Entity ClosedSpline(Point3d[] pts)"
 acad"public Entity InterpClosedSpline(Point3d[] pts)"
-
+acad"public Point3d[] SplineInterpPoints(Entity ent)"
+acad"public Vector3d[] SplineTangents(Entity ent)"
 acad"public Entity Circle(Point3d c, Vector3d n, double r)"
 acad"public Point3d CircleCenter(Entity ent)"
 acad"public Vector3d CircleNormal(Entity ent)"
@@ -883,8 +884,10 @@ shape_from_ref(r, b::ACAD=current_backend()) =
             line(ACADLineVertices(c, r),
                  backend=b, ref=ref)
         elseif code == 7
-            spline([xy(0,0)], false, false, #HACK obtain interpolation points
-                   backend=b, ref=ref)
+            let tans = ACADSplineTangents(c, r)
+                spline(ACADSplineInterpPoints(c, r), tans[1], tans[2],
+                       backend=b, ref=ref)
+            end
         elseif code == 9
             let start_angle = mod(ACADArcStartAngle(c, r), 2pi)
                 end_angle = mod(ACADArcEndAngle(c, r), 2pi)
