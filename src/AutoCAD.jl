@@ -120,6 +120,7 @@ acad"public Entity ClosedSpline(Point3d[] pts)"
 acad"public Entity InterpClosedSpline(Point3d[] pts)"
 acad"public Point3d[] SplineInterpPoints(Entity ent)"
 acad"public Vector3d[] SplineTangents(Entity ent)"
+
 acad"public Entity Circle(Point3d c, Vector3d n, double r)"
 acad"public Point3d CircleCenter(Entity ent)"
 acad"public Vector3d CircleNormal(Entity ent)"
@@ -885,8 +886,13 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                  backend=b, ref=ref)
         elseif code == 7
             let tans = ACADSplineTangents(c, r)
-                spline(ACADSplineInterpPoints(c, r), tans[1], tans[2],
-                       backend=b, ref=ref)
+                if length(tans[1]) < 1e-20 && length(tans[2]) < 1e-20
+                    closed_spline(ACADSplineInterpPoints(c, r)[1:end-1],
+                                  backend=b, ref=ref)
+                else
+                    spline(ACADSplineInterpPoints(c, r), tans[1], tans[2],
+                           backend=b, ref=ref)
+                end
             end
         elseif code == 9
             let start_angle = mod(ACADArcStartAngle(c, r), 2pi)
