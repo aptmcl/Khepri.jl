@@ -270,12 +270,14 @@ backend_map_division(b::Unity, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
             end
         end
     end
+=#
+
+unity"public GameObject AddText(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)"
 
 realize(b::Unity, s::Text) =
-  UnityText(
+  UnityAddText(
     connection(b),
-    s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), s.height)
-=#
+    s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), "Arial.ttf", s.height)
 
 unity"public GameObject Sphere(Vector3 center, float radius)"
 
@@ -336,7 +338,9 @@ realize(b::Unity, s::Cone) =
   UnityPyramid(connection(b), regular_polygon_vertices(64, s.cb, s.r), add_z(s.cb, s.h))
 
 realize(b::Unity, s::ConeFrustum) =
-  UnityPyramidFrustum(connection(b), regular_polygon_vertices(64, cb, s.rb), regular_polygon_vertices(64, s.cb + vz(s.h, s.cb.cs), s.rt))
+  UnityPyramidFrustum(connection(b),
+    regular_polygon_vertices(64, s.cb, s.rb),
+    regular_polygon_vertices(64, s.cb + vz(s.h, s.cb.cs), s.rt))
 
 unity"public GameObject Cylinder(Vector3 bottom, float radius, Vector3 top)"
 
