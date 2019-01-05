@@ -277,7 +277,7 @@ unity"public GameObject AddText(string txt, Vector3 position, Vector3 vx, Vector
 realize(b::Unity, s::Text) =
   UnityAddText(
     connection(b),
-    s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), "Arial.ttf", s.height)
+    s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Arial.ttf", s.height)
 
 unity"public GameObject Sphere(Vector3 center, float radius)"
 
@@ -656,6 +656,9 @@ backend_bounding_box(b::Unity, shapes::Shapes) =
 =#
 
 unity"public void SetView(Vector3 position, Vector3 target, float lens)"
+unity"public Vector3 ViewCamera()"
+unity"public Vector3 ViewTarget()"
+unity"public float ViewLens()"
 
 set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
   let c = connection(b)
@@ -663,7 +666,6 @@ set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
     interrupt_processing(c)
   end
 
-#=
 get_view(b::Unity) =
   let c = connection(b)
     UnityViewCamera(c), UnityViewTarget(c), UnityViewLens(c)
