@@ -272,12 +272,12 @@ backend_map_division(b::Unity, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
     end
 =#
 
-unity"public GameObject AddText(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)"
+unity"public GameObject Text(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)"
 
 realize(b::Unity, s::Text) =
   UnityAddText(
     connection(b),
-    s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Arial.ttf", s.height)
+    s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Fonts/Inconsolata-Regular", s.height)
 
 unity"public GameObject Sphere(Vector3 center, float radius)"
 
@@ -674,8 +674,6 @@ get_view(b::Unity) =
 zoom_extents(b::Unity) = UnityZoomExtents(connection(b))
 
 view_top(b::Unity) = UnityViewTop(connection(b))
-
-=#
 
 unity"public void DeleteAll()"
 unity"public void DeleteMany(GameObject[] objs)"
