@@ -6,6 +6,7 @@ using Sockets
 include("Parameters.jl")
 include("Utils.jl")
 include("Coords.jl")
+include("Paths.jl")
 include("Shapes.jl")
 include("Geometry.jl")
 include("Encoders.jl")
