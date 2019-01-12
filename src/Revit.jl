@@ -4,7 +4,9 @@ export
     all_floors,
     RevitSystemFamily,
     RevitFileFamily,
-    RevitInPlaceFamily
+    RevitInPlaceFamily,
+    revit_systems_family,
+    revit_file_family
 
 macro rvt_str(str)
     rpc("RVT", str)
@@ -35,7 +37,7 @@ rvt"public Element SurfaceGrid(XYZ[] linearizedMatrix, int n, int m)"
 rvt"public void MoveElement(ElementId id, XYZ translation)"
 rvt"public void RotateElement(ElementId id, double angle, XYZ axis0, XYZ axis1)"
 rvt"public Element InsertDoor(Length deltaFromStart, Length deltaFromGround, Element host, ElementId familyId)"
-rvt"public Element InsertWindow(Length deltaFromStart, Length deltaFromGround, Element host, ElementId familyId)"
+rvt"public Element InsertWindow(Length deltaFromStart, Length deltaFromGround, Element host, ElementId familyId, string[] names, object[] values)"
 rvt"public Element InsertRailing(Element host, ElementId familyId)"
 
 rvt"public void CreateFamily(string familyTemplatesPath, string familyTemplateName, string familyName)"
@@ -104,11 +106,12 @@ revit_file_family(path, pairs...) = RevitFileFamily(path, Dict(pairs...), Parame
 
 struct RevitFamilyElement <: RevitFamily
     family::RevitFamily
-    parameters::Dict
+    family_map::Dict
+    instance_map::Dict
 end
 
 revit_family_element(revit_family, pairs...) =
-    RevitFamilyElement(revit_family, Dict(pairs))
+    RevitFamilyElement(revit_family, Dict(pairs), Dict())
 
 # This is for future use
 struct RevitInPlaceFamily <: RevitFamily
@@ -116,9 +119,8 @@ struct RevitInPlaceFamily <: RevitFamily
     ref::Parameter{Int}
 end
 
-
 rvt"public ElementId LoadFamily(string fileName)"
-rvt"public ElementId FamilyElement(ElementId familyId, string[] namesList, Length[] valuesList)"
+rvt"public ElementId FamilyElement(ElementId familyId, string[] names, Length[] values)"
 
 backend_get_family(b::RVT, f::RevitSystemFamily) = 0 #Convention for system families
 backend_get_family(b::RVT, f::RevitFileFamily) = RVTLoadFamily(connection(b), f.path)
@@ -127,18 +129,32 @@ backend_get_family(b::RVT, f::RevitFamilyElement) =
       param_map = revit_family.parameter_map
       params = keys(param_map)
     RVTFamilyElement(connection(b),
-                     ref(revit_family),
+                     backend_get_family(b, revit_family),
                      [param_map[param] for param in params],
                      [getfield(f, param) for param in params])
   end
+
+backend_get_family(b::RVT, f::Family) =
+    let implemented_dict = f.implemented_as
+      if haskey(implemented_dict, b)
+          implemented_dict[b]
+      else
+        let revit_parent_family = backend_family(b, f.based_on)
+            revit_family = RevitFamilyElement(
+              revit_parent_family,
+              revit_parent_family.parameter_map)
+          implemented_dict[b] = backend_get_family(b, revit_family)
+        end
+      end
+    end
 
 #AML This must be defined in the backend
 rvt"public String InstalledLibraryPath(String name)"
 # C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\
 
-#=
-
 set_backend_family(default_wall_family(), revit, revit_system_family())
+
+#=
 set_backend_family(default_slab_family(), revit, revit_system_family())
 set_backend_family(default_beam_family(), revit, revit_file_family(
       RVTInstalledLibraryPath(connection(revit)), "Structural Framing\\Wood\\M_Timber.rfa"),

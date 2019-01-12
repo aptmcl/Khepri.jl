@@ -20,7 +20,9 @@ export encode_String, decode_String,
        encode_Point2d_array, decode_Point2d_array,
        encode_Vector3d, decode_Vector3d,
        encode_Frame3d, decode_Frame3d,
-       decode_void
+       decode_void,
+       encode_object, decode_object,
+       encode_object_array, decode_object_array
 
 encode_String(c::IO, v::String) = begin
   str = string(v)
@@ -282,6 +284,18 @@ decode_void(c::IO) = begin
   if v == 127
     error("Backend Error: $(decode_String(c))")
   end
+end
+
+encode_object(c::IO, v::Bool) = (encode_byte(c, 0x0); encode_bool(c, v))
+encode_object(c::IO, v::UInt8) = (encode_byte(c, 0x1); encode_byte(c, v))
+encode_object(c::IO, v::Int32) = (encode_byte(c, 0x2); encode_int(c, v))
+encode_object(c::IO, v::Int64) = (encode_byte(c, 0x3); encode_long(c, v))
+encode_object(c::IO, v::Float32) = (encode_byte(c, 0x4); encode_float(c, v))
+encode_object(c::IO, v::Float64) = (encode_byte(c, 0x5); encode_double(c, v))
+
+encode_object_array(c::IO, v::Vector) = begin
+  encode_int(c, length(v))
+  for e in v encode_object(c, e) end
 end
 
 create_backend_connection(backend::String, port::Integer) =
