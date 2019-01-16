@@ -700,24 +700,36 @@ dimension(p0::Loc, p1::Loc, sep::Real, scale::Real, style::Symbol, b::Unity=curr
         dimension(p0, p1, add_pol(p0, sep, angle + pi/2), scale, style, b)
     end
 
+=#
+
 # Layers
+# Experiment for multiple, simultaneous, alternative layers
+# Layers
+unity"public GameObject CreateParent(String name)"
+unity"public GameObject CurrentParent()"
+unity"public GameObject SetCurrentParent(GameObject newParent)"
+unity"public void SetActive(GameObject obj, bool state)"
+unity"public void DeleteAllInParent(GameObject parent)"
+
 UnityLayer = Int
 
-current_layer(b::Unity=current_backend())::UnityLayer =
-  UnityCurrentLayer(connection(b))
+current_layer(b::Unity)::UnityLayer =
+  UnityCurrentParent(connection(b))
 
-current_layer(layer::UnityLayer, b::Unity=current_backend()) =
-  UnitySetCurrentLayer(connection(b), layer)
+current_layer(layer::UnityLayer, b::Unity) =
+  UnitySetCurrentParent(connection(b), layer)
 
-create_layer(name::String, b::Unity=current_backend()) =
-  UnityCreateLayer(connection(b), name)
+create_layer(name::String, b::Unity) =
+  UnityCreateParent(connection(b), name)
 
-create_layer(name::String, color::RGB, b::Unity=current_backend()) =
-  let layer = UnityCreateLayer(connection(b), name)
-    UnitySetLayerColor(connection(b), layer, color.r, color.g, color.b)
-    layer
+set_layer_active(layer::UnityLayer, status, b::Unity) =
+  let c = connection(b)
+    UnitySetActive(c, layer, status)
+    interrupt_processing(c)
   end
-=#
+
+delete_all_shapes_in_layer(layer::UnityLayer, b::Unity) =
+  UnityDeleteAllInParent(connection(b), layer)
 
 # Materials
 
