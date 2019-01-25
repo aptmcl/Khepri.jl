@@ -637,7 +637,7 @@ realize(b::ACAD, s::SurfaceGrid) =
         2)
 
 realize(b::ACAD, s::Thicken) =
-  and_delete_shape(
+  and_mark_deleted(
     map_ref(s.shape) do r
       ACADThicken(connection(b), r, s.thickness)
     end,
