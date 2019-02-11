@@ -1243,8 +1243,8 @@ subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 @defproxy(mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 @defproxy(union_mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 
-@defproxy(surface_grid, Shape2D, points::AbstractMatrix{Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
-          interpolator::Any=LazyParameter(Any, () -> surface_interpolator(convert(AbstractMatrix{Loc}, points))))
+@defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
+          interpolator::Any=LazyParameter(Any, () -> surface_interpolator(points)))
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(p -> in_world(p).raw[1:end-1], pts)
         Interpolations.scale(
