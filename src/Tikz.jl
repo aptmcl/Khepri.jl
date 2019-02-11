@@ -264,6 +264,9 @@ withTikZXForm(f, out, c) =
       c)
    end
 
+delete_all_shapes(b::TikZ) =
+  truncate(connection(b), 0)
+
 realize(b::TikZ, s::Point) =
   tikz_pgfpoint(connection(b), in_world(s.position))
 
