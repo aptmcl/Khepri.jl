@@ -1244,7 +1244,8 @@ subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 @defproxy(union_mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 
 @defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
-          interpolator::Any=LazyParameter(Any, () -> surface_interpolator(points)))
+          interpolator::Parameter{Any}(missing))
+
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(p -> in_world(p).raw[1:end-1], pts)
         Interpolations.scale(
@@ -1258,12 +1259,17 @@ convert(::Type{AbstractMatrix{<:Loc}}, pts::Vector{<:Vector{<:Loc}}) =
 
 # This needs to be improved to return a proper frame
 evaluate(s::SurfaceGrid, u::Real, v::Real) =
-  let p = s.interpolator()(u,v)
-      v = Interpolations.gradient(s.interpolator(), u, v)
-    loc_from_o_vx_vy(
-      xyz(p, world_cs),
-      vxy(v[1], v[2], world_cs),
-      vxy(v[2], -v[2], world_cs))
+  let interpolator = s.interpolator
+    if ismissing(interpolator())
+      interpolator(surface_interpolator(s.points))
+    end
+    let p = interpolator()(u,v)
+        v = Interpolations.gradient(interpolator(), u, v)
+      loc_from_o_vx_vy(
+        xyz(p, world_cs),
+        vxy(v[1], v[2], world_cs),
+        vxy(v[2], -v[2], world_cs))
+    end
   end
 
 surface_domain(s::SurfaceGrid) = (0.0, 1.0, 0.0, 1.0)
