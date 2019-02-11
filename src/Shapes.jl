@@ -866,9 +866,13 @@ end
 # When dispatching a BIM operation to a backend, we also need to dispatch the family
 # If a backend does not specify a based_on family, we create one.
 
-
 backend_family(b::Backend, family::Family) =
-  get!(family.implemented_as, b, family)
+  get(family.implemented_as, b) do
+    family.based_on == nothing ? # this is not a family_element (nor a derivation of a family_element)
+      error("Family $(family) is missing the implementation for backend $(b)") :
+      backend_family(b, family.based_on)
+  end
+  #get!(family.implemented_as, b, family)
   #get!(family.based_on, b) do
   #    copy_struct(family)
   #end
@@ -1239,8 +1243,8 @@ subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 @defproxy(mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 @defproxy(union_mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 
-@defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
-          interpolator::Any=LazyParameter(Any, () -> surface_interpolator(convert(AbstractMatrix{<:Loc}, points))))
+@defproxy(surface_grid, Shape2D, points::AbstractMatrix{Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
+          interpolator::Any=LazyParameter(Any, () -> surface_interpolator(convert(AbstractMatrix{Loc}, points))))
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(p -> in_world(p).raw[1:end-1], pts)
         Interpolations.scale(
@@ -1261,6 +1265,18 @@ evaluate(s::SurfaceGrid, u::Real, v::Real) =
       vxy(v[1], v[2], world_cs),
       vxy(v[2], -v[2], world_cs))
   end
+
+surface_domain(s::SurfaceGrid) = (0.0, 1.0, 0.0, 1.0)
+frame_at(s::SurfaceGrid, u::Real, v::Real) = evaluate(s, u, v)
+map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=current_backend()) =
+  let (u1, u2, v1, v2) = surface_domain(s)
+    map_division(u1, u2, nu) do u
+      map_division(v1, v2, nv) do v
+        f(frame_at(s, u, v))
+      end
+    end
+  end
+
 
 @defproxy(thicken, Shape3D, shape::Shape=surface_circle(), thickness::Real=1)
 
