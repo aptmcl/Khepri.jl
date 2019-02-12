@@ -372,12 +372,30 @@ evaluate(s::Spline, t::Real) =
     if ismissing(interpolator())
       interpolator(curve_interpolator(s.points))
     end
-    let p = interpolator()(t)
-        v = Interpolations.gradient(interpolator(), u, v)
+    let p = interpolator()(t),
+        vt = Interpolations.gradient(interpolator(), t)[1],
+        vn = Interpolations.hessian(interpolator(), t)[1]
       loc_from_o_vx_vy(
         xyz(p[1], p[2], p[3], world_cs),
-        vxyz(v[1][1], v[1][2], v[1][3], world_cs),
-        vxyz(v[2][1], v[2][2], v[2][3], world_cs))
+        vxyz(vt[1], vt[2], vt[3], world_cs),
+        vxyz(vn[1], vn[2], vn[3], world_cs))
+    end
+  end
+
+#
+evaluate(s::Spline, t::Real) =
+  let interpolator = s.interpolator
+    if ismissing(interpolator())
+      interpolator(curve_interpolator(s.points))
+    end
+    let p = interpolator()(t),
+        vt = Interpolations.gradient(interpolator(), t)[1],
+        vn = Interpolations.hessian(interpolator(), t)[1],
+        vy = cross(vt, vn)
+      loc_from_o_vx_vy(
+        xyz(p[1], p[2], p[3], world_cs),
+        vxyz(vn[1], vn[2], vn[3], world_cs),
+        vxyz(vy[1], vy[2], vy[3], world_cs))
     end
   end
 
