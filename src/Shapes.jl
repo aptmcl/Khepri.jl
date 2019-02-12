@@ -1244,14 +1244,19 @@ subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 @defproxy(union_mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 
 @defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
-          interpolator::Parameter{Any}=Parameter(missing))
+          interpolator::Parameter{Any}=Parameter{Any}(missing))
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
-    let pts = map(p -> in_world(p).raw[1:end-1], pts)
+    let pts = map(pts) do p
+                let v = in_world(p).raw
+                  SVector{3,Float64}(v[1], v[2], v[3])
+                end
+              end
         Interpolations.scale(
             interpolate(pts, BSpline(Cubic(Natural(OnGrid())))),
             range(0,stop=1,length=size(pts, 1)),
             range(0,stop=1,length=size(pts, 2)))
     end
+# For interpolator to work, we need this:
 
 convert(::Type{AbstractMatrix{<:Loc}}, pts::Vector{<:Vector{<:Loc}}) =
   permutedims(hcat(pts...))
@@ -1265,9 +1270,9 @@ evaluate(s::SurfaceGrid, u::Real, v::Real) =
     let p = interpolator()(u,v)
         v = Interpolations.gradient(interpolator(), u, v)
       loc_from_o_vx_vy(
-        xyz(p, world_cs),
-        vxy(v[1], v[2], world_cs),
-        vxy(v[2], -v[2], world_cs))
+        xyz(p[1], p[2], p[3], world_cs),
+        vxyz(v[1][1], v[1][2], v[1][3], world_cs),
+        vxyz(v[2][1], v[2][2], v[2][3], world_cs))
     end
   end
 
