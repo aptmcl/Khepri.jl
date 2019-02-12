@@ -353,21 +353,42 @@ line(v0::Loc, v1::Loc, vs...) = line([v0, v1, vs...])
 @defproxy(closed_line, Shape1D, vertices::Locs=[u0(), ux(), uy()])
 closed_line(v0::Loc, v1::Loc, vs...) = closed_line([v0, v1, vs...])
 @defproxy(spline, Shape1D, points::Locs=[u0(), ux(), uy()], v0::Union{Bool,Vec}=false, v1::Union{Bool,Vec}=false,
-          interpolator::Any=LazyParameter(Any, () -> curve_interpolator(points)))
+          interpolator::Parameter{Any}=Parameter{Any}(missing))
 spline(v0::Loc, v1::Loc, vs...) = spline([v0, v1, vs...])
 
 curve_interpolator(pts::Locs) =
-    let pts = map(p -> in_world(p).raw, pts)
+    let pts = map(pts) do p
+                let v = in_world(p).raw
+                  SVector{3,Float64}(v[1], v[2], v[3])
+                end
+              end
         Interpolations.scale(
-            interpolate(pts,
-                        BSpline(Cubic(Natural())),
-                        OnGrid()),
-            range(0,stop=1,length=length(pts)))
+            interpolate(pts, BSpline(Cubic(Natural(OnGrid())))),
+            range(0,stop=1,length=size(pts, 1)))
     end
 
-# This needs to be improved to return a proper frame
-evaluate(s::Spline, t::Real) = xyz(s.interpolator()[t], world_cs)
+evaluate(s::Spline, t::Real) =
+  let interpolator = s.interpolator
+    if ismissing(interpolator())
+      interpolator(curve_interpolator(s.points))
+    end
+    let p = interpolator()(t)
+        v = Interpolations.gradient(interpolator(), u, v)
+      loc_from_o_vx_vy(
+        xyz(p[1], p[2], p[3], world_cs),
+        vxyz(v[1][1], v[1][2], v[1][3], world_cs),
+        vxyz(v[2][1], v[2][2], v[2][3], world_cs))
+    end
+  end
 
+curve_domain(s::Spline) = (0.0, 1.0)
+frame_at(s::Spline, t::Real) = evaluate(s, t)
+map_division(f::Function, s::Spline, n::Int, backend::Backend=current_backend()) =
+  let (t1, t2) = curve_domain(s)
+    map_division(t1, t2, n) do t
+        f(frame_at(s, t))
+    end
+  end
 
 #(def-base-shape 1D-shape (spline* [pts : (Listof Loc) (list (u0) (ux) (uy))] [v0 : (U Boolean Vec) #f] [v1 : (U Boolean Vec) #f]))
 
@@ -1256,12 +1277,12 @@ surface_interpolator(pts::AbstractMatrix{<:Loc}) =
             range(0,stop=1,length=size(pts, 1)),
             range(0,stop=1,length=size(pts, 2)))
     end
+
 # For interpolator to work, we need this:
 
 convert(::Type{AbstractMatrix{<:Loc}}, pts::Vector{<:Vector{<:Loc}}) =
   permutedims(hcat(pts...))
 
-# This needs to be improved to return a proper frame
 evaluate(s::SurfaceGrid, u::Real, v::Real) =
   let interpolator = s.interpolator
     if ismissing(interpolator())
