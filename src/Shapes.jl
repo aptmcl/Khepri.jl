@@ -800,6 +800,15 @@ RevitFamily(
     "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
     Dict(:width => "b", :height => "d"))))
 
+To make things more interesting, some families might require instantiation on
+different levels. For example, a circular window family in Revit needs to be
+loaded using RVTLoadFamily, which requires the name of the family, then it needs
+to be instantiated with RVTFamilyElement, which requires the radius of the window,
+and finally needs to be inserted on the wall, using RVTInsertWindow, which requires
+the opening angle. This might be different for different families, so we need a
+flexible way of using the parameters.
+
+
 However, the same beam might have a different mapping in a different backend.
 This means that we need another mapping to support different backends. One
 possibility is to use something similar to:
@@ -1475,7 +1484,7 @@ end
 @defop select_solids(prompt::String="Select solids")
 @defop select_shape(prompt::String="Select a shape")
 @defop select_shapes(prompt::String="Select shapes")
-@defshapeop highlight()
+@defop highlight_shapes(shapes::Shapes)
 @defshapeop register_for_changes()
 @defshapeop unregister_for_changes()
 @defshapeop waiting_for_changes()

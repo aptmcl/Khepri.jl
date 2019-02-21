@@ -452,6 +452,17 @@ backend_map_division(b::ACAD, f::Function, s::Shape2D, nu::Int, nv::Int) =
 # The previous method cannot be applied to meshes in AutoCAD, which are created by surface_grid
 
 backend_map_division(b::ACAD, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
+let conn = connection(b)
+    r = ref(s).value
+    (u1, u2, v1, v2) = ACADSurfaceDomain(conn, r)
+    map_division(u1, u2, nu) do u
+        map_division(v1, v2, nv) do v
+            f(ACADSurfaceFrameAt(conn, r, u, v))
+        end
+    end
+end
+
+
     let (u1, u2, v1, v2) = ACADSurfaceDomain(conn, r)
         map_division(u1, u2, nu) do u
             map_division(v1, v2, nv) do v
@@ -1069,6 +1080,14 @@ all_shapes_in_layer(layer, b::ACAD) =
     let c = connection(b)
         Shape[shape_from_ref(r, b) for r in ACADGetAllShapesInLayer(c, layer)]
     end
+
+acad"public void SelectShapes(ObjectId[] ids)"
+
+highlight_shapes(b::ACAD, shapes::Shapes) =
+    ACADSelectShapes(connection(b), map(s -> ref(s).value, shapes))
+
+
+
 
 disable_update(b::ACAD) =
     ACADDisableUpdate(connection(b))
