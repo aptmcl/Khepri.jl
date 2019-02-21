@@ -462,15 +462,6 @@ let conn = connection(b)
     end
 end
 
-
-    let (u1, u2, v1, v2) = ACADSurfaceDomain(conn, r)
-        map_division(u1, u2, nu) do u
-            map_division(v1, v2, nv) do v
-                f(ACADSurfaceFrameAt(conn, r, u, v))
-            end
-        end
-    end
-
 realize(b::ACAD, s::Text) =
   ACADText(
     connection(b),
