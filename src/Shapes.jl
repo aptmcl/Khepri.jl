@@ -1485,6 +1485,7 @@ end
 @defop select_shape(prompt::String="Select a shape")
 @defop select_shapes(prompt::String="Select shapes")
 @defop highlight_shapes(shapes::Shapes)
+@defshapeop highlight_shape()
 @defshapeop register_for_changes()
 @defshapeop unregister_for_changes()
 @defshapeop waiting_for_changes()

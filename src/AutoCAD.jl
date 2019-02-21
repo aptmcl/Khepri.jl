@@ -1073,8 +1073,10 @@ all_shapes_in_layer(layer, b::ACAD) =
     end
 
 acad"public void SelectShapes(ObjectId[] ids)"
+highlight_shapes(s::Shape, b::ACAD) =
+    ACADSelectShapes(connection(b), [ref(s).value])
 
-highlight_shapes(b::ACAD, shapes::Shapes) =
+highlight_shapes(shapes::Shapes, b::ACAD) =
     ACADSelectShapes(connection(b), map(s -> ref(s).value, shapes))
 
 
