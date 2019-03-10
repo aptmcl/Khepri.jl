@@ -748,7 +748,7 @@ from defaults. The base height will be determined by the current level and the
 wall height by the current level-to-level height. Finally, the wall thickness,
 constituent parts, thermal characteristics, and so on will come from the wall
 defaults.  In the case of wall, we will assume that current_wall_defaults() is
-a parameter that contains a set of a wall parameters.  As an example of use, we
+a parameter that contains a set of wall parameters.  As an example of use, we
 might have:
 
 current_wall_defaults(wall_defaults(thickness=10))
@@ -798,7 +798,7 @@ as Dict(:width => "b", :height => "d")))). So, for a Revit family, we might use:
 
 RevitFamily(
     "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-    Dict(:width => "b", :height => "d"))))
+    Dict(:width => "b", :height => "d"))
 
 To make things more interesting, some families might require instantiation on
 different levels. For example, a circular window family in Revit needs to be
@@ -806,8 +806,23 @@ loaded using RVTLoadFamily, which requires the name of the family, then it needs
 to be instantiated with RVTFamilyElement, which requires the radius of the window,
 and finally needs to be inserted on the wall, using RVTInsertWindow, which requires
 the opening angle. This might be different for different families, so we need a
-flexible way of using the parameters.
+flexible way of using the parameters. One hipotesis is to specify those different
+moments as different dictionaries.
 
+RevitFamily(
+  "C:\\ProgramData\\Autodesk\\RVT 2019\\Libraries\\US Metric\\Windows\\CIRCULAR WINDOW.rfa",
+  ("radius_window" => :radius),
+  ("angle_window" => :opening_angle))
+
+If no parameters are needed on a particular phases, we might use an empty dictionary
+to describe that phase. Given the typical Revit families, defaults parameters seem
+to be the best approach here. This means that the previous beam family might be
+equivalent to
+
+RevitFamily(
+  "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
+  ("b" => :width, "d" => :height),
+  ())
 
 However, the same beam might have a different mapping in a different backend.
 This means that we need another mapping to support different backends. One
@@ -816,10 +831,10 @@ possibility is to use something similar to:
 backend_family(
     revit => RevitFamily(
         "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-        Dict(:width => "b", :height => "d")),
+        ("b" => :width, "d" => :height)),
     archicad => ArchiCADFamily(
         "BeamElement",
-        Dict(:width => "size_x", :height => "size_y")),
+        ("size_x" => :width, "size_y" => :height)),
     autocad => AutoCADFamily())
 
 Then, we need an operation that instantiates a family. This can be done on two different
@@ -827,7 +842,7 @@ levels: (1) from a backend-specific family (e.g., RevitFamily), for example:
 
 beam_family = RevitFamily(
     "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-    Dict(:width => "b", :height => "d"))
+    ("b" => :width, "d" => :height))
 
 current_beam_defaults(beam_family_instance(beam_family, width=10, height=20)
 
@@ -836,10 +851,10 @@ or from a generic backend family, for example:
 beam_family = backend_family(
     revit => RevitFamily(
         "C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\Structural Framing\\Wood\\M_Timber.rfa",
-        Dict(:width => "b", :height => "d")),
+        ("b" => :width, "d" => :height)),
     archicad => ArchiCADFamily(
         "BeamElement"
-        Dict(:width => "size_x", :height => "size_y")),
+        ("size_x" => :width, "size_y" => :height)),
     autocad => AutoCADFamily())
 
 current_beam_defaults(beam_family_instance(beam_family, width=10, height=20)
@@ -863,6 +878,8 @@ abstract type FamilyInstance <: Family end
 family(f::Family) = f
 family(f::FamilyInstance) = f.family
 
+#HACK Using Dict instead of IdDict just because get is not fully implemented for IdDict
+#FIXME after updating to Julia 1.2
 macro deffamily(name, parent, fields...)
   name_str = string(name)
   abstract_name = esc(Symbol(string))
@@ -890,16 +907,16 @@ macro deffamily(name, parent, fields...)
     struct $struct_name <: $parent
       $(struct_fields...)
       based_on::Union{Family, Nothing}
-      implemented_as::IdDict{Backend, Family}
+      implemented_as::Dict{<:Backend, <:Family}
       ref::Parameter{Any}
     end
     $(constructor_name)($(opt_params...);
                         $(key_params...),
                         based_on=nothing,
-                        implemented_as=IdDict{Backend, Family}()) =
+                        implemented_as=Dict{Backend, Family}()) =
       $(struct_name)($(field_names...), based_on, implemented_as, Parameter{Any}(nothing))
     $(instance_name)(family:: Family #=$(struct_name)=#; $(instance_params...)) =
-      $(struct_name)($(field_names...), family, IdDict{Backend, Family}(), Parameter{Any}(nothing))
+      $(struct_name)($(field_names...), family, Dict{Backend, Family}(), Parameter{Any}(nothing))
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
@@ -920,10 +937,6 @@ backend_family(b::Backend, family::Family) =
       error("Family $(family) is missing the implementation for backend $(b)") :
       backend_family(b, family.based_on)
   end
-  #get!(family.implemented_as, b, family)
-  #get!(family.based_on, b) do
-  #    copy_struct(family)
-  #end
 
 copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 
@@ -936,7 +949,7 @@ set_backend_family(family::Family, backend::Backend, backend_family::Family) =
 
 realize(b::Backend, f::Family) =
   if f.ref() == nothing
-    f.ref(backend_get_family(b, backend_family(b, f)))
+    f.ref(backend_get_family_ref(b, f, backend_family(b, f)))
   else
     f.ref()
   end
@@ -1123,8 +1136,10 @@ realize(b::Backend, s::Window) =
 
 export add_door
 add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
-    let b = backend(w)
-        d = door(w, loc, family=family)
+  backend_add_door(backend(w), w, loc, family)
+
+backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
+    let d = door(w, loc, family=family)
         push!(w.doors, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
@@ -1135,8 +1150,10 @@ add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_fami
 #
 export add_window
 add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
-    let b = backend(w)
-        d = window(w, loc, family=family)
+  backend_add_window(backend(w), w, loc, family)
+
+backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
+    let d = window(w, loc, family=family)
         push!(w.windows, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))

@@ -58,8 +58,8 @@ const RVTRef = GenericRef{RVTKey, RVTId}
 const RVTRefs = Vector{RVTRef}
 const RVTNativeRef = NativeRef{RVTKey, RVTId}
 const RVT = SocketBackend{RVTKey, RVTId}
-
-void_ref(b::RVT) = RVTNativeRef(-1)
+const RVTVoidId = -1
+void_ref(b::RVT) = RVTNativeRef(RVTVoidId)
 
 create_RVT_connection() = create_backend_connection("Revit", 11001)
 
@@ -90,28 +90,68 @@ Revit families are divided into
 abstract type RevitFamily <: Family end
 
 struct RevitSystemFamily <: RevitFamily
-    parameter_map::Dict{Symbol,String}
-    ref::Parameter{Int}
+    family_map::Dict{String, Function}
+    instance_map::Dict{String, Function}
+    instance_ref::Parameter{RVTId}
 end
 
-revit_system_family(pairs...) = RevitSystemFamily(Dict(pairs...), Parameter(-1))
+revit_system_family(family_map=(), instance_map=()) =
+    RevitSystemFamily(
+        Dict(family_map...),
+        Dict(instance_map...),
+        Parameter(0)) # instead of RVTVoidId.  We need to think this carefully.
+
+backend_get_family_ref(b::RVT, f::Family, rvtf::RevitSystemFamily) =
+  let c = connection(b)
+    if rvtf.instance_ref()===RVTVoidId
+      let param_map = rvtf.family_map,
+          params = keys(param_map)
+        rvtf.instance_ref(
+            RVTFamilyElement(
+                c,
+                0,
+                collect(keys),
+                [param_map[param](f) for param in params]))
+      end
+    end
+    rvtf.instance_ref()
+  end
 
 struct RevitFileFamily <: RevitFamily
     path::String
-    parameter_map::Dict{Symbol,String}
-    ref::Parameter{Int}
+    family_map::Dict{String, Function}
+    instance_map::Dict{String, Function}
+    family_ref::Parameter{RVTId}
+    instance_ref::Parameter{RVTId}
 end
 
-revit_file_family(path, pairs...) = RevitFileFamily(path, Dict(pairs...), Parameter(-1))
+revit_file_family(path, family_map=(), instance_map=()) =
+    RevitFileFamily(
+        path,
+        Dict(family_map...),
+        Dict(instance_map...),
+        Parameter(RVTVoidId),
+        Parameter(RVTVoidId))
 
-struct RevitFamilyElement <: RevitFamily
-    family::RevitFamily
-    family_map::Dict
-    instance_map::Dict
-end
-
-revit_family_element(revit_family, pairs...) =
-    RevitFamilyElement(revit_family, Dict(pairs), Dict())
+backend_get_family_ref(b::RVT, f::Family, rvtf::RevitFileFamily) =
+  let c = connection(b)
+    if rvtf.family_ref()===RVTVoidId
+      rvtf.family_ref(RVTLoadFamily(c, rvtf.path))
+    end
+    if rvtf.instance_ref()===RVTVoidId
+      let param_map = rvtf.family_map,
+          params = keys(param_map)
+        rvtf.instance_ref(
+            RVTFamilyElement(
+                c,
+                rvtf.family_ref(),
+                collect(params),
+                [param_map[param](f) for param in params]))
+      end
+    end
+    rvtf.instance_ref()
+  end
+#
 
 # This is for future use
 struct RevitInPlaceFamily <: RevitFamily
@@ -121,32 +161,6 @@ end
 
 rvt"public ElementId LoadFamily(string fileName)"
 rvt"public ElementId FamilyElement(ElementId familyId, string[] names, Length[] values)"
-
-backend_get_family(b::RVT, f::RevitSystemFamily) = 0 #Convention for system families
-backend_get_family(b::RVT, f::RevitFileFamily) = RVTLoadFamily(connection(b), f.path)
-backend_get_family(b::RVT, f::RevitFamilyElement) =
-  let revit_family = f.family
-      param_map = revit_family.parameter_map
-      params = keys(param_map)
-    RVTFamilyElement(connection(b),
-                     backend_get_family(b, revit_family),
-                     [param_map[param] for param in params],
-                     [getfield(f, param) for param in params])
-  end
-
-backend_get_family(b::RVT, f::Family) =
-    let implemented_dict = f.implemented_as
-      if haskey(implemented_dict, b)
-          implemented_dict[b]
-      else
-        let revit_parent_family = backend_family(b, f.based_on)
-            revit_family = RevitFamilyElement(
-              revit_parent_family,
-              revit_parent_family.parameter_map)
-          implemented_dict[b] = backend_get_family(b, revit_family)
-        end
-      end
-    end
 
 #AML This must be defined in the backend
 rvt"public String InstalledLibraryPath(String name)"
@@ -165,17 +179,11 @@ set_backend_family(default_beam_family(), revit, revit_file_family(
 
 =#
 
-# This should go into switch_to_backend
-
-# We need to install families
-
 switch_to_backend(from::Backend, to::RVT) =
     let height = level_height(default_level())
         current_backend(to)
         default_level(level(height))
     end
-
-
 
 #=
 backend_get_family(b::RVT, f::TableFamily) =
@@ -283,7 +291,7 @@ rvt"public ElementId CreateSplineWall(XYZ[] pts, ElementId baseLevelId, ElementI
 rvt"public Element CreateLineRailing(XYZ[] pts, ElementId baseLevelId, ElementId familyId)"
 rvt"public Element CreatePolygonRailing(XYZ[] pts, ElementId baseLevelId, ElementId familyId)"
 
-realize(b::RVT, s::Wall) =
+realize_wall_no_openings(b::RVT, s::Wall) =
     if is_unconnected_level(s.top_level)
         RVTCreateUnconnectedLineWall(
             connection(b),
@@ -298,6 +306,38 @@ realize(b::RVT, s::Wall) =
             ref(s.bottom_level).value,
             ref(s.top_level).value,
             realize(b, s.family))
+    end
+
+realize_wall_openings(b::RVT, w::Wall, w_ref, openings) =
+  begin
+      for opening in openings
+          realize(b, opening)
+      end
+      w_ref
+  end
+
+realize(b::RVT, s::Window) =
+  let rvtf = backend_family(b, s.family),
+      param_map = rvtf.family_map,
+      params = keys(param_map)
+    RVTInsertWindow(
+        connection(b),
+        s.loc.x,
+        s.loc.y,
+        ref(s.wall).value,
+        backend_get_family_ref(b, s.family, rvtf),
+        collect(params),
+        [param_map[param](s.family) for param in params])
+  end
+
+backend_add_door(b::RVT, w::Wall, loc::Loc, family::DoorFamily) = finish_this()
+backend_add_window(b::RVT, w::Wall, loc::Loc, family::WindowFamily) =
+    let d = window(w, loc, family=family)
+        push!(w.windows, d)
+        if realized(w) && ! realized(d)
+            realize(b, d)
+        end
+        w
     end
 
 ############################################

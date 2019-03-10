@@ -546,8 +546,17 @@ struct UnityMaterialFamily <: UnityFamily
 end
 
 unity_material_family(name, pairs...) = UnityMaterialFamily(name, Dict(pairs...), Parameter{Any}(nothing))
-backend_get_family(b::Unity, f::UnityMaterialFamily) = UnityLoadMaterial(connection(b), f.name)
-backend_get_family(b::Unity, f::Family) = error("Missing Unity family for $f")
+backend_get_family_ref(b::Unity, f::Family, uf::UnityMaterialFamily) = UnityLoadMaterial(connection(b), uf.name)
+
+struct UnityResourceFamily <: UnityFamily
+  name::String
+  parameter_map::Dict{Symbol,String}
+  ref::Parameter{Any}
+end
+
+unity_resource_family(name, pairs...) = UnityResourceFamily(name, Dict(pairs...), Parameter{Any}(nothing))
+backend_get_family_ref(b::Unity, f::Family, uf::UnityResourceFamily) = UnityLoadResource(connection(b), uf.name)
+
 
 set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Plaster/Plaster"))
 set_backend_family(default_slab_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
@@ -560,14 +569,9 @@ unity"public GameObject Window(Vector3 position, Quaternion rotation, float dx, 
 unity"public GameObject Shelf(Vector3 position, int rowLength, int lineLength, float cellWidth, float cellHeight, float cellDepth)"
 
 
-backend_get_family(b::Unity, f::TableFamily) =
-    UnityLoadResource(connection(b), "ModernTable")
-
-backend_get_family(b::Unity, f::ChairFamily) =
-    UnityLoadResource(connection(b), "ModernChair")
-
-backend_get_family(b::Unity, f::TableChairFamily) =
-    UnityLoadResource(connection(b), "ModernTableChair")
+set_backend_family(default_table_family(), unity, unity_resource_family("ModernTable"))
+set_backend_family(default_chair_family(), unity, unity_resource_family("ModernChair"))
+set_backend_family(default_table_chair_family(), unity, unity_resource_family("ModernTableChair"))
 
 backend_rectangular_table(b::Unity, c, angle, family) =
     UnityInstantiateBIMElement(connection(b), realize(b, family), c, -angle)
