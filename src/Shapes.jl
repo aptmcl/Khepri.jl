@@ -908,16 +908,16 @@ macro deffamily(name, parent, fields...)
     struct $struct_name <: $parent
       $(struct_fields...)
       based_on::Union{Family, Nothing}
-      implemented_as::Dict{<:Backend, <:Family}
+      implemented_as::IdDict{<:Backend, <:Family}
       ref::Parameter{Any}
     end
     $(constructor_name)($(opt_params...);
                         $(key_params...),
                         based_on=nothing,
-                        implemented_as=Dict{Backend, Family}()) =
+                        implemented_as=IdDict{Backend, Family}()) =
       $(struct_name)($(field_names...), based_on, implemented_as, Parameter{Any}(nothing))
-    $(instance_name)(family:: Family #=$(struct_name)=#; $(instance_params...)) =
-      $(struct_name)($(field_names...), family, Dict{Backend, Family}(), Parameter{Any}(nothing))
+    $(instance_name)(family:: Family, implemented_as=family.implemented_as; $(instance_params...)) =
+      $(struct_name)($(field_names...), family, implemented_as, Parameter{Any}(nothing))
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
@@ -928,16 +928,23 @@ macro deffamily(name, parent, fields...)
   end
 end
 
-
 # When dispatching a BIM operation to a backend, we also need to dispatch the family
-# If a backend does not specify a based_on family, we create one.
 
 backend_family(b::Backend, family::Family) =
-  get(family.implemented_as, b) do
+# replace this with next fragment after updating Julia
+  if haskey(family.implemented_as, b)
+    family.implemented_as[b]
+  else
     family.based_on == nothing ? # this is not a family_element (nor a derivation of a family_element)
       error("Family $(family) is missing the implementation for backend $(b)") :
       backend_family(b, family.based_on)
   end
+#=  get(family.implemented_as, b) do
+    family.based_on == nothing ? # this is not a family_element (nor a derivation of a family_element)
+      error("Family $(family) is missing the implementation for backend $(b)") :
+      backend_family(b, family.based_on)
+  end
+=#
 
 copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 
