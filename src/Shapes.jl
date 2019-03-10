@@ -367,6 +367,7 @@ curve_interpolator(pts::Locs) =
             range(0,stop=1,length=size(pts, 1)))
     end
 
+#=
 evaluate(s::Spline, t::Real) =
   let interpolator = s.interpolator
     if ismissing(interpolator())
@@ -382,7 +383,7 @@ evaluate(s::Spline, t::Real) =
     end
   end
 
-#
+=#
 evaluate(s::Spline, t::Real) =
   let interpolator = s.interpolator
     if ismissing(interpolator())
