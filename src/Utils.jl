@@ -181,3 +181,13 @@ map_division(f, u0, u1, nu::Real, v0, v1, nv::Real, include_last_v::Bool=true) =
 map_division(f, u0, u1, nu::Real, include_last_u::Bool, v0, v1, nv::Real, include_last_v::Bool) =
   map_division(u -> map_division(v -> f(u, v), v0, v1, nv, include_last_v),
                u0, u1, nu, include_last_u)
+
+# Grasshopper compatibility
+
+export series, crossref
+
+series(start::Real, step::Real, count::Int) =
+  range(start, step=step, length=count)
+
+crossref(arr1, arr2) =
+    vcat([arr1 for i in arr2]...), vcat([arr2 for i in arr1]...)
