@@ -558,20 +558,20 @@ unity_resource_family(name, pairs...) = UnityResourceFamily(name, Dict(pairs...)
 backend_get_family_ref(b::Unity, f::Family, uf::UnityResourceFamily) = UnityLoadResource(connection(b), uf.name)
 
 
-set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Plaster/Plaster"))
+set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Plaster/Plaster1"))
 set_backend_family(default_slab_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
 set_backend_family(default_beam_family(), unity, unity_material_family("Materials/Metal/Aluminum"))
 set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
 set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
-set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass"))
+set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass/Glass"))
 
 unity"public GameObject Window(Vector3 position, Quaternion rotation, float dx, float dy, float dz)"
 unity"public GameObject Shelf(Vector3 position, int rowLength, int lineLength, float cellWidth, float cellHeight, float cellDepth)"
 
 
-set_backend_family(default_table_family(), unity, unity_resource_family("ModernTable"))
-set_backend_family(default_chair_family(), unity, unity_resource_family("ModernChair"))
-set_backend_family(default_table_chair_family(), unity, unity_resource_family("ModernTableChair"))
+set_backend_family(default_table_family(), unity, unity_resource_family("Prefabs/Tables/ModernTable/ModernTable"))
+set_backend_family(default_chair_family(), unity, unity_resource_family("Prefabs/Chairs/ModernChair/ModernChair"))
+set_backend_family(default_table_chair_family(), unity, unity_resource_family("Prefabs/TablesChairs/ModernTableChair/ModernTableChair"))
 
 backend_rectangular_table(b::Unity, c, angle, family) =
     UnityInstantiateBIMElement(connection(b), realize(b, family), c, -angle)
