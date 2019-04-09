@@ -395,6 +395,7 @@ unity"public GameObject Intersect(GameObject s0, GameObject s1)"
 unity"public GameObject Subtract(GameObject s0, GameObject s1)"
 unity"public void SubtractFrom(GameObject s0, GameObject s1)"
 
+unity"public GameObject Canonicalize(GameObject s)"
 ###
 unite_ref(b::Unity, r0::UnityNativeRef, r1::UnityNativeRef) =
     ensure_ref(b, UnityUnite(connection(b), r0.value, r1.value))
@@ -426,6 +427,15 @@ slice_ref(b::Unity, r::UnityUnionRef, p::Loc, v::Vec) =
 =#
 unite_refs(b::Unity, refs::Vector{<:UnityRef}) =
     UnityUnionRef(tuple(refs...))
+
+#
+realize(b::Unity, s::UnionShape) =
+  let r = foldl((r0,r1)->unite_ref(b,r0,r1), map(ref, s.shapes),
+                init=UnityEmptyRef())
+    delete_shapes(s.shapes)
+    UnityCanonicalize(connection(b), ref(r))
+    #r
+  end
 
 realize(b::Unity, s::IntersectionShape) =
   let r = foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes),
