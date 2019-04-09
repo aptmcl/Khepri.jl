@@ -943,6 +943,18 @@ select_position(prompt::String, b::ACAD) =
     end
   end
 
+select_positions(prompt::String, b::ACAD) =
+  let sel() =
+    let p = select_position(prompt, b)
+      if p == nothing
+        []
+      else
+        [p, sel()...]
+      end
+    end
+    sel()
+  end
+
 acad"public ObjectId[] GetPoint(string prompt)"
 acad"public ObjectId[] GetPoints(string prompt)"
 
