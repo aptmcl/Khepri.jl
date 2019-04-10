@@ -433,7 +433,7 @@ realize(b::Unity, s::UnionShape) =
   let r = foldl((r0,r1)->unite_ref(b,r0,r1), map(ref, s.shapes),
                 init=UnityEmptyRef())
     delete_shapes(s.shapes)
-    UnityCanonicalize(connection(b), ref(r))
+    UnityCanonicalize(connection(b), r.value)
     #r
   end
 
