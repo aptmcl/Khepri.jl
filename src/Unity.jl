@@ -433,8 +433,8 @@ realize(b::Unity, s::UnionShape) =
   let r = foldl((r0,r1)->unite_ref(b,r0,r1), map(ref, s.shapes),
                 init=UnityEmptyRef())
     delete_shapes(s.shapes)
-    UnityCanonicalize(connection(b), r.value)
-    #r
+    #UnityCanonicalize(connection(b), r.value)
+    r
   end
 
 realize(b::Unity, s::IntersectionShape) =
@@ -745,6 +745,11 @@ set_layer_active(layer::UnityLayer, status, b::Unity) =
 delete_all_shapes_in_layer(layer::UnityLayer, b::Unity) =
   UnityDeleteAllInParent(connection(b), layer)
 
+# Experiment to speed up things
+
+canonicalize_layer(layer::UnityLayer, b::Unity) =
+  UnityCanonicalize(connection(b), layer)
+
 # Materials
 
 UnityMaterial = Int
@@ -771,7 +776,7 @@ unity"public GameObject CreateBlockFromShapes(String name, GameObject[] objs)"
 realize(b::Unity, s::Block) =
   s.shapes == [] ?
     UnityLoadResource(connection(b), s.name) :
-    UnityCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes))
+    UnityCanonicalize(connection(b), UnityCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes)))
 
 realize(b::Unity, s::BlockInstance) =
     UnityCreateBlockInstance(
