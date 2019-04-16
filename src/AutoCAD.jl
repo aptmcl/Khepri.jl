@@ -155,9 +155,7 @@ acad"public Entity CenteredBox(Frame3d frame, double dx, double dy, double dz)"
 acad"public ObjectId IrregularPyramidMesh(Point3d[] pts, Point3d apex)"
 acad"public ObjectId IrregularPyramid(Point3d[] pts, Point3d apex)"
 acad"public ObjectId IrregularPyramidFrustum(Point3d[] bpts, Point3d[] tpts)"
-acad"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
-acad"public Entity SurfaceFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level)"
-acad"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
+
 acad"public ObjectId Thicken(ObjectId obj, double thickness)"
 acad"public ObjectId NurbSurfaceFrom(ObjectId id)"
 acad"public ObjectId Extrude(ObjectId profileId, Vector3d dir)"
@@ -450,6 +448,13 @@ backend_map_division(b::ACAD, f::Function, s::Shape2D, nu::Int, nv::Int) =
     end
 
 # The previous method cannot be applied to meshes in AutoCAD, which are created by surface_grid
+
+acad"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
+acad"public int[] PolygonMeshData(Entity e)"
+acad"public Point3dCollection MeshVertices(ObjectId id)"
+
+acad"public Entity SurfaceFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level)"
+acad"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
 
 backend_map_division(b::ACAD, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
 let conn = connection(b)
@@ -873,8 +878,8 @@ backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::R
 # User Selection
 
 shape_from_ref(r, b::ACAD=current_backend()) =
-    let c = connection(b)
-        code = ACADShapeCode(c, r)
+    let c = connection(b),
+        code = ACADShapeCode(c, r),
         ref = LazyRef(b, ACADNativeRef(r))
         if code == 1 # Point
             point(ACADPointPosition(c, r),
@@ -897,7 +902,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                 end
             end
         elseif code == 9
-            let start_angle = mod(ACADArcStartAngle(c, r), 2pi)
+            let start_angle = mod(ACADArcStartAngle(c, r), 2pi),
                 end_angle = mod(ACADArcEndAngle(c, r), 2pi)
                 if end_angle > start_angle
                     arc(maybe_loc_from_o_vz(ACADArcCenter(c, r), ACADArcNormal(c, r)),
@@ -910,16 +915,21 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                 end
             end
         elseif code == 10
-            let str = ACADTextString(c, r)
-                height = ACADTextHeight(c, r)
+            let str = ACADTextString(c, r),
+                height = ACADTextHeight(c, r),
                 loc = ACADTextPosition(c, r)
                 text(str, loc, height, backend=b, ref=ref)
             end
         elseif code == 11
-            let str = ACADMTextString(c, r)
-                height = ACADMTextHeight(c, r)
+            let str = ACADMTextString(c, r),
+                height = ACADMTextHeight(c, r),
                 loc = ACADMTextPosition(c, r)
                 text(str, loc, height, backend=b, ref=ref)
+            end
+        elseif code == 16
+            let pts = ACADMeshVertices(c, r),
+                (type, n, m, n_closed, m_closed) = ACADPolygonMeshData(c, r)
+                surface_grid(reshape(pts, (n, m), n_closed == 1, m_closed == 1, ref=ref)
             end
         elseif 12 <= code <= 14
             surface(Shapes1D[], backend=b, ref=ref)
