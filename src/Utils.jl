@@ -184,10 +184,20 @@ map_division(f, u0, u1, nu::Real, include_last_u::Bool, v0, v1, nv::Real, includ
 
 # Grasshopper compatibility
 
-export series, crossref
+export series, crossref, remap, cull
 
 series(start::Real, step::Real, count::Int) =
   range(start, step=step, length=count)
 
-crossref(arr1, arr2) =
-    vcat([arr1 for i in arr2]...), vcat([arr2 for i in arr1]...)
+export crossref_holistic
+crossref_holistic(arr1, arr2) =
+  vcat([arr1[i] for i in range(1, stop=length(arr1)) for j in arr2]...),
+  vcat([arr2 for i in arr1]...)
+
+crossref(as, bs) = [(a, b) for a in as, b in bs]
+
+remap(in, (min_in, max_in), (min_out, max_out)) =
+  min_out + (max_out-min_out)/(max_in-min_in)*(in-min_in)
+
+cull(template, as) =
+  [a for (a, t) in zip(as, cycle(template)) if t]
