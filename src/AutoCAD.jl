@@ -929,7 +929,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
         elseif code == 16
             let pts = ACADMeshVertices(c, r),
                 (type, n, m, n_closed, m_closed) = ACADPolygonMeshData(c, r)
-                surface_grid(reshape(pts, (n, m), n_closed == 1, m_closed == 1, ref=ref)
+                surface_grid(reshape(pts, (n, m)), n_closed == 1, m_closed == 1, ref=ref)
             end
         elseif 12 <= code <= 14
             surface(Shapes1D[], backend=b, ref=ref)
