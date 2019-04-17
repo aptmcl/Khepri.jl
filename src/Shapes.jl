@@ -343,7 +343,10 @@ is_curve(s::Shape1D) = true
 is_surface(s::Shape2D) = true
 is_solid(s::Shape3D) = true
 
+# HACK: Fix element type
+Shapes0D = Vector{<:Any}
 Shapes1D = Vector{<:Any}
+Shapes2D = Vector{<:Any}
 
 @defproxy(empty_shape, Shape0D)
 @defproxy(universal_shape, Shape3D)
