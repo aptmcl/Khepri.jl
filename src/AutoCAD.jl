@@ -528,10 +528,17 @@ backend_sweep(b::ACAD, path::Shape, profile::Shape, rotation::Real, scale::Real)
     end
   end
 
-realize(b::ACAD, s::Revolve) =
+backend_revolve_point(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
+  realize(b, arc(loc_from_o_vz(p, n), distance(profile, p), start_angle, amplitude))
+backend_revolve_curve(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
+  acad_revolution(b, profile, p, n, start_angle, amplitude)
+backend_revolve_surface(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
+  acad_revolution(b, profile, p, n, start_angle, amplitude)
+
+acad_revolution(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
   and_delete_shape(
-    map_ref(s.profile) do r
-      ACADRevolve(connection(b), r, s.p, s.n, s.start_angle, s.amplitude)
+    map_ref(profile) do r
+      ACADRevolve(connection(b), r, p, n, start_angle, amplitude)
     end,
     s.profile)
 
