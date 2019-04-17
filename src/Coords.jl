@@ -397,3 +397,31 @@ Base.iterate(v::Vec, state) = Base.iterate(v.raw, state)
 
 Base.iterate(v::Loc) = Base.iterate(v.raw)
 Base.iterate(v::Loc, state) = Base.iterate(v.raw, state)
+
+# Utilities
+export trig_center, trig_normal, quad_center, quad_normal, polygon_normal, iterate_quads
+
+trig_center(p0, p1, p2) =
+  xyz((p0.x+p1.x+p2.x)/3, (p0.y+p1.y+p2.y)/3, (p0.z+p1.z+p2.z)/3, p0.cs)
+
+trig_normal(p0, p1, p2) =
+  polygon_normal([p1 - p0, p2 - p1, p0 - p2])
+
+quad_center(p0, p1, p2, p3) =
+  intermediate_loc(intermediate_loc(p0, p2), intermediate_loc(p1, p3))
+
+quad_normal(p0, p1, p2, p3) =
+  polygon_normal([p1 - p0, p2 - p1, p3 - p2, p0 - p3])
+
+polygon_normal(vs) =
+  unitized(
+    sum(
+      cross(v0,v1)
+      for (v0,v1) in zip(vs, drop(cycle(vs), 1))))
+
+iterate_quads(f, ptss) =
+  [[f(p0, p1, p2, p3)
+    for (p0, p1, p2, p3)
+    in zip(pts0[1:end-1], pts1[1:end-1], pts1[2:end], pts0[2:end])]
+    for (pts0, pts1)
+    in zip(ptss[1:end-1], ptss[2:end])]
