@@ -406,12 +406,14 @@ evaluate(s::Spline, t::Real) =
 curve_domain(s::Spline) = (0.0, 1.0)
 frame_at(s::Spline, t::Real) = evaluate(s, t)
 map_division(f::Function, s::Spline, n::Int, backend::Backend=current_backend()) =
+  backend_map_division(backend, f, s, n)
+#=HACK, THIS IS NOT READY, YET. COMPARE WITH THE BACKEND VERSION!!!!!!
   let (t1, t2) = curve_domain(s)
     map_division(t1, t2, n) do t
         f(frame_at(s, t))
     end
   end
-
+=#
 #(def-base-shape 1D-shape (spline* [pts : (Listof Loc) (list (u0) (ux) (uy))] [v0 : (U Boolean Vec) #f] [v1 : (U Boolean Vec) #f]))
 
 @defproxy(closed_spline, Shape1D, points::Locs=[u0(), ux(), uy()])
@@ -505,7 +507,7 @@ right_cuboid(cb::Loc, width::Real, height::Real, ct::Loc, angle::Real=0; backend
   let (c, h) = position_and_height(cb, ct)
     right_cuboid(c, width, height, h, angle, backend=backend)
   end
-@defproxy(box, Shape3D, c::Loc=u0(), dx::Real=1, dy::Real=1, dz::Real=1)
+@defproxy(box, Shape3D, c::Loc=u0(), dx::Real=1, dy::Real=dx, dz::Real=dy)
 box(c0::Loc, c1::Loc) =
   let v = in_cs(c1, c0)-c0
     box(c0, v.x, v.y, v.z)
@@ -599,7 +601,7 @@ loft_ruled(profiles::Shapes=Shape[]) = loft(profiles, Shape[], true, false)
 export loft, loft_ruled
 
 realize(b::Backend, s::LoftPoints) = backend_loft_points(backend(s), s.profiles, s.rails, s.ruled, s.closed)
-realize(b::Backend, s::LoftCurves) = backend_loft_curvess(backend(s), s.profiles, s.rails, s.ruled, s.closed)
+realize(b::Backend, s::LoftCurves) = backend_loft_curves(backend(s), s.profiles, s.rails, s.ruled, s.closed)
 realize(b::Backend, s::LoftSurfaces) = backend_loft_surfaces(backend(s), s.profiles, s.rails, s.ruled, s.closed)
 realize(b::Backend, s::LoftCurvePoint) = backend_loft_curve_point(backend(s), s.profile, s.point)
 realize(b::Backend, s::LoftSurfacePoint) = backend_loft_surface_point(backend(s), s.profile, s.point)
