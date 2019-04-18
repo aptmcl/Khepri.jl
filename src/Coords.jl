@@ -425,3 +425,43 @@ iterate_quads(f, ptss) =
     in zip(pts0[1:end-1], pts1[1:end-1], pts1[2:end], pts0[2:end])]
     for (pts0, pts1)
     in zip(ptss[1:end-1], ptss[2:end])]
+
+
+# We need to implement smooth walks along curves
+# Using just the Frenet frame is not adequate as
+# changes in curvature cause it to suddenly change
+# direction.
+
+# The technique we use to solve this is based on
+# rotation minimizing frames (RMF) presented in
+# "Computation of Rotation Minimizing Frames"
+# (Wenping Wang, Bert Jüttler, Dayue Zheng, and Yang Liu, 2008)
+# Regarding the paper notation, t = vz, r = -vx, s = vy
+export rotation_minimizing_frames
+
+rotation_minimizing_frames(frames) =
+  let new_frames = [frames[1]]
+    for x1 in drop(frames, 1)
+      # Reflection of x0 tangent and axis onto x1
+      # using reflection plane located between x0 and x1
+      let x0 = new_frames[end],
+          v1 = in_world(x1) - in_world(x0),
+          c1 = dot(v1, v1),
+          r0 = in_world(vx(1, x0.cs)),
+          t0 = in_world(vz(1, x0.cs)),
+          ril = r0 - v1*(2/c1*dot(v1,r0)),
+          til = t0 - v1*(2/c1*dot(v1,t0)),
+          # Reflection on a plane at x1, aligning the frame
+          # tangent with the curve tangent
+          t1 = in_world(vz(1, x1.cs)),
+          v2 = t1 - til,
+          c2 = dot(v2, v2),
+          r1 = ril - v2*(2/c2*dot(v2, ril)),
+          s1 = cross(t1, r1)
+        push!(new_frames, loc_from_o_vx_vy(x1, r1, s1))
+      end
+    end
+    new_frames
+  end
+
+  
