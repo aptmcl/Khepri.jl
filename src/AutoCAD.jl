@@ -419,14 +419,54 @@ acad"public Frame3d CurveFrameAt(Entity ent, double t)"
 acad"public Frame3d CurveFrameAtLength(Entity ent, double l)"
 
 backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
-    let conn = connection(b)
-        r = ref(s).value
+  let conn = connection(b),
+        r = ref(s).value,
         (t1, t2) = ACADCurveDomain(conn, r)
-        map_division(t1, t2, n) do t
-            f(ACADCurveFrameAt(conn, r, t))
-        end
+    map_division(t1, t2, n) do t
+      f(ACADCurveFrameAt(conn, r, t))
     end
+  end
 
+# For low level access:
+acad"public Point3d[] CurvePointsAt(Entity ent, double[] ts)"
+acad"public Vector3d[] CurveTangentsAt(Entity ent, double[] ts)"
+acad"public Vector3d[] CurveNormalsAt(Entity ent, double[] ts)"
+
+backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
+  let conn = connection(b),
+      r = ref(s).value,
+      (t1, t2) = ACADCurveDomain(conn, r),
+      ti = division(t1, t2, n),
+      ps = ACADCurvePointsAt(conn, r, ti),
+      ts = ACADCurveTangentsAt(conn, r, ti),
+      #ns = ACADCurveNormalsAt(conn, r, ti),
+      frames = rotation_minimizing_frames(ACADCurveFrameAt(conn, r, t1), ps, ts)
+    map(f, frames)
+  end
+
+rotation_minimizing_frames(u0, xs, ts) =
+  let new_frames = [u0],
+      ri = in_world(vx(1, ui.cs))
+    for i in 1:length(xs)-1
+      let xi = xs[i],
+          xii = xs[i+1],
+          ti = ts[i],
+          tii = ts[i+1],
+          v1 = xii - xi,
+          c1 = dot(v1, v1),
+          ril = ri - v1*(2/c1*dot(v1,ri)),
+          til = ti - v1*(2/c1*dot(v1,ti)),
+          v2 = tii - til,
+          c2 = dot(v2, v2),
+          rii = ril - v2*(2/c2*dot(v2, ril)),
+          sii = cross(tii, rii),
+          uii = loc_from_o_vx_vy(xii, rii, sii)
+        push!(new_frames, uii)
+        ri = rii
+      end
+    end
+    new_frames
+  end
 
 acad"public Vector3d RegionNormal(Entity ent)"
 acad"public Point3d RegionCentroid(Entity ent)"
