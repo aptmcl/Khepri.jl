@@ -418,7 +418,7 @@ acad"public double CurveLength(Entity ent)"
 acad"public Frame3d CurveFrameAt(Entity ent, double t)"
 acad"public Frame3d CurveFrameAtLength(Entity ent, double l)"
 
-backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
+old_backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
   let conn = connection(b),
         r = ref(s).value,
         (t1, t2) = ACADCurveDomain(conn, r)
@@ -444,9 +444,10 @@ backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
     map(f, frames)
   end
 
+#=
 rotation_minimizing_frames(u0, xs, ts) =
-  let new_frames = [u0],
-      ri = in_world(vx(1, ui.cs))
+  let ri = in_world(vy(1, u0.cs)),
+      new_frames = [loc_from_o_vx_vy(xs[1], ri, cross(ts[1], ri))]
     for i in 1:length(xs)-1
       let xi = xs[i],
           xii = xs[i+1],
@@ -461,6 +462,32 @@ rotation_minimizing_frames(u0, xs, ts) =
           rii = ril - v2*(2/c2*dot(v2, ril)),
           sii = cross(tii, rii),
           uii = loc_from_o_vx_vy(xii, rii, sii)
+        push!(new_frames, uii)
+        ri = rii
+      end
+    end
+    new_frames
+  end
+=#
+
+#
+rotation_minimizing_frames(u0, xs, ts) =
+  let ri = in_world(vy(1, u0.cs)),
+      new_frames = [loc_from_o_vx_vy(xs[1], cross(ri, ts[1]), ri)]
+    for i in 1:length(xs)-1
+      let xi = xs[i],
+          xii = xs[i+1],
+          ti = ts[i],
+          tii = ts[i+1],
+          v1 = xii - xi,
+          c1 = dot(v1, v1),
+          ril = ri - v1*(2/c1*dot(v1,ri)),
+          til = ti - v1*(2/c1*dot(v1,ti)),
+          v2 = tii - til,
+          c2 = dot(v2, v2),
+          rii = ril - v2*(2/c2*dot(v2, ril)),
+          sii = cross(rii, tii),
+          uii = loc_from_o_vx_vy(xii, sii, rii)
         push!(new_frames, uii)
         ri = rii
       end
