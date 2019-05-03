@@ -169,7 +169,7 @@ sph_phi(p) =
   end
 sph_psi(p) =
   let (x, y, z) = (p.x, p.y, p.z)
-    0 == x == y == z ? 0 : mod(atan2(sqrt(x*x + y*y), z),2pi)
+    0 == x == y == z ? 0 : mod(atan(sqrt(x*x + y*y), z),2pi)
   end
 
 struct VXYZ <: Vec
@@ -463,5 +463,3 @@ rotation_minimizing_frames(frames) =
     end
     new_frames
   end
-
-  
