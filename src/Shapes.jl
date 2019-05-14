@@ -469,7 +469,7 @@ text_centered(str::String="", center::Loc=u0(), height::Real=1) =
 
 # This is for unknown shapes (they are opaque, the only thing you can do with then
 # might be just delete them)
-@defproxy(unknown, Shape3D)
+@defproxy(unknown, Shape3D, baseref::Any=required())
 
 
 @defproxy(sphere, Shape3D, center::Loc=u0(), radius::Real=1)
