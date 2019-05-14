@@ -485,9 +485,9 @@ regular_pyramid_frustum(edges::Integer, cb::Loc, rb::Real, angle::Real, ct::Loc,
   end
 
 @defproxy(regular_pyramid, Shape3D, edges::Integer=3, cb::Loc=u0(), rb::Real=1, angle::Real=0, h::Real=1, inscribed::Bool=false)
-regular_pyramid(edges::Integer, cb::Loc, rb::Real, a::Real, ct::Loc, inscribed::Bool=false) =
+regular_pyramid(edges::Integer, cb::Loc, rb::Real, angle::Real, ct::Loc, inscribed::Bool=false) =
   let (c, h) = position_and_height(cb, ct)
-    regular_pyramid(edges, c, rb, a, h, inscribed)
+    regular_pyramid(edges, c, rb, angle, h, inscribed)
   end
 
 @defproxy(irregular_pyramid_fustrum, Shape3D, cbs::Locs=[ux(), uy(), uxy()], cts::Locs=[uxz(), uyz(), uxyz()])
