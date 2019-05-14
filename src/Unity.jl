@@ -275,7 +275,7 @@ backend_map_division(b::Unity, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
 unity"public GameObject Text(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)"
 
 realize(b::Unity, s::Text) =
-  UnityAddText(
+  UnityText(
     connection(b),
     s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Fonts/Inconsolata-Regular", s.height)
 
