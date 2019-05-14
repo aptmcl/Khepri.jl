@@ -1012,7 +1012,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                     backend=b, ref=ref)
         else
             #unknown(backend=b, ref=ref)
-            unknown(backend=b, baseref=r, ref=LazyRef(b, ACADNativeRef(ACADCopy(c, r)), 0, 0) # To force copy
+            unknown(backend=b, baseref=r, ref=LazyRef(b, ACADNativeRef(ACADCopy(c, r)), 0, 0)) # To force copy
             #error("Unknown shape with code $(code)")
         end
     end
