@@ -1017,6 +1017,15 @@ shape_from_ref(r, b::ACAD=current_backend()) =
     end
 #
 
+#=
+In case we need to realize an Uknown shape (because, e.g., it was deleted),
+if the reference is still valid we might just copy it
+=#
+
+realize(b::ACAD, s::Unknown) =
+    ACADCopy(connection(b), s.ref.value.value)
+
+
 acad"public Point3d[] GetPosition(string prompt)"
 
 select_position(prompt::String, b::ACAD) =
@@ -1170,10 +1179,10 @@ all_shapes_in_layer(layer, b::ACAD) =
 
 acad"public void SelectShapes(ObjectId[] ids)"
 highlight_shape(s::Shape, b::ACAD) =
-    ACADSelectShapes(connection(b), [ref(s).value])
+    ACADSelectShapes(connection(b), collect_ref(s))
 
 highlight_shapes(shapes::Shapes, b::ACAD) =
-    ACADSelectShapes(connection(b), map(s -> ref(s).value, shapes))
+    ACADSelectShapes(connection(b), collect_ref(s))
 
 
 
