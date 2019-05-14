@@ -1012,7 +1012,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                     backend=b, ref=ref)
         else
             #unknown(backend=b, ref=ref)
-            unknown(backend=b, baseref=r, ref=LazyRef(b, ACADNativeRef(ACADCopy(c, r)), 0, 0)) # To force copy
+            unknown(r, backend=b, ref=LazyRef(b, ACADNativeRef(r), 0, 0))# To force copy
             #error("Unknown shape with code $(code)")
         end
     end
@@ -1023,7 +1023,7 @@ In case we need to realize an Unknown shape, we just copy it
 =#
 
 realize(b::ACAD, s::Unknown) =
-    ACADCopy(connection(b), s.baseref.value.value)
+    ACADCopy(connection(b), s.baseref)
 
 
 acad"public Point3d[] GetPosition(string prompt)"
