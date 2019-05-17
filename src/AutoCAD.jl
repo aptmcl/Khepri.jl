@@ -1181,8 +1181,8 @@ acad"public void SelectShapes(ObjectId[] ids)"
 highlight_shape(s::Shape, b::ACAD) =
     ACADSelectShapes(connection(b), collect_ref(s))
 
-highlight_shapes(shapes::Shapes, b::ACAD) =
-    ACADSelectShapes(connection(b), collect_ref(s))
+highlight_shapes(ss::Shapes, b::ACAD) =
+    ACADSelectShapes(connection(b), collect_ref(ss))
 
 
 
