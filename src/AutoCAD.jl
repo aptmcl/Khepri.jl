@@ -561,7 +561,7 @@ realize(b::ACAD, s::RegularPrism) =
                                    ps,
                                    map(p -> add_z(p, s.h), ps))
   end
-realize(b::ACAD, s::IrregularPyramidFustrum) =
+realize(b::ACAD, s::IrregularPyramidFrustum) =
     ACADIrregularPyramidFrustum(connection(b), s.bs, s.ts)
 
 realize(b::ACAD, s::IrregularPrism) =
