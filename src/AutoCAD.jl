@@ -554,20 +554,20 @@ realize(b::ACAD, s::RegularPyramid) =
                           regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                           add_z(s.cb, s.h))
 realize(b::ACAD, s::IrregularPyramid) =
-  ACADIrregularPyramid(connection(b), s.cbs, s.ct)
+  ACADIrregularPyramid(connection(b), s.bs, s.t)
 realize(b::ACAD, s::RegularPrism) =
-  let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
+  let ps = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
     ACADIrregularPyramidFrustum(connection(b),
-                                   cbs,
-                                   map(p -> add_z(p, s.h), cbs))
+                                   ps,
+                                   map(p -> add_z(p, s.h), ps))
   end
 realize(b::ACAD, s::IrregularPyramidFustrum) =
-    ACADIrregularPyramidFrustum(connection(b), s.cbs, s.cts)
+    ACADIrregularPyramidFrustum(connection(b), s.bs, s.ts)
 
 realize(b::ACAD, s::IrregularPrism) =
   ACADIrregularPyramidFrustum(connection(b),
-                              s.cbs,
-                              map(p -> (p + s.v), s.cbs))
+                              s.bs,
+                              map(p -> (p + s.v), s.bs))
 ## FIXME: deal with the rotation angle
 realize(b::ACAD, s::RightCuboid) =
   ACADCenteredBox(connection(b), s.cb, s.width, s.height, s.h)

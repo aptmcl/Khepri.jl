@@ -367,7 +367,7 @@ realize(b::RH, s::RegularPyramid) =
                        regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                        add_z(s.cb, s.h))
 realize(b::RH, s::IrregularPyramid) =
-    RHIrregularPyramid(connection(b), s.cbs, s.ct)
+    RHIrregularPyramid(connection(b), s.bs, s.t)
 realize(b::RH, s::RegularPrism) =
     let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
         RHIrregularPyramidFrustum(connection(b),
@@ -376,8 +376,8 @@ realize(b::RH, s::RegularPrism) =
     end
 realize(b::RH, s::IrregularPrism) =
     RHIrregularPyramidFrustum(connection(b),
-                              s.cbs,
-                              map(p -> (p + s.v), s.cbs))
+                              s.bs,
+                              map(p -> (p + s.v), s.bs))
 
 realize(b::RH, s::RightCuboid) =
     RHXYCenteredBox(connection(b), s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.width, s.height, s.h)

@@ -306,22 +306,22 @@ realize(b::Unity, s::RegularPyramid) =
                add_z(s.cb, s.h))
 
 realize(b::Unity, s::IrregularPyramid) =
-  UnityPyramid(connection(b), s.cbs, s.ct)
+  UnityPyramid(connection(b), s.bs, s.t)
 
 realize(b::Unity, s::RegularPrism) =
-  let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
+  let bs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
     UnityPyramidFrustum(connection(b),
-                        cbs,
-                        map(p -> add_z(p, s.h), cbs))
+                        bs,
+                        map(p -> add_z(p, s.h), bs))
   end
 
-realize(b::Unity, s::IrregularPyramidFustrum) =
-    UnityPyramidFrustum(connection(b), s.cbs, s.cts)
+realize(b::Unity, s::IrregularPyramidFrustum) =
+    UnityPyramidFrustum(connection(b), s.bs, s.ts)
 
 realize(b::Unity, s::IrregularPrism) =
   UnityPyramidFrustum(connection(b),
-                      s.cbs,
-                      map(p -> (p + s.v), s.cbs))
+                      s.bs,
+                      map(p -> (p + s.v), s.bs))
 
 unity"public GameObject RightCuboid(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle)"
 

@@ -490,17 +490,17 @@ regular_pyramid(edges::Integer, cb::Loc, rb::Real, angle::Real, ct::Loc, inscrib
     regular_pyramid(edges, c, rb, angle, h, inscribed)
   end
 
-@defproxy(irregular_pyramid_fustrum, Shape3D, cbs::Locs=[ux(), uy(), uxy()], cts::Locs=[uxz(), uyz(), uxyz()])
-@defproxy(irregular_pyramid, Shape3D, cbs::Locs=[ux(), uy(), uxy()], ct::Loc=uz())
+@defproxy(irregular_pyramid_frustum, Shape3D, bs::Locs=[ux(), uy(), uxy()], ts::Locs=[uxz(), uyz(), uxyz()])
+@defproxy(irregular_pyramid, Shape3D, bs::Locs=[ux(), uy(), uxy()], t::Loc=uz())
 
 @defproxy(regular_prism, Shape3D, edges::Integer=3, cb::Loc=u0(), r::Real=1, angle::Real=0, h::Real=1, inscribed::Bool=false)
 regular_prism(edges::Integer, cb::Loc, r::Real, angle::Real, ct::Loc, inscribed::Bool=false) =
   let (c, h) = position_and_height(cb, ct)
     regular_prism(edges, c, r, angle, h, inscribed)
   end
-@defproxy(irregular_prism, Shape3D, cbs::Locs=[ux(), uy(), uxy()], v::Vec=vz(1))
-irregular_prism(cbs::Locs, h::Real) =
-  irregular_prism(cbs, vz(h))
+@defproxy(irregular_prism, Shape3D, bs::Locs=[ux(), uy(), uxy()], v::Vec=vz(1))
+irregular_prism(bs::Locs, h::Real) =
+  irregular_prism(bs, vz(h))
 
 @defproxy(right_cuboid, Shape3D, cb::Loc=u0(), width::Real=1, height::Real=1, h::Real=1, angle::Real=0)
 right_cuboid(cb::Loc, width::Real, height::Real, ct::Loc, angle::Real=0; backend::Backend=current_backend()) =
