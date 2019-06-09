@@ -135,10 +135,10 @@ revit_file_family(path, family_map=(), instance_map=()) =
 
 backend_get_family_ref(b::RVT, f::Family, rvtf::RevitFileFamily) =
   let c = connection(b)
-    if rvtf.family_ref()===RVTVoidId
+    if true #rvtf.family_ref()===RVTVoidId
       rvtf.family_ref(RVTLoadFamily(c, rvtf.path))
     end
-    if rvtf.instance_ref()===RVTVoidId
+    if true #rvtf.instance_ref()===RVTVoidId
       let param_map = rvtf.family_map,
           params = keys(param_map)
         rvtf.instance_ref(
@@ -167,7 +167,7 @@ rvt"public String InstalledLibraryPath(String name)"
 # C:\\ProgramData\\Autodesk\\RVT 2017\\Libraries\\US Metric\\
 
 set_backend_family(default_wall_family(), revit, revit_system_family())
-
+set_backend_family(default_window_family(), revit, revit_system_family())
 #=
 set_backend_family(default_slab_family(), revit, revit_system_family())
 set_backend_family(default_beam_family(), revit, revit_file_family(
@@ -222,20 +222,25 @@ locs_and_arcs(circle::CircularPath) =
         ([locs1..., locs2...], [arcs1..., arcs2...])
     end
 
-realize_slab(b::RVT, contour::ClosedPath, level::Level, family::SlabFamily) =
+
+realize_slab(b::RVT, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::SlabFamily) =
     let (locs, arcs) = locs_and_arcs(contour)
+        @assert length(holes) == 0
         RVTCreatePathFloor(connection(b), locs, arcs, ref(level).value)
         # we are not using the family yet
         # ref(s.family))
     end
 
-realize_slab(b::RVT, contour::ClosedPolygonalPath, level::Level, family::SlabFamily) =
+realize_slab(b::RVT, contour::ClosedPolygonalPath, holes::Vector{<:ClosedPath}, level::Level, family::SlabFamily) =
+  begin
+      @assert length(holes) == 0
     RVTCreatePolygonalFloor(
         connection(b),
         convert(ClosedPolygonalPath, contour).vertices,
         ref(level).value)
         # we are not using the family yet
         # ref(s.family))
+    end
 
 realize_slab(b::RVT, contour::RectangularPath, level::Level, family::SlabFamily) =
     realize_slab(b, convert(ClosedPolygonalPath, contour), level, family)
@@ -318,7 +323,7 @@ realize_wall_openings(b::RVT, w::Wall, w_ref, openings) =
 
 realize(b::RVT, s::Window) =
   let rvtf = backend_family(b, s.family),
-      param_map = rvtf.family_map,
+      param_map = rvtf.instance_map,
       params = keys(param_map)
     RVTInsertWindow(
         connection(b),
