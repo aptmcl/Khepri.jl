@@ -242,8 +242,8 @@ realize_slab(b::RVT, contour::ClosedPolygonalPath, holes::Vector{<:ClosedPath}, 
         # ref(s.family))
     end
 
-realize_slab(b::RVT, contour::RectangularPath, level::Level, family::SlabFamily) =
-    realize_slab(b, convert(ClosedPolygonalPath, contour), level, family)
+realize_slab(b::RVT, contour::RectangularPath, holes::Vector{<:ClosedPath}, level::Level, family::SlabFamily) =
+    realize_slab(b, convert(ClosedPolygonalPath, contour), holes, level, family)
 
 rvt"public void CreatePolygonalOpening(XYZ[] pts, Element host)"
 rvt"public void CreatePathOpening(XYZ[] pts, double[] angles, Element host)"
