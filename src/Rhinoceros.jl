@@ -108,7 +108,7 @@ rhino"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
 rhino"public Brep Extrusion(RhinoObject obj, Vector3d dir)"
 rhino"public Brep SweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
 rhino"public Brep SolidSweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
-
+rhino"public Brep SweepPathProfile(RhinoObject path, RhinoObject profile, double rotation, double scale)"
 #=
 rhino"public Guid Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)"
 rhino"public Guid Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)"
@@ -411,7 +411,7 @@ backend_extrusion(b::RH, s::Shape, v::Vec) =
 backend_sweep(b::RH, path::Shape, profile::Shape, rotation::Real, scale::Real) =
   map_ref(profile) do profile_r
     map_ref(path) do path_r
-      RHSolidSweepPathCurve(connection(b), path_r, profile_r, rotation, scale)
+      RHSweepPathProfile(connection(b), path_r, profile_r, rotation, scale)
     end
   end
 
@@ -625,7 +625,6 @@ zoom_extents(b::RH) =
 view_top(b::RH) =
     RHViewTop(connection(b))
 
-#
 rhino"public int DeleteAll()"
 rhino"public int DeleteAllInLayer(String name)"
 rhino"public void Delete(Guid id)"
