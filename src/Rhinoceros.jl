@@ -547,8 +547,8 @@ realize(b::RH, s::UnionMirror) =
 
 realize(b::RH, s::SurfaceGrid) =
   let (nu, nv) = (length(s.ptss), length(s.ptss[1]))
-    RHSurfaceFromGrid(connection(b), nu nv, vcat(s.ptss...), s.closed_u, s.closed_v,
-      max(2*floor(Int,nu/30)+1,2), max(2*floor(Int, nv/30)+1,2))
+    RHSurfaceFromGrid(connection(b), nu, nv, vcat(s.ptss...), s.closed_u, s.closed_v,
+      max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
   end
 #=
 realize(b::RH, s::Thicken) =
