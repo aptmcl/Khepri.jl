@@ -118,10 +118,12 @@ rhino"public Guid[] Intersect(RhinoObject obj0, RhinoObject obj1)"
 rhino"public Guid[] Subtract(RhinoObject obj0, RhinoObject obj1)"
 #=
 rhino"public Guid Revolve(ObjectId profileId, Point3d p, Vector3d n, double startAngle, double amplitude)"
-rhino"public void Move(ObjectId id, Vector3d v)"
-rhino"public void Scale(ObjectId id, Point3d p, double s)"
-rhino"public void Rotate(ObjectId id, Point3d p, Vector3d n, double a)"
-rhino"public Guid Mirror(ObjectId id, Point3d p, Vector3d n, bool copy)"
+=#
+rhino"public void Move(Guid id, Vector3d v)"
+rhino"public void Scale(Guid id, Point3d p, double s)"
+rhino"public void Rotate(Guid id, Point3d p, Vector3d n, double a)"
+rhino"public Guid Mirror(Guid id, Point3d p, Vector3d n, bool copy)"
+#=
 rhino"public Point3d[] GetPoint(string prompt)"
 rhino"public Point3d[] BoundingBox(ObjectId[] ids)"
 rhino"public void ZoomExtents()"
@@ -302,7 +304,7 @@ realize(b::RH, s::RegularPolygon) =
   RHClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 
 realize(b::RH, s::Rectangle) =
-  RHClosedPolyLine(connection(b), [s.c, add_x(s.c, s.dx), add_xy(s.c, s.dx, s.dy), add_y(s.c, s.dy)])
+  RHClosedPolyLine(connection(b), [s.corner, add_x(s.corner, s.dx), add_xy(s.corner, s.dx, s.dy), add_y(s.corner, s.dy)])
 
 rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
 
@@ -499,10 +501,10 @@ slice_ref(b::RH, r::RHUnionRef, p::Loc, v::Vec) =
 #=
 realize(b::RH, s::IntersectionShape) =
   foldl((r0,r1)->intersect_ref(b,r0,r1), UniversalRef{RHId}(), map(ref, s.shapes))
+  =#
 
 realize(b::RH, s::Slice) =
   slice_ref(b, ref(s.shape), s.p, s.n)
-  =#
 
 realize(b::RH, s::Move) =
   let r = map_ref(s.shape) do r
@@ -544,6 +546,7 @@ realize(b::RH, s::UnionMirror) =
           end
     UnionRef((r0,r1))
   end
+=#
 
 realize(b::RH, s::SurfaceGrid) =
   let (nu, nv) = size(s.points)
