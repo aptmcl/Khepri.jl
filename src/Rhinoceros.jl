@@ -119,9 +119,9 @@ rhino"public Guid[] Subtract(RhinoObject obj0, RhinoObject obj1)"
 #=
 rhino"public Guid Revolve(ObjectId profileId, Point3d p, Vector3d n, double startAngle, double amplitude)"
 =#
-rhino"public void Move(Guid id, Vector3d v)"
-rhino"public void Scale(Guid id, Point3d p, double s)"
-rhino"public void Rotate(Guid id, Point3d p, Vector3d n, double a)"
+rhino"public Guid Move(Guid id, Vector3d v)"
+rhino"public Guid Scale(Guid id, Point3d p, double s)"
+rhino"public Guid Rotate(Guid id, Point3d p, Vector3d n, double a)"
 rhino"public Guid Mirror(Guid id, Point3d p, Vector3d n, bool copy)"
 #=
 rhino"public Point3d[] GetPoint(string prompt)"
