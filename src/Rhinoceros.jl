@@ -89,8 +89,10 @@ rhino"public Guid IrregularPyramidMesh(Point3d[] pts, Point3d apex)"
 =#
 rhino"public Brep IrregularPyramid(Point3d[] pts, Point3d apex)"
 rhino"public Brep IrregularPyramidFrustum(Point3d[] bpts, Point3d[] tpts)"
-#=rhino"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
-rhino"public Entity SurfaceFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level)"
+#rhino"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
+rhino"public Guid SurfaceFromGrid(int nU, int nV, Point3d[] pts, bool closedU, bool closedV, int degreeU, int degreeV)"
+
+#=
 rhino"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
 =#
 rhino"public Brep[] Thicken(RhinoObject obj, double thickness)"
@@ -104,6 +106,9 @@ rhino"public double[] SurfaceDomain(Entity ent)"
 rhino"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
 =#
 rhino"public Brep Extrusion(RhinoObject obj, Vector3d dir)"
+rhino"public Brep SweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
+rhino"public Brep SolidSweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
+
 #=
 rhino"public Guid Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)"
 rhino"public Guid Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)"
@@ -250,7 +255,6 @@ realize(b::RH, s::Point) =
 realize(b::RH, s::Line) =
   RHPolyLine(connection(b), s.vertices)
 
-#=
 realize(b::RH, s::Spline) =
   if (s.v0 == false) && (s.v1 == false)
     RHSpline(connection(b), s.points)
@@ -265,7 +269,6 @@ realize(b::RH, s::Spline) =
 
 realize(b::RH, s::ClosedSpline) =
   RHInterpClosedSpline(connection(b), s.points)
-=#
 
 realize(b::RH, s::Circle) =
   RHCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
@@ -402,17 +405,15 @@ backend_extrusion(b::RH, s::Shape, v::Vec) =
             RHExtrusion(connection(b), r, v)
         end,
         s)
-#=
-realize(b::Backend, s::Sweep) =
-  backend_sweep(b, s.path, s.profile, s.rotation, s.scale)
 
 backend_sweep(b::RH, path::Shape, profile::Shape, rotation::Real, scale::Real) =
   map_ref(profile) do profile_r
     map_ref(path) do path_r
-      RHSweep(connection(b), path_r, profile_r, rotation, scale)
+      RHSolidSweepPathCurve(connection(b), path_r, profile_r, rotation, scale)
     end
   end
 
+#=
 realize(b::RH, s::Revolve) =
   and_delete_shape(
     map_ref(s.profile) do r
@@ -542,10 +543,14 @@ realize(b::RH, s::UnionMirror) =
           end
     UnionRef((r0,r1))
   end
+=#
 
 realize(b::RH, s::SurfaceGrid) =
-  RHSurfaceFromGrid(connection(b), length(s.ptss), length(s.ptss[1]), vcat(s.ptss...), s.closed_u, s.closed_v, 2)
-
+  let (nu, nv) = (length(s.ptss), length(s.ptss[1]))
+    RHSurfaceFromGrid(connection(b), nu nv, vcat(s.ptss...), s.closed_u, s.closed_v,
+      max(2*floor(Int,nu/30)+1,2), max(2*floor(Int, nv/30)+1,2))
+  end
+#=
 realize(b::RH, s::Thicken) =
   and_delete_shape(
     map_ref(s.shape) do r
@@ -619,7 +624,6 @@ view_top(b::RH) =
     RHViewTop(connection(b))
 
 #
-rhino"public int DeleteAll()"
 rhino"public int DeleteAllInLayer(String name)"
 rhino"public void Delete(Guid id)"
 rhino"public void DeleteMany(Guid[] ids)"
@@ -659,10 +663,13 @@ create_layer(name::String, color::RGB, b::RH) =
 delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
   RHDeleteAllInLayer(connection(b), layer)
 
+rhino"public Guid Clone(RhinoObject e)"
+
 shape_from_ref(r, b::RH) =
   let c = connection(b)
-    let code = RHShapeCode(c, r)
-        ref = LazyRef(b, RHNativeRef(RHClone(connection(b), r))) # HACK CLONING!!!!!
+    let code = RHShapeCode(c, r),
+        ref = LazyRef(b, RHNativeRef(r))
+              #ref = LazyRef(b, RHNativeRef(RHClone(connection(b), r))) # HACK CLONING!!!!!
       if code == 1
         point(RHPointPosition(c, r),
               backend=b, ref=ref)
