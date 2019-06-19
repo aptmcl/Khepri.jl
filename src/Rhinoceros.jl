@@ -626,6 +626,7 @@ view_top(b::RH) =
     RHViewTop(connection(b))
 
 #
+rhino"public int DeleteAll()"
 rhino"public int DeleteAllInLayer(String name)"
 rhino"public void Delete(Guid id)"
 rhino"public void DeleteMany(Guid[] ids)"
