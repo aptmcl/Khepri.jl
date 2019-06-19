@@ -546,7 +546,6 @@ realize(b::RH, s::UnionMirror) =
           end
     UnionRef((r0,r1))
   end
-=#
 
 realize(b::RH, s::SurfaceGrid) =
   let (nu, nv) = size(s.points)
