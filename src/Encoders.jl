@@ -66,7 +66,15 @@ Guids = Vector{Guid}
 is_empty_guid(g::Guid) = all(v -> v == 0, g)
 
 encode_Guid(c::IO, v::Guid) = write(c, v)
-decode_Guid(c::IO) = read(c, 16)
+decode_Guid(c::IO) =
+  let guid = read(c, 16)
+      if is_empty_guid(guid)
+        error("Backend Error: $(decode_String(c))")
+      else
+        guid
+      end
+  end
+
 
 encode_Guid_array(c::IO, v::Vector) = begin
   encode_int(c, length(v))
