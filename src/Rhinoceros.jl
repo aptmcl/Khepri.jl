@@ -502,6 +502,7 @@ realize(b::RH, s::IntersectionShape) =
 
 realize(b::RH, s::Slice) =
   slice_ref(b, ref(s.shape), s.p, s.n)
+  =#
 
 realize(b::RH, s::Move) =
   let r = map_ref(s.shape) do r
@@ -543,11 +544,10 @@ realize(b::RH, s::UnionMirror) =
           end
     UnionRef((r0,r1))
   end
-=#
 
 realize(b::RH, s::SurfaceGrid) =
-  let (nu, nv) = (length(s.ptss), length(s.ptss[1]))
-    RHSurfaceFromGrid(connection(b), nu, nv, vcat(s.ptss...), s.closed_u, s.closed_v,
+  let (nu, nv) = size(s.points)
+    RHSurfaceFromGrid(connection(b), nu, nv, reshape(s.points,:), s.closed_u, s.closed_v,
       max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
   end
 #=
