@@ -32,18 +32,15 @@ decode_ChairFamily = decode_int
 encode_TableChairFamily = encode_int
 decode_TableChairFamily = decode_int
 
-#=
 rhino"public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)"
 rhino"public void View(Point3d position, Point3d target, double lens)"
 rhino"public void ViewTop()"
 rhino"public Point3d ViewCamera()"
 rhino"public Point3d ViewTarget()"
 rhino"public double ViewLens()"
+#=
 rhino"public byte Sync()"
 rhino"public byte Disconnect()"
-rhino"public void Delete(ObjectId id)"
-rhino"public void DeleteMany(ObjectId[] ids)"
-rhino"public Guid Copy(ObjectId id)"
 =#
 rhino"public Guid Point(Point3d p)"
 rhino"public Point3d PointPosition(Guid ent)"
@@ -96,19 +93,17 @@ rhino"public Guid SurfaceFromGrid(int nU, int nV, Point3d[] pts, bool closedU, b
 rhino"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
 =#
 rhino"public Brep[] Thicken(RhinoObject obj, double thickness)"
+rhino"public double[] CurveDomain(RhinoObject obj)"
+rhino"public double CurveLength(RhinoObject obj)"
+rhino"public Plane CurveFrameAt(RhinoObject obj, double t)"
+rhino"public Plane CurveFrameAtLength(RhinoObject obj, double l)"
 #=
-rhino"public double[] CurveDomain(Entity ent)"
-rhino"public double CurveLength(Entity ent)"
-rhino"public Frame3d CurveFrameAt(Entity ent, double t)"
-rhino"public Frame3d CurveFrameAtLength(Entity ent, double l)"
 rhino"public Guid NurbSurfaceFrom(ObjectId id)"
 rhino"public double[] SurfaceDomain(Entity ent)"
 rhino"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
 =#
 rhino"public Brep Extrusion(RhinoObject obj, Vector3d dir)"
-rhino"public Brep SweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
-rhino"public Brep SolidSweepPathCurve(RhinoObject path, RhinoObject profile, double rotation, double scale)"
-rhino"public Brep SweepPathProfile(RhinoObject path, RhinoObject profile, double rotation, double scale)"
+rhino"public Brep[] SweepPathProfile(RhinoObject path, RhinoObject profile, double rotation, double scale)"
 #=
 rhino"public Guid Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)"
 rhino"public Guid Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)"
@@ -305,6 +300,25 @@ realize(b::RH, s::RegularPolygon) =
 
 realize(b::RH, s::Rectangle) =
   RHClosedPolyLine(connection(b), [s.corner, add_x(s.corner, s.dx), add_xy(s.corner, s.dx, s.dy), add_y(s.corner, s.dy)])
+#
+rhino"public Point3d[] CurvePointsAt(RhinoObject obj, double[] ts)"
+rhino"public Vector3d[] CurveTangentsAt(RhinoObject obj, double[] ts)"
+rhino"public Vector3d[] CurveNormalsAt(RhinoObject obj, double[] ts)"
+
+backend_map_division(b::RH, f::Function, s::Shape1D, n::Int) =
+  let conn = connection(b),
+      r = ref(s).value,
+      (t1, t2) = RHCurveDomain(conn, r),
+      ti = division(t1, t2, n),
+      ps = RHCurvePointsAt(conn, r, ti),
+      ts = RHCurveTangentsAt(conn, r, ti),
+      #ns = ACADCurveNormalsAt(conn, r, ti),
+      frames = rotation_minimizing_frames(RHCurveFrameAt(conn, r, t1), ps, ts)
+    map(f, frames)
+  end
+
+
+
 
 rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
 
@@ -389,12 +403,12 @@ realize(b::RH, s::RightCuboid) =
 
 realize(b::RH, s::Box) =
     RHBox(connection(b), s.c, vx(1,s.c.cs), vy(1,s.c.cs), s.dx, s.dy, s.dz)
-#=
+
 realize(b::RH, s::Cone) =
   RHCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
+
 realize(b::RH, s::ConeFrustum) =
   RHConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
-=#
 
 realize(b::RH, s::Cylinder) =
   RHCylinder(connection(b), s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
