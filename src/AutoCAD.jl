@@ -944,7 +944,7 @@ shape_from_ref(r, b::ACAD=current_backend()) =
                  backend=b, ref=ref)
         elseif code == 7
             let tans = ACADSplineTangents(c, r)
-                if length(tans[1]) < 1e-20 && length(tans[2]) < 1e-20
+                if length(tans) == 0 || (length(tans[1]) < 1e-20 && length(tans[2]) < 1e-20)
                     closed_spline(ACADSplineInterpPoints(c, r)[1:end-1],
                                   backend=b, ref=ref)
                 else
