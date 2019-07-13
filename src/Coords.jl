@@ -381,10 +381,10 @@ meta_program(p::Loc) =
         Expr(:call, :xyz, meta_program(cx(p)), meta_program(cy(p)), meta_program(cz(p)))
     end
 meta_program(v::Vec) =
-    if cz(p) == 0
-        Expr(:call, :vxy, meta_program(cx(p)), meta_program(cy(p)))
+    if cz(v) == 0
+        Expr(:call, :vxy, meta_program(cx(v)), meta_program(cy(v)))
     else
-        Expr(:call, :vxyz, meta_program(cx(p)), meta_program(cy(p)), meta_program(cz(p)))
+        Expr(:call, :vxyz, meta_program(cx(v)), meta_program(cy(v)), meta_program(cz(v)))
     end
 
 # Conversions
