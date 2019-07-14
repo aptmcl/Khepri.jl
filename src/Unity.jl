@@ -10,6 +10,9 @@ encode_GameObject = encode_int
 decode_GameObject = decode_int_or_error
 encode_GameObject_array = encode_int_array
 decode_GameObject_array = decode_int_array
+encode_ExistingGameObject = encode_int
+decode_ExistingGameObject = decode_int_or_error
+
 
 encode_Material = encode_int
 decode_Material = decode_int_or_error
@@ -996,3 +999,15 @@ render_view(path::String, b::Unity) =
       interrupt_processing(c)
       UnityScreenShot(c, path)
     end
+
+unity"public void SelectGameObjects(GameObject[] objs)"
+
+highlight_shape(s::Shape, b::Unity) =
+    UnitySelectGameObjects(connection(b), collect_ref(s))
+
+highlight_shapes(ss::Shapes, b::Unity) =
+    UnitySelectGameObjects(connection(b), collect_ref(ss))
+
+
+#unity"public ExistingGameObject PromptGameObject()"
+unity"public GameObject PromptGameObject()"
