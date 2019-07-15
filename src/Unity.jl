@@ -810,61 +810,21 @@ backend_ieslight(b::Unity, file::String, loc::Loc, dir::Vec, alpha::Real, beta::
     UnityIESLight(connection(b), file, loc, loc + dir, vxyz(alpha, beta, gamma))
 
 # User Selection
-
+=#
 shape_from_ref(r, b::Unity=current_backend()) =
-    let c = connection(b)
-        code = UnityShapeCode(c, r)
-        ref = LazyRef(b, UnityNativeRef(r))
-        if code == 1 # Point
-            point(UnityPointPosition(c, r),
-                  backend=b, ref=ref)
-        elseif code == 2
-            circle(maybe_loc_from_o_vz(UnityCircleCenter(c, r), UnityCircleNormal(c, r)),
-                   UnityCircleRadius(c, r),
-                   backend=b, ref=ref)
-        elseif 3 <= code <= 6
-            line(UnityLineVertices(c, r),
-                 backend=b, ref=ref)
-        elseif code == 7
-            spline([xy(0,0)], false, false, #HACK obtain interpolation points
-                   backend=b, ref=ref)
-        elseif code == 9
-            let start_angle = mod(UnityArcStartAngle(c, r), 2pi)
-                end_angle = mod(UnityArcEndAngle(c, r), 2pi)
-                if end_angle > start_angle
-                    arc(maybe_loc_from_o_vz(UnityArcCenter(c, r), UnityArcNormal(c, r)),
-                        UnityArcRadius(c, r), start_angle, end_angle - start_angle,
-                        backend=b, ref=ref)
-                else
-                    arc(maybe_loc_from_o_vz(UnityArcCenter(c, r), UnityArcNormal(c, r)),
-                        UnityArcRadius(c, r), end_angle, start_angle - end_angle,
-                        backend=b, ref=ref)
-                end
-            end
-        elseif code == 10
-            let str = UnityTextString(c, r)
-                height = UnityTextHeight(c, r)
-                loc = UnityTextPosition(c, r)
-                text(str, loc, height, backend=b, ref=ref)
-            end
-        elseif code == 11
-            let str = UnityMTextString(c, r)
-                height = UnityMTextHeight(c, r)
-                loc = UnityMTextPosition(c, r)
-                text(str, loc, height, backend=b, ref=ref)
-            end
-        elseif 12 <= code <= 14
-            surface(Shapes1D[], backend=b, ref=ref)
-        elseif 103 <= code <= 106
-            polygon(UnityLineVertices(c, r),
-                    backend=b, ref=ref)
-        else
-            unknown(backend=b, ref=ref)
-            #error("Unknown shape with code $(code)")
-        end
+  let idx = findfirst(s -> ref(s).value == r, collected_shapes())
+    if isnothing(idx)
+      let c = connection(b),
+          code = UnityShapeCode(c, r),
+          ref = LazyRef(b, UnityNativeRef(r))
+          error("Unknown shape with code $(code)")
+      end
+    else
+      collected_shapes()[idx]
     end
+  end
 #
-
+#=
 Unity"public Point3d[] GetPosition(string prompt)"
 
 select_position(prompt::String, b::Unity) =
@@ -1011,12 +971,12 @@ unity"public void StartSelectingGameObject()"
 unity"public ExistingGameObject RecentlySelectedGameObject()"
 
 select_shape(prompt::String, b::Unity) =
-  let c = connection(b),
-      s = nothing
-    UnityStartSelectingGameObject(c)
-    while s == nothing
-      sleep(0.1)
-      s = UnityRecentlySelectedGameObject(c)
-    end
-    s
-  end
+  select_one_with_prompt(prompt, b, (c, prompt) ->
+    let s = nothing
+      UnityStartSelectingGameObject(c)
+      while s == nothing
+        sleep(0.1)
+        s = UnityRecentlySelectedGameObject(c)
+      end
+      [s]
+    end)
