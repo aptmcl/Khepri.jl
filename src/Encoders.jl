@@ -7,7 +7,7 @@ export encode_String, decode_String,
        is_empty_guid,
        encode_bool, decode_bool,
        encode_byte, decode_byte,
-       encode_int, decode_int, decode_int_or_error,
+       encode_int, decode_int, decode_int_or_error, decode_int_or_nothing,
        encode_long, decode_long, decode_long_or_error,
        encode_int_array, decode_int_array, decode_int_or_error_array,
        encode_float, decode_float,
@@ -153,6 +153,15 @@ decode_int_or_error_numbered(err_num) = (c::IO) ->
   end
 
 decode_int_or_error = decode_int_or_error_numbered(-1)
+
+decode_int_or_nothing(c::IO) =
+  let i = decode_int_or_error(c)
+    if i == -2
+      nothing
+    else
+      i
+    end
+  end
 
 decode_long_or_error_numbered(err_num) = (c::IO) ->
   let i = decode_long(c)

@@ -11,9 +11,7 @@ decode_GameObject = decode_int_or_error
 encode_GameObject_array = encode_int_array
 decode_GameObject_array = decode_int_array
 encode_ExistingGameObject = encode_int
-decode_ExistingGameObject = decode_int_or_error
-
-
+decode_ExistingGameObject = decode_int_or_nothing
 encode_Material = encode_int
 decode_Material = decode_int_or_error
 
