@@ -10,8 +10,6 @@ encode_GameObject = encode_int
 decode_GameObject = decode_int_or_error
 encode_GameObject_array = encode_int_array
 decode_GameObject_array = decode_int_array
-encode_ExistingGameObject = encode_int
-decode_ExistingGameObject = decode_int_or_nothing
 encode_Material = encode_int
 decode_Material = decode_int_or_error
 
@@ -969,15 +967,15 @@ highlight_shapes(ss::Shapes, b::Unity) =
 
 
 unity"public void StartSelectingGameObject()"
-unity"public ExistingGameObject RecentlySelectedGameObject()"
+unity"public int SelectedGameObjectId(bool existing)"
 
 select_shape(prompt::String, b::Unity) =
   select_one_with_prompt(prompt, b, (c, prompt) ->
-    let s = nothing
+    let s = -2 # Means not found
       UnityStartSelectingGameObject(c)
-      while s == nothing
+      while s == -2
         sleep(0.1)
-        s = UnityRecentlySelectedGameObject(c)
+        s = UnitySelectedGameObjectId(c, true)
       end
       [s]
     end)
