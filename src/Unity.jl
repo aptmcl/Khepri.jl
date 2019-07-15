@@ -811,7 +811,7 @@ backend_ieslight(b::Unity, file::String, loc::Loc, dir::Vec, alpha::Real, beta::
 
 # User Selection
 =#
-shape_from_ref(r, b::Unity=current_backend()) =
+shape_from_ref(r, b::Unity) =
   let idx = findfirst(s -> ref(s).value == r, collected_shapes())
     if isnothing(idx)
       let c = connection(b),

@@ -409,7 +409,7 @@ realize(b::ACAD, s::Surface) =
     ids
   end
 backend_surface_boundary(b::ACAD, s::Shape2D) =
-    map(shape_from_ref, ACADCurvesFromSurface(connection(b), ref(s).value))
+    map(c -> shape_from_ref(c, b), ACADCurvesFromSurface(connection(b), ref(s).value))
 
 # Iterating over curves and surfaces
 
@@ -928,7 +928,7 @@ backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::R
 
 # User Selection
 
-shape_from_ref(r, b::ACAD=current_backend()) =
+shape_from_ref(r, b::ACAD) =
     let c = connection(b),
         code = ACADShapeCode(c, r),
         ref = LazyRef(b, ACADNativeRef(r))
