@@ -1009,5 +1009,16 @@ highlight_shapes(ss::Shapes, b::Unity) =
     UnitySelectGameObjects(connection(b), collect_ref(ss))
 
 
-#unity"public ExistingGameObject PromptGameObject()"
-unity"public GameObject PromptGameObject()"
+unity"public void StartSelectingGameObject()"
+unity"public ExistingGameObject RecentlySelectedGameObject()"
+
+select_shape(prompt::String, b::Unity) =
+  let c = connection(b),
+      s = nothing
+    UnityStartSelectingGameObject(c)
+    while s == nothing
+      sleep(0.1)
+      s = UnityRecentlySelectedGameObject(c)
+    end
+    s
+  end
