@@ -21,6 +21,7 @@ export Loc, Locs, LocOrZ,
        vx,vy,vz,
        vxy,vxz,vyz,vpol,vcyl,vsph,
        add_x,add_y,add_z,add_xy,add_xz,add_yz,add_xyz,
+       add_pol,add_cyl,add_sph,
        unitized, dot, cross,
        cs_from_o_vx_vy_vz,
        cs_from_o_vx_vy,
@@ -152,7 +153,7 @@ cyl_z(p) = p.z
 pol(rho::Real, phi::Real, cs::CS=current_cs()) =
   cyl(rho, phi, 0, cs)
 add_pol(p::Loc, rho::Real, phi::Real) =
-  p + vcyl(rho, phi, 0)
+  p + vcyl(rho, phi, 0, p.cs)
 pol_rho = cyl_rho
 pol_phi = cyl_phi
 
