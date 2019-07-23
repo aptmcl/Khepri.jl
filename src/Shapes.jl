@@ -213,7 +213,9 @@ clear_trace!() =
 
 trace!(s) =
   let frames = stacktrace(),
-      interesting_locations = frames[findfirst(frame -> basename(string(frame.file)) != "Shapes.jl", frames):end-15], # remove garbage
+      interesting_locations = filter(frame -> ! startswith(string(frame.file), "."),
+                                     frames[findfirst(frame -> basename(string(frame.file)) != "Shapes.jl",
+                                                      frames):end-15]), # remove garbage
       locations = map(frame -> (frame.file, frame.line), interesting_locations)
     shape_to_file_locations[s] = locations
     for location in locations
