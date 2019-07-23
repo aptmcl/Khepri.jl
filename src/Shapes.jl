@@ -192,10 +192,42 @@ collecting_shapes(fn) =
         collected_shapes()
     end
 
+######################################################
+#Traceability
+traceability = Parameter(false)
+# We a dict from shapes to file locations
+# and a dict from file locations to shapes
+shape_to_file_locations = IdDict()
+file_location_to_shapes = Dict()
+
+export traceability, clear_trace!, shape_source, source_shapes
+
+shape_source(s) = shape_to_file_locations[s]
+source_shapes(file, line) = file_location_to_shapes[(file, line)]
+
+clear_trace!() =
+  begin
+    empty!(shape_to_file_locations)
+    empty!(file_location_to_shapes)
+  end
+
+trace!(s) =
+  let frames = stacktrace(),
+      interesting_locations = frames[findfirst(frame -> basename(string(frame.file)) != "Shapes.jl", frames):end-15], # remove garbage
+      locations = map(frame -> (frame.file, frame.line), interesting_locations)
+    shape_to_file_locations[s] = locations
+    for location in locations
+      file_location_to_shapes[location] = Shape[get(file_location_to_shapes, location, [])..., s]
+    end
+  end
+
+######################################################
+
 create(s::Shape) =
     begin
         immediate_mode() && ref(s)
         in_shape_collection() && push!(collected_shapes(), s)
+        traceability() && trace!(s)
         s
     end
 
