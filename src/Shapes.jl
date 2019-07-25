@@ -195,12 +195,13 @@ collecting_shapes(fn) =
 ######################################################
 #Traceability
 traceability = Parameter(false)
+trace_depth = Parameter(1000)
 # We a dict from shapes to file locations
 # and a dict from file locations to shapes
 shape_to_file_locations = IdDict()
 file_location_to_shapes = Dict()
 
-export traceability, clear_trace!, shape_source, source_shapes
+export traceability, trace_depth, clear_trace!, shape_source, source_shapes
 
 shape_source(s) = shape_to_file_locations[s]
 source_shapes(file, line) = file_location_to_shapes[(file, line)]
@@ -211,12 +212,29 @@ clear_trace!() =
     empty!(file_location_to_shapes)
   end
 
+interesting_locations(frames) =
+  let locations = [],
+      i = 2
+    while i < length(frames)-15 # magic number that represents the number of frames to discard
+      let path = string(frames[i].file)
+        if ! (startswith(path, ".\\") ||
+              endswith(path, "Shapes.jl") ||
+              endswith(path, "Parameters.jl") ||
+              startswith(path, ".\\none")) # redundant, I know
+          push!(locations, (frames[i].file, frames[i].line))
+        end
+      end
+      i = i+1
+      if i > trace_depth()
+        break
+      end
+    end
+    locations
+  end
+
 trace!(s) =
   let frames = stacktrace(),
-      interesting_locations = filter(frame -> ! startswith(string(frame.file), "."),
-                                     frames[findfirst(frame -> basename(string(frame.file)) != "Shapes.jl",
-                                                      frames):end-15]), # remove garbage
-      locations = map(frame -> (frame.file, frame.line), interesting_locations)
+      locations = interesting_locations(frames)
     shape_to_file_locations[s] = locations
     for location in locations
       file_location_to_shapes[location] = Shape[get(file_location_to_shapes, location, [])..., s]
