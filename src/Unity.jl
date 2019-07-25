@@ -813,10 +813,11 @@ backend_ieslight(b::Unity, file::String, loc::Loc, dir::Vec, alpha::Real, beta::
 shape_from_ref(r, b::Unity) =
   let idx = findfirst(s -> r in collect_ref(s), collected_shapes())
     if isnothing(idx)
-      let c = connection(b),
-          code = UnityShapeCode(c, r),
-          ref = LazyRef(b, UnityNativeRef(r))
-          error("Unknown shape with code $(code)")
+      let c = connection(b)
+          unknown(r, backend=b, ref=LazyRef(b, UnityNativeRef(r), 0, 0))
+          #code = UnityShapeCode(c, r),
+          #ref = LazyRef(b, UnityNativeRef(r))
+          #error("Unknown shape with code $(code)")
       end
     else
       collected_shapes()[idx]
