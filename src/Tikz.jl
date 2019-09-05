@@ -226,11 +226,6 @@ tikz_set_view(out::IO, camera::Loc, target::Loc, lens::Real) =
 
 #
 
-struct IOBuffer_Backend{K,T} <: Backend{K,T}
-  out::IOBuffer
-end
-connection(backend::IOBuffer_Backend) = backend.out
-
 abstract type TikZKey end
 const TikZId = Nothing
 const TikZIds = Vector{TikZId}
@@ -241,7 +236,7 @@ const TikZUniversalRef = UniversalRef{TikZKey, TikZId}
 const TikZNativeRef = NativeRef{TikZKey, TikZId}
 const TikZUnionRef = UnionRef{TikZKey, TikZId}
 const TikZSubtractionRef = SubtractionRef{TikZKey, TikZId}
-const TikZ = IOBuffer_Backend{TikZKey, TikZId}
+const TikZ = IOBufferBackend{TikZKey, TikZId}
 
 void_ref(b::TikZ) = TikZNativeRef(nothing)
 
