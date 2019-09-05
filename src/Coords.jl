@@ -41,8 +41,36 @@ export Loc, Locs, LocOrZ,
        translating_current_cs,
        regular_polygon_vertices
 
+#=
+Some useful terminology:
+
+Coordinate Space (also known as Reference Frame): an origin (position) and
+three axis (directions) that allow the precise identification of locations and
+translations (which includes directions and magnitude). There can be many reference
+frames. One is considered the world reference frame. It is possible to interpret
+the same location or the same translation regarding different reference frames.
+
+Coordinate System: a way to assign meaning to numbers that represent locations
+or translations relative to a reference frame. Different coordinate systems (e.g.,
+rectangular, polar, cylindrical, and spherical) assign different meanings to the
+three numbers. It is possible to convert between different coordinate systems.
+
+Location: represented by a triple of numbers using a Coordinate System and a
+Reference Frame.
+
+Translation: represented by a triple of numbers using a Coordinate System and a
+Reference Frame.
+
+We need to frequently add translations to locations but it might happen that these
+translations and locations have different reference frames, which cause surprising
+results. To avoid this problem, we introduce the concept of void reference frame,
+a reference frame which does not
+
+=#
+
 Vec4f = SVector{4,Float64}
 Mat4f = SMatrix{4,4,Float64}
+
 struct CS
   transform::Mat4f
 end
@@ -74,6 +102,8 @@ center_scaled_cs(cs::CS, x::Real, y::Real, z::Real) =
 
 global const world_cs = CS(Mat4f(I))
 global const current_cs = Parameter(world_cs)
+# Special cs for "transparent" vectors
+global const null_cs = CS(Mat4f(I))
 
 is_world_cs(cs::CS) = cs ===  world_cs
 
@@ -81,8 +111,6 @@ translating_current_cs(f, _dx::Real=0, _dy::Real=0, _dz::Real=0; dx::Real=_dx, d
     with(current_cs, translated_cs(current_cs(), dx, dy, dz)) do
         f()
     end
-
-
 
 abstract type Loc end
 abstract type Vec end
@@ -501,4 +529,15 @@ p + Δx(5)
 p + Δxy(1,2)
 Addition would respect the frame of reference of p
 
+Another hypotesis is to write
+
+p + _x(5)
+p + _xy(1,2)
+
+or even
+
+p + dx(5)
+p + dxy(1,2)
+
+For the moment, I'll choose this one
 =#
