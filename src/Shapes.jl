@@ -196,12 +196,13 @@ collecting_shapes(fn) =
 #Traceability
 traceability = Parameter(false)
 trace_depth = Parameter(1000)
+excluded_modules = Parameter([Base, Base.CoreLogging, Khepri])
 # We a dict from shapes to file locations
 # and a dict from file locations to shapes
 shape_to_file_locations = IdDict()
 file_location_to_shapes = Dict()
 
-export traceability, trace_depth, clear_trace!, shape_source, source_shapes
+export traceability, trace_depth, excluded_modules, clear_trace!, shape_source, source_shapes
 
 shape_source(s) = get(shape_to_file_locations, s, [])
 source_shapes(file, line) = get(file_location_to_shapes, (file, line), [])
@@ -211,22 +212,20 @@ clear_trace!() =
     empty!(shape_to_file_locations)
     empty!(file_location_to_shapes)
   end
-
+#=
+We do not care about frames that are unrelated to the application.
+=#
 interesting_locations(frames) =
   let locations = [],
-      i = 2
-    while i < length(frames)-15 # magic number that represents the number of frames to discard
-      let path = string(frames[i].file)
-        if ! (startswith(path, ".\\") ||
-              endswith(path, "Shapes.jl") ||
-              endswith(path, "Parameters.jl") ||
-              startswith(path, ".\\none")) # redundant, I know
-          push!(locations, (frames[i].file, frames[i].line))
+      max_depth = min(trace_depth(), length(frames)-0)#14)
+    for i in 2:max_depth
+      let frame = frames[i],
+          linfo = frame.linfo
+        if linfo isa Core.CodeInfo ||
+           (linfo isa Core.MethodInstance &&
+            ! (linfo.def.module in excluded_modules()))
+          push!(locations, (frame.file, frame.line))
         end
-      end
-      i = i+1
-      if i > trace_depth()
-        break
       end
     end
     locations
