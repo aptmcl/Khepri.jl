@@ -203,8 +203,8 @@ file_location_to_shapes = Dict()
 
 export traceability, trace_depth, clear_trace!, shape_source, source_shapes
 
-shape_source(s) = shape_to_file_locations[s]
-source_shapes(file, line) = file_location_to_shapes[(file, line)]
+shape_source(s) = get(shape_to_file_locations, s, [])
+source_shapes(file, line) = get(file_location_to_shapes, (file, line), [])
 
 clear_trace!() =
   begin
@@ -1474,6 +1474,17 @@ reset_backend(b::SocketBackend) =
     close(b.connection())
     reset(b.connection)
   end
+
+#One less dynamic option is to use a file-based backend. To that end, we implement
+#the IOBuffer_Backend
+
+struct IOBufferBackend{K,T} <: Backend{K,T}
+  out::IOBuffer
+end
+connection(backend::IOBufferBackend) = backend.out
+
+
+################################################################################
 bounding_box(shape::Shape) =
   bounding_box([shape])
 
