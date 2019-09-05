@@ -102,7 +102,7 @@ Base.convert(::Type{Array{S,1}}, l::List{T}) where {S, T <: S} = collect(T, l)
 
 
 
-export random, random_range, set_random_seed, RGB, rgb,
+export random, random_range, set_random_seed,
        division, map_division
 
 #previous_random::Int = 12345
@@ -141,7 +141,7 @@ random_range(x0, x1) =
     x0 + random(x1 - x0)
   end
 
-export rgb, radiance
+export RGB, rgb, rgb_radiance
 
 struct RGB
   r::Real
@@ -152,7 +152,10 @@ end
 rgb(r::Real=0, g::Real=0, b::Real=0) =
     RGB(convert(UInt8, r), convert(UInt8, g), convert(UInt8, b))
 
-radiance(c::RGB) = 0.265*c.r+0.67*c.g+0.065*c.b
+rgb_radiance(c::RGB) = 0.265*c.r+0.67*c.g+0.065*c.b
+
+
+
 
 required() = error("Required parameter")
 
