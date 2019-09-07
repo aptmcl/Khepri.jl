@@ -256,7 +256,6 @@ realize_pyramid_fustrum(b::Radiance, s::Shape, kind::String, bot_vs, top_vs) =
     end
     bot_id
   end
-end
 
 realize(b::Radiance, s::Slab) =
   let base = vz(s.level.height + s.family.coating_thickness - s.family.thickness),
