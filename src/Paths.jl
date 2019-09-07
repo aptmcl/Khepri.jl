@@ -20,6 +20,7 @@ export open_path,
        translate,
        stroke,
        fill,
+       path_length,
        curve_length,
        location_at_length,
        subpath
@@ -117,6 +118,9 @@ curve_length(ps::Vector{<:Loc}) =
     l
   end
 
+# rename to path_length?
+
+path_length = curve_length
 
 
 location_at_length(path::CircularPath, d::Real) =
@@ -441,8 +445,15 @@ convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
     convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
 
 #### Utilities
+export path_vertices, subtract_paths
 
 path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
 path_vertices(path::Path) = path_vertices(convert(ClosedPolygonalPath, path))
-export path_vertices
+
+
+subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
+  closed_polygonal_path(
+    subtract_polygon_vertices(
+      path_vertices(path1),
+      path_vertices(path2)))
