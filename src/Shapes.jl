@@ -1177,6 +1177,9 @@ wall(p0::Loc, p1::Loc;
     wall([p0, p1], bottom_level=bottom_level, top_level=top_level,
          family=family, offset=offset)
 
+# Right and Left considering observer looking along with curve direction
+r_thickness(w::Wall) = (+1+w.offset)/2*w.family.thickness
+l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
 # Door
 
 @deffamily(door_family, Family,

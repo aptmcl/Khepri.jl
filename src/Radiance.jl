@@ -301,19 +301,19 @@ realize(b::Radiance, w::Wall) =
       w_height = w.top_level.height - w_base_height,
       w_path = translate(w.path, vz(w_base_height)),
       w_thickness = w.family.thickness,
-      r_thickness = (1+w.offset)/2*w_thickness,
-      l_thickness = (1-w.offset)/2*w_thickness,
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w),
       r_w_path = closed_path_for_height(offset(w_path, r_thickness), w_height),
       l_w_path = closed_path_for_height(offset(w_path, l_thickness), w_height),
       openings = [w.doors..., w.windows...]
-    @assert length(path_vertices(w_path)) == 2 # fix this for bigger numbers
+    #@assert length(path_vertices(w_path)) == 2 # fix this for bigger numbers
     for op in openings
       let op_base_height = op.loc.y,
           op_height = op.family.height,
           op_thickness = op.family.thickness,
           op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-          r_op_path = closed_path_for_height(offset(op_path, +half_thickness), op_height),
-          l_op_path = closed_path_for_height(offset(op_path, -half_thickness), op_height)
+          r_op_path = closed_path_for_height(offset(op_path, r_thickness), op_height),
+          l_op_path = closed_path_for_height(offset(op_path, l_thickness), op_height)
         r_w_path = subtract_paths(r_w_path, r_op_path)
         l_w_path = subtract_paths(l_w_path, l_op_path)
       end
