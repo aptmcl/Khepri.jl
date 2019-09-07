@@ -5,15 +5,16 @@ write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
   begin
     print_elems(elems) =
       begin
-        println(io, length(elems))
+        print(io, length(elems))
+        for e in elems print(io, " ", e) end
+        println(io)
         # Some viewers are (incorrectly) restrictive regarding the RAD format
-        # for e in elems print(io, " ", e) end
-        for i in 1:length(elems)
-          print(io, " ", elems[i])
-          if i%3 == 0
-            println(io)
-          end
-        end
+        #for i in 1:length(elems)
+        #  print(io, " ", elems[i])
+        #  if i%3 == 0
+        #    println(io)
+        #  end
+        #end
       end
     println(io, modifier, " ", typ, " ", identifier)
     print_elems(strings)
@@ -24,6 +25,9 @@ write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
 
 write_rad_polygon(io::IO, modifier, id, vertices) =
   begin
+    with(current_backend, autocad, immediate_mode, true) do
+      polygon(vertices)
+    end
     println(io, modifier, " ", "polygon", " ", id)
     println(io, 0) #0 strings
     println(io, 0) #0 ints
@@ -141,6 +145,12 @@ save_rad(path::String) =
 
 current_backend(radiance)
 
+delete_all_shapes(b::Radiance) =
+  take!(radiance.buffer())
+
+
+
+
 #=
 realize(b::ACAD, s::Sphere) =
   ACADSphere(connection(b), s.center, s.radius)
@@ -188,8 +198,8 @@ realize(b::Radiance, s::Cylinder) =
       mod = next_modifier(b, s),
       kind = "cylinder",
       buf = buffer(b),
-      bot = s.cb,
-      top = s.cb + vz(s.h, s.cb.cs),
+      bot = in_world(s.cb),
+      top = in_world(s.cb + vz(s.h, s.cb.cs)),
       normal = unitized(top-bot)
     write_rad_ring(buf, "mat$(kind)bot$(mod)", bot_id, bot, 0, s.r, -normal)
     write_rad_cylinder(buf, "mat$(kind)side$(mod)", side_id, bot, s.r, top)
@@ -235,30 +245,32 @@ realize(b::Radiance, s::Rotate) =
 # BIM
 
 realize_pyramid_fustrum(b::Radiance, s::Shape, kind::String, bot_vs, top_vs) =
-    with(current_backend, autocad) do
-        println(bot_vs)
-        println(top_vs)
-        irregular_pyramid_fustrum(bot_vs, top_vs)
-    let bot_id = next_id(b, s)
-        top_id = next_id(b, s)
-        mod = next_modifier(b, s)
-        buf = buffer(b)
-        write_rad_polygon(buf, "mat$(kind)top$(mod)", bot_id, reverse(bot_vs))
-        write_rad_polygon(buf, "mat$(kind)bot$(mod)", top_id, top_vs)
-        for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-            write_rad_polygon(buffer(b), "mat$(kind)side$(mod)", next_id(b, s), vs)
-        end
-        bot_id
+  let bot_id = next_id(b, s),
+      top_id = next_id(b, s),
+      mod = next_modifier(b, s),
+      buf = buffer(b)
+    write_rad_polygon(buf, "mat$(kind)top$(mod)", bot_id, reverse(bot_vs))
+    write_rad_polygon(buf, "mat$(kind)bot$(mod)", top_id, top_vs)
+    for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
+      write_rad_polygon(buffer(b), "mat$(kind)side$(mod)", next_id(b, s), vs)
     end
+    bot_id
+  end
 end
 
 realize(b::Radiance, s::Slab) =
-    let base = vz(s.level.height + s.family.coating_thickness - s.family.thickness)
-        thickness = vz(s.family.coating_thickness + s.family.thickness)
-        bot_vs = path_vertices(translate(s.contour, base))
-        top_vs = path_vertices(translate(s.contour, base + thickness))
-        realize_pyramid_fustrum(b, s, "slab", bot_vs, top_vs)
+  let base = vz(s.level.height + s.family.coating_thickness - s.family.thickness),
+      thickness = vz(s.family.coating_thickness + s.family.thickness),
+      path = s.contour
+    for op in s.openings
+      path = subtract_paths(path, op)
     end
+    realize_pyramid_fustrum(
+      b, s, "slab",
+      path_vertices(translate(path, base)),
+      path_vertices(translate(path, base + thickness)))
+  end
+
 #=
 #FIXME define the family parameters for beams
 realize(b::Radiance, s::Beam) =
@@ -266,35 +278,49 @@ realize(b::Radiance, s::Beam) =
 
 =#
 realize(b::Radiance, s::Panel) =
-    let p1 = s.vertices[1],
-        p2 = s.vertices[2],
-        p3 = s.vertices[3],
-        n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
-        realize_pyramid_fustrum(
-            b, s, "panel",
-            map(p -> in_world(p - n), s.vertices),
-            map(p -> in_world(p + n), s.vertices))
+  let p1 = s.vertices[1],
+      p2 = s.vertices[2],
+      p3 = s.vertices[3],
+      n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
+    realize_pyramid_fustrum(
+        b, s, "panel",
+        map(p -> in_world(p - n), s.vertices),
+        map(p -> in_world(p + n), s.vertices))
+  end
+
+closed_path_for_height(path, h) =
+  let ps = path_vertices(path)
+    closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
+  end
+
+#=
+One important restriction is that Radiance only supports _planar_ polygons.
+This forces us to create multiple subpaths.
+=#
+realize(b::Radiance, w::Wall) =
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      w_path = translate(w.path, vz(w_base_height)),
+      w_thickness = w.family.thickness,
+      r_thickness = (1+w.offset)/2*w_thickness,
+      l_thickness = (1-w.offset)/2*w_thickness,
+      r_w_path = closed_path_for_height(offset(w_path, r_thickness), w_height),
+      l_w_path = closed_path_for_height(offset(w_path, l_thickness), w_height),
+      openings = [w.doors..., w.windows...]
+    @assert length(path_vertices(w_path)) == 2 # fix this for bigger numbers
+    for op in openings
+      let op_base_height = op.loc.y,
+          op_height = op.family.height,
+          op_thickness = op.family.thickness,
+          op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
+          r_op_path = closed_path_for_height(offset(op_path, +half_thickness), op_height),
+          l_op_path = closed_path_for_height(offset(op_path, -half_thickness), op_height)
+        r_w_path = subtract_paths(r_w_path, r_op_path)
+        l_w_path = subtract_paths(l_w_path, l_op_path)
+      end
     end
-
-realize(b::Radiance, s::Wall) =
-    let base_height = s.bottom_level.height,
-        height = s.top_level.height - base_height
-        realize_wall_path(b, s, s.path, base_height, height, s.family.thickness)
-    end
-
-realize_wall_path(b::Radiance, s::Wall, path::OpenPolygonalPath, base_height::Real, height::Real, thickness::Real) =
-    let vs = path_vertices(path)
-        half_thickness = thickness/2
-        bot_vs = [offset(vs, half_thickness	)...,
-                  reverse!(offset(vs, -half_thickness))...]
-        top_vs = map(p -> add_z(p, height), bot_vs)
-        realize_pyramid_fustrum(b, s, "wall", bot_vs, top_vs)
-    end
-
-realize_wall_path(b::Radiance, s::Wall, path::Path, base_height::Real, height::Real, thickness::Real) =
-    realize_wall_path(b, s, convert(OpenPolygonalPath, path), base_height, height, thickness)
-
-
+    realize_pyramid_fustrum(b, w, "wall", path_vertices(r_w_path), path_vertices(l_w_path))
+end
 
 #=
 
@@ -361,3 +387,42 @@ test = DataFrame([
 
 udi_in_range(test, -1, 5)
 =#
+
+
+#
+const CIE_Overcast_Sky_rad_contents = """
+!gensky 12 21 12.00 -c -a 42.300 -o 71.100 -m 75.000 -B 100
+
+skyfunc glow sky_mat
+0
+0
+4 1 1 1 0
+
+sky_mat source sky
+0
+0
+4 0 0 1 180
+
+skyfunc glow ground_glow
+0
+0
+4 1 1 1  0
+
+ground_glow source ground
+0
+0
+4 0 0 -1 180
+"""
+
+path_replace_suffix(path::String, suffix::String) =
+  let (base, old_suffix) = splitext(path)
+    base * suffix
+  end
+
+export_CIE_Overcast_Sky(path::String) =
+  let skypath = path_replace_suffix(path, "_sky.rad")
+    open(skypath, "w") do out
+      write(out, CIE_Overcast_Sky_rad_contents)
+    end
+    skypath
+  end
