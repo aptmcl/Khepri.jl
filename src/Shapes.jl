@@ -42,6 +42,7 @@ export Shape,
 
 
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
+
 abstract type Backend{K,R} end
 Base.show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
 
@@ -825,6 +826,23 @@ export default_level, default_level_to_level_height, upper_level
 @defproxy(column, Shape3D, center::Loc, bottom_level::Any, top_level::Any, family::Any)
 =#
 
+#=
+
+One of the problems with BIM is that sometimes it is useful to create objects
+incrementally, e.g., a wall with doors and windows, or a slab with an opening but
+in some backends, this needs to be done atomically.
+
+To solve this problem, we create a form that temporarily delays realization:
+=#
+
+export with_incremental_construction
+with_incremental_construction(f::Function) =
+  let s = with(immediate_mode, false) do
+            f()
+          end
+    immediate_mode() ? ref(s) : s
+    s
+  end
 
 #=
 
@@ -1149,47 +1167,50 @@ A wall contains doors and windows
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
+          offset::Real=0.0,
           doors::Shapes=Shape[], windows::Shapes=Shape[])
 wall(p0::Loc, p1::Loc;
      bottom_level::Level=default_level(),
      top_level::Level=upper_level(bottom_level),
-     family::WallFamily=default_wall_family()) =
-    wall([p0, p1], bottom_level=bottom_level, top_level=top_level, family=family)
+     family::WallFamily=default_wall_family(),
+     offset::Real=0.0) =
+    wall([p0, p1], bottom_level=bottom_level, top_level=top_level,
+         family=family, offset=offset)
 
 # Door
 
 @deffamily(door_family, Family,
-    width::Real=1.0,
-    height::Real=2.0,
-    thickness::Real=0.05)
+  width::Real=1.0,
+  height::Real=2.0,
+  thickness::Real=0.05)
 
 @defproxy(door, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
 
 # Window
 
 @deffamily(window_family, Family,
-    width::Real=1.0,
-    height::Real=2.0,
-    thickness::Real=0.05)
+  width::Real=1.0,
+  height::Real=2.0,
+  thickness::Real=0.05)
 
 @defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
 # Default implementation
 realize(b::Backend, w::Wall) =
-    realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
+  realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
 
 realize_wall_no_openings(b::Backend, w::Wall) =
-    let w_base_height = w.bottom_level.height,
-        w_height = w.top_level.height - w_base_height,
-        w_path = translate(w.path, vz(w_base_height))
-        w_thickness = w.family.thickness
-        ensure_ref(b, backend_wall(b, w_path, w_height, w_thickness, w.family))
-    end
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      w_path = translate(w.path, vz(w_base_height)),
+      w_thickness = w.family.thickness
+    ensure_ref(b, backend_wall(b, w_path, w_height, w_thickness, w.family))
+  end
 
 realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
     let w_base_height = w.bottom_level.height,
         w_height = w.top_level.height - w_base_height,
-        w_path = translate(w.path, vz(w_base_height))
+        w_path = translate(w.path, vz(w_base_height)),
         w_thickness = w.family.thickness
         for opening in openings
             w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
@@ -1200,10 +1221,10 @@ realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
     end
 
 realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
-    let op_base_height = op.loc.y
-        op_height = op.family.height
-        op_thickness = op.family.thickness
-        op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height))
+    let op_base_height = op.loc.y,
+        op_height = op.family.height,
+        op_thickness = op.family.thickness,
+        op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
         op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, family))
         ensure_ref(b, subtract_ref(b, w_ref, op_ref))
     end
