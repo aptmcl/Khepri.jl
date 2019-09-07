@@ -300,7 +300,6 @@ realize(b::Radiance, w::Wall) =
   let w_base_height = w.bottom_level.height,
       w_height = w.top_level.height - w_base_height,
       w_path = translate(w.path, vz(w_base_height)),
-      w_thickness = w.family.thickness,
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w),
       r_w_path = closed_path_for_height(offset(w_path, r_thickness), w_height),
@@ -310,7 +309,6 @@ realize(b::Radiance, w::Wall) =
     for op in openings
       let op_base_height = op.loc.y,
           op_height = op.family.height,
-          op_thickness = op.family.thickness,
           op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
           r_op_path = closed_path_for_height(offset(op_path, r_thickness), op_height),
           l_op_path = closed_path_for_height(offset(op_path, l_thickness), op_height)
