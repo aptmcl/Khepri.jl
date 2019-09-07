@@ -43,16 +43,17 @@ centered_rectangle(p0, w, p1) =
       c = loc_from_o_vx_vy(p0, v0, v1)
     rectangle(c-vy(w/2, c.cs), distance(p0, p1), w)
   end
-
-offset(ps::Locs, d::Real) =
-  let vs = map((p0, p1) -> rotated_v(unitized(p1 - p0)*d, pi/2), ps[2:end], ps[1:end-1]),
-      vs = [vs[1], map(v_in_v, vs[1:end-1], vs[2:end])..., vs[end]]
-    map(+, ps, vs)
+offset(ps::Locs, d::Real) = error("BUM")
+offset(ps::Locs, d::Real, closed) =
+  let qs = closed ? [ps[end], ps..., ps[1]] : ps,
+      vs = map((p0, p1) -> rotated_v(unitized(p1 - p0)*d, pi/2), qs[2:end], qs[1:end-1]),
+      ws = map(v_in_v, vs[1:end-1], vs[2:end])
+    map(+, ps, closed ? ws : [vs[1], ws..., vs[end]])
   end
 
-offset(path::OpenPolygonalPath, d::Real) = open_polygonal_path(offset(path.vertices, d))
-offset(path::ClosedPolygonalPath, d::Real) = closed_polygonal_path(offset(path.vertices, d))
-offset(l::Line, d::Real) = line(offset(l.vertices, d))
+offset(path::OpenPolygonalPath, d::Real) = open_polygonal_path(offset(path.vertices, d, false))
+offset(path::ClosedPolygonalPath, d::Real) = closed_polygonal_path(offset(path.vertices, d, true))
+offset(l::Line, d::Real) = line(offset(l.vertices, d, false))
 
 export offset
 
