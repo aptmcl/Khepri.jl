@@ -61,14 +61,17 @@ check_plugin() =
     begin
         global checked_plugin
         if ! checked_plugin
-            @info("Checking plugin...")
+            @info("Checking AutoCAD plugin...")
             try
                 update_plugin()
                 @info("done.")
                 checked_plugin = true
             catch exc
                 if isa(exc, Base.IOError)
-                    @error("Please, close AutoCAD and retry.")
+                    @error("""The AutoCAD plugin is outdated!
+                    Please, close AutoCAD and restart Khepri,
+                    only starting AutoCAD when requested by Khepri.""")
+                    throw(exc)
                 else
                     throw(exc)
                 end
