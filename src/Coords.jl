@@ -541,3 +541,9 @@ p + dxy(1,2)
 
 For the moment, I'll choose this one
 =#
+
+
+# Broadcasting
+
+Base.broadcastable(p::Loc) = Ref(p)
+Base.broadcastable(v::Vec) = Ref(v)
