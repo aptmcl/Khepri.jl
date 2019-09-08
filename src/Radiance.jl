@@ -113,7 +113,8 @@ const RadianceNativeRef = NativeRef{RadianceKey, RadianceId}
 const RadianceUnionRef = UnionRef{RadianceKey, RadianceId}
 const RadianceSubtractionRef = SubtractionRef{RadianceKey, RadianceId}
 
-mutable struct RadianceBackend{K,T} <: Backend{K,T}
+mutable struct RadianceBackend{K,T} <: LazyBackend{K,T}
+  shapes::Shapes
   buffer::LazyParameter{IOBuffer}
   count::Integer
   materials::Dict
@@ -121,11 +122,16 @@ end
 
 const Radiance = RadianceBackend{RadianceKey, RadianceId}
 
+#=
+The Radiance backend cannot realize shapes immediately, only when requested.
+=#
+
+
 void_ref(b::Radiance) = RadianceNativeRef(-1)
 
 create_radiance_buffer() = IOBuffer()
 
-const radiance = Radiance(LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
+const radiance = Radiance(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
 
 buffer(b::Radiance) = b.buffer()
 next_id(b::Radiance, s::Shape) =
@@ -136,10 +142,15 @@ next_id(b::Radiance, s::Shape) =
 next_modifier(b::Radiance, s::Shape) =
     get!(b.materials, isdefined(s, :family) ? s.family : missing, length(b.materials))
 
-save_rad(path::String) =
-    open(path, "w") do out
-        write(out, String(take!(radiance.buffer())))
+save_rad(path::String, b::RadianceBackend=radiance) =
+  let buf = b.buffer()
+    for s in b.shapes
+      realize(b, s)
     end
+    open(path, "w") do out
+      write(out, String(take!(buf)))
+    end
+  end
 
 #
 
@@ -302,22 +313,28 @@ realize(b::Radiance, w::Wall) =
       w_path = translate(w.path, vz(w_base_height)),
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w),
-      r_w_path = closed_path_for_height(offset(w_path, r_thickness), w_height),
-      l_w_path = closed_path_for_height(offset(w_path, l_thickness), w_height),
+      r_w_paths = subpaths(offset(w_path, r_thickness)),
+      l_w_paths = subpaths(offset(w_path, l_thickness)),
       openings = [w.doors..., w.windows...]
-    #@assert length(path_vertices(w_path)) == 2 # fix this for bigger numbers
-    for op in openings
-      let op_base_height = op.loc.y,
-          op_height = op.family.height,
-          op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-          r_op_path = closed_path_for_height(offset(op_path, r_thickness), op_height),
-          l_op_path = closed_path_for_height(offset(op_path, l_thickness), op_height)
-        r_w_path = subtract_paths(r_w_path, r_op_path)
-        l_w_path = subtract_paths(l_w_path, l_op_path)
+    for (r_w_path, l_w_path) in zip(r_w_paths, l_w_paths)
+      let r_w_path = closed_path_for_height(r_w_path, w_height),
+          l_w_path = closed_path_for_height(l_w_path, w_height)
+        #@assert length(path_vertices(w_path)) == 2 # fix this for bigger numbers
+        for op in openings
+          let op_base_height = op.loc.y,
+              op_height = op.family.height,
+              op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
+              r_op_path = closed_path_for_height(offset(op_path, r_thickness), op_height),
+              l_op_path = closed_path_for_height(offset(op_path, l_thickness), op_height)
+            r_w_path = subtract_paths(r_w_path, r_op_path)
+            l_w_path = subtract_paths(l_w_path, l_op_path)
+          end
+        end
+        realize_pyramid_fustrum(b, w, "wall", path_vertices(r_w_path), path_vertices(l_w_path))
       end
     end
-    realize_pyramid_fustrum(b, w, "wall", path_vertices(r_w_path), path_vertices(l_w_path))
-end
+    void_ref(b)
+  end
 
 #=
 
