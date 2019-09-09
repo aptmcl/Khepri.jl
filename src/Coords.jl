@@ -346,6 +346,7 @@ add_xyz(p,x,y,z) = xyz(p.x+x, p.y+y, p.z+z, p.cs)
 (-)(a::XYZ,b::XYZ) = vxyz(a.raw - in_cs(b, a.cs).raw, a.cs)
 (-)(a::VXYZ) = vxyz(-a.raw, a.cs)
 (*)(a::VXYZ,b::Real) = vxyz(a.raw * b, a.cs)
+(*)(a::Real,b::VXYZ) = vxyz(a * b.raw, b.cs)
 (/)(a::VXYZ,b::Real) = vxyz(a.raw / b, a.cs)
 
 length(v::Vec) = norm(v.raw)
