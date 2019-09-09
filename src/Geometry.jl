@@ -51,7 +51,7 @@ offset_vertices(ps::Locs, d::Real, closed) =
     map(+, ps, closed ? ws : [vs[1], ws..., vs[end]])
   end
 
-offset(path::Path, d::Real) = d == 0 ? path : nonzero_offset(path, d)
+offset(path::Union{Path,Shape}, d::Real) = d == 0 ? path : nonzero_offset(path, d)
 
 nonzero_offset(path::OpenPolygonalPath, d::Real) =
   d == 0 ? path : open_polygonal_path(offset_vertices(path.vertices, d, false))
@@ -99,12 +99,43 @@ polygon(pts4)
 @test closest_vertices_indexes(pts2, pts3) == (2,5)
 =#
 
-subtract_polygon_vertices(pts1, pts2) =
-  let (i, j) = closest_vertices_indexes(pts1, pts2)
-    [pts1[1:i]..., reverse([pts2[j:end]..., pts2[1:j]...])..., pts1[i:end]...]
+point_in_segment(r, p, q) =
+  let pr = r-p,
+      pq = q-p,
+      rx = cx(pr)/cx(pq),
+      ry = cy(pr)/cy(pq)
+    isapprox(rx, ry) && isapprox(ry, cz(pr)/cz(pq))
   end
 
-export subtract_polygon_vertices
+collinear_segments(p1, p2, q1, q2) =
+  point_in_segment(q1, p1, p2) &&
+  point_in_segment(q2, p1, p2)
+
+collinear_vertices_indexes(pts1, pts2) =
+  for (i1, p1) in enumerate(pts1)
+    let i2 = (i1+1)%length(pts1),
+        p2 = pts1[i2]
+      for (j1, q1) in enumerate(pts2)
+        let j2 = (j1+1)%length(pts2),
+            q2 = pts2[j2]
+          if collinear_segments(p1, p2, q1, q2)
+            return (i1, j1)
+          end
+        end
+      end
+    end
+  end
+
+subtract_polygon_vertices(pts1, pts2) =
+  let ij = collinear_vertices_indexes(pts1, pts2)
+    isnothing(ij) ?
+      inject_polygon_vertices_at_indexes(pts1, pts2, closest_vertices_indexes(pts1, pts2))
+      splice_polygon_vertices_at_indexes(pts1, pts2, ij)
+
+inject_polygon_vertices_at_indexes(pts1, pts2, (i, j)) =
+  [pts1[1:i]..., reverse([pts2[j:end]..., pts2[1:j]...])..., pts1[i:end]...]
+
+export closest_vertices_indexes, inject_polygon_vertices_at_indexes, subtract_polygon_vertices
 
 #=
 pts1 = subtract_polygon_vertices(pts1, pts2)
