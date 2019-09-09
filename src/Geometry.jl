@@ -129,7 +129,7 @@ collinear_vertices_indexes(pts1, pts2) =
 subtract_polygon_vertices(pts1, pts2) =
   let ij = collinear_vertices_indexes(pts1, pts2)
     isnothing(ij) ?
-      inject_polygon_vertices_at_indexes(pts1, pts2, closest_vertices_indexes(pts1, pts2))
+      inject_polygon_vertices_at_indexes(pts1, pts2, closest_vertices_indexes(pts1, pts2)) :
       splice_polygon_vertices_at_indexes(pts1, pts2, ij)
 
 inject_polygon_vertices_at_indexes(pts1, pts2, (i, j)) =
