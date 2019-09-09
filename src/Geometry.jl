@@ -131,6 +131,7 @@ subtract_polygon_vertices(pts1, pts2) =
     isnothing(ij) ?
       inject_polygon_vertices_at_indexes(pts1, pts2, closest_vertices_indexes(pts1, pts2)) :
       splice_polygon_vertices_at_indexes(pts1, pts2, ij)
+  end
 
 inject_polygon_vertices_at_indexes(pts1, pts2, (i, j)) =
   [pts1[1:i]..., reverse([pts2[j:end]..., pts2[1:j]...])..., pts1[i:end]...]
