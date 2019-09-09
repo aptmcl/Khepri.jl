@@ -23,7 +23,10 @@ export open_path,
        path_length,
        curve_length,
        location_at_length,
-       subpath
+       path_start,
+       path_end,
+       subpath,
+       subpaths
 
 abstract type Path end
 
@@ -150,7 +153,7 @@ location_at_length(path::OpenPolygonalPath, d::Real) =
                 d -= delta
             end
         end
-        error("Exceeded path length")
+        error("Exceeded path length by ", d)
     end
 location_at_length(path::ClosedPolygonalPath, d::Real) =
     let p = path.vertices[1]
@@ -195,7 +198,7 @@ subpath_starting_at(path::OpenPolygonalPath, d::Real) =
         end
         abs(d) < 1e-9 ?
           path :
-          error("Exceeded path length")
+          error("Exceeded path length by ", d)
     end
 
 subpath_ending_at(path::OpenPolygonalPath, d::Real) =
@@ -217,7 +220,7 @@ subpath_ending_at(path::OpenPolygonalPath, d::Real) =
         end
         abs(d) < 1e-9 ?
           path :
-          error("Exceeded path length")
+          error("Exceeded path length by ", d)
     end
 
 #=
@@ -313,7 +316,7 @@ location_at_length(path::PathOps, d::Real) =
                 d -= delta
             end
         end
-        error("Exceeded path length")
+        error("Exceeded path length by ", d)
     end
 
 location_at_length(op::LineOp, start::Loc, d::Real) =
@@ -339,7 +342,7 @@ subpath_starting_at(path::PathOps, d::Real) =
                 d -= delta
             end
         end
-        error("Exceeded path length")
+        error("Exceeded path length by ", d)
     end
 
 subpath_ending_at(path::PathOps, d::Real) =
@@ -355,7 +358,7 @@ subpath_ending_at(path::PathOps, d::Real) =
                 d -= delta
             end
         end
-        error("Exceeded path length")
+        error("Exceeded path length by ", d)
     end
 
 subpath_starting_at(pathOp::LineOp, d::Real) =
@@ -445,11 +448,21 @@ convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
     convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
 
 #### Utilities
-export path_vertices, subtract_paths
+export path_vertices, subpaths, subtract_paths
 
 path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
 path_vertices(path::Path) = path_vertices(convert(ClosedPolygonalPath, path))
+
+subpaths(path::OpenPolygonalPath) =
+  let ps = path.vertices
+    map((p0, p1)->open_polygonal_path([p0, p1]), ps[1:end-1], ps[2:end])
+  end
+
+subpaths(path::ClosedPolygonalPath) =
+  let ps = path.vertices
+      map((p0, p1)->open_polygonal_path([p0, p1]), ps, [ps[2:end]..., ps[1]])
+  end
 
 
 subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
@@ -457,3 +470,8 @@ subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
     subtract_polygon_vertices(
       path_vertices(path1),
       path_vertices(path2)))
+
+path_start(path::OpenPolygonalPath) = path.vertices[1]
+path_end(path::OpenPolygonalPath) = path.vertices[end]
+path_start(path::ClosedPolygonalPath) = path.vertices[1]
+path_end(path::ClosedPolygonalPath) = path.vertices[1]
