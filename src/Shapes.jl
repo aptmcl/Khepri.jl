@@ -27,7 +27,6 @@ export Shape,
        instantiate_block,
        reset_backend,
        connection,
-       immediate_mode,
        Backend,
        @deffamily,
        @defproxy,
@@ -202,9 +201,9 @@ abstract type LazyBackend{K,T} <: Backend{K,T} end
 maybe_realize(s::Shape, b::Backend=backend(s)) =
   maybe_realize(b, s)
 
-maybe_realize(b::Backend, s::Shape) = ref(s)
-maybe_realize(b::LazyBackend, s::Shape) = postpone_realize(b, s)
-postpone_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
+maybe_realize(b::Backend, s::Shape) = force_realize(s)
+maybe_realize(b::LazyBackend, s::Shape) = delay_realize(b, s)
+delay_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
 force_realize(s::Shape) = (ref(s); s)
 
 #=
@@ -221,7 +220,7 @@ collecting_shapes(fn) =
         end
         collected_shapes()
     end
-maybe_collect(s::Shape) = in_shape_collection() && collect_shape!(s)
+maybe_collect(s::Shape) = (in_shape_collection() && collect_shape!(s); s)
 
 ######################################################
 #Traceability
@@ -272,7 +271,7 @@ trace!(s) =
     s
   end
 
-maybe_trace(s) = traceability() && trace!(s)
+maybe_trace(s) = (traceability() && trace!(s); s)
 
 ######################################################
 
@@ -843,24 +842,6 @@ export default_level, default_level_to_level_height, upper_level
 
 @defproxy(column, Shape3D, center::Loc, bottom_level::Any, top_level::Any, family::Any)
 =#
-
-#=
-
-One of the problems with BIM is that sometimes it is useful to create objects
-incrementally, e.g., a wall with doors and windows, or a slab with an opening but
-in some backends, this needs to be done atomically.
-
-To solve this problem, we create a form that temporarily delays realization:
-=#
-
-export with_incremental_construction
-with_incremental_construction(f::Function) =
-  let s = with(immediate_mode, false) do
-            f()
-          end
-    immediate_mode() ? ref(s) : s
-    s
-  end
 
 #=
 
