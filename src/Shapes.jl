@@ -37,7 +37,8 @@ export Shape,
        subpath_ending_at,
        bounding_box,
        capture_shape, capture_shapes,
-       captured_shape, captured_shapes
+       captured_shape, captured_shapes,
+       revolve
 
 
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use

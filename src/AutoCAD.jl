@@ -587,7 +587,7 @@ acad_revolution(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, ampl
     map_ref(profile) do r
       ACADRevolve(connection(b), r, p, n, start_angle, amplitude)
     end,
-    s.profile)
+    profile)
 
 backend_loft_curves(b::ACAD, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
   and_delete_shapes(ACADLoft(connection(b),
