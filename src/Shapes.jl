@@ -1415,8 +1415,8 @@ import Base.union
 export union, intersection, subtraction
 
 @defproxy(union_shape, Shape3D, shapes::Shapes=Shape[])
-union(shapes::Shapes) = union_shape(shapes)
-union(shape::Shape, shapes...) = union_shape([shape, shapes...])
+union(shapes::Shapes) = union_shape(filter(s -> !is_empty_shape(s), shapes))
+union(shape::Shape, shapes...) = union([shape, shapes...])
 
 @defproxy(intersection_shape, Shape3D, shapes::Shapes=Shape[])
 intersection(shapes::Shapes) = intersection_shape(shapes)
