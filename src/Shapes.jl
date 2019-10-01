@@ -627,6 +627,8 @@ revolve(profile::Shape=point(x(1)), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle:
     revolve_surface(profile, p, n, start_angle, amplitude)
   elseif is_union_shape(profile)
     union(map(s->revolve(s, p, n, start_angle, amplitude), profile.shapes))
+  elseif is_empty_shape(profile)
+    profile
   else
     error("Profile is neither a point nor a curve nor a surface")
   end
