@@ -153,7 +153,7 @@ Base.show(io::IO, loc::XYZ) =
 #import Base.getfield, Base.Field
 #getfield(p::XYZ, ::Field{:cyl_rho}) = hypot(p.x, p.y)
 
-xyz(x,y,z,cs=current_cs()) =
+xyz(x::Real, y::Real, z::Real,cs::CS=current_cs()) =
   XYZ(x,y,z,cs,Vec4f(convert(Float64,x),convert(Float64,y),convert(Float64,z), 1.0))
 
 xyz(s::Vec4f,cs::CS) =
@@ -163,20 +163,20 @@ scaled_cs(p::XYZ, x::Real, y::Real, z::Real) = xyz(p.x, p.y, p.z, scaled_cs(p.cs
 center_scaled_cs(p::XYZ, x::Real, y::Real, z::Real) = xyz(p.x/x, p.y/y, p.z/z, center_scaled_cs(p.cs, x, y, z))
 
 
-cx(p) = p.x
-cy(p) = p.y
-cz(p) = p.z
+cx(p::Loc) = p.x
+cy(p::Loc) = p.y
+cz(p::Loc) = p.z
 
 cyl(rho::Real, phi::Real, z::Real, cs::CS=current_cs()) =
   xyz(rho*cos(phi), rho*sin(phi), z, cs)
 add_cyl(p::Loc, rho::Real, phi::Real, z::Real) =
   p + vcyl(rho, phi, z, p.cs)
-cyl_rho(p) =
+cyl_rho(p::Loc) =
   let (x, y) = (p.x, p.y)
     sqrt(x*x + y*y)
   end
-cyl_phi(p) = sph_phi(p)
-cyl_z(p) = p.z
+cyl_phi(p::Loc) = sph_phi(p)
+cyl_z(p::Loc) = p.z
 
 pol(rho::Real, phi::Real, cs::CS=current_cs()) =
   cyl(rho, phi, 0, cs)
@@ -191,15 +191,15 @@ sph(rho::Real, phi::Real, psi::Real, cs::CS=current_cs()) =
   end
 add_sph(p::Loc, rho::Real, phi::Real, psi::Real) =
   p + vsph(rho, phi, psi, p.cs)
-sph_rho(p) =
+sph_rho(p::Loc) =
   let (x, y, z) = (p.x, p.y, p.z)
     sqrt(x*x + y*y + z*z)
   end
-sph_phi(p) =
+sph_phi(p::Loc) =
   let (x, y) = (p.x, p.y)
     0 == x == y ? 0 : mod(atan(y, x),2pi)
   end
-sph_psi(p) =
+sph_psi(p::Loc) =
   let (x, y, z) = (p.x, p.y, p.z)
     0 == x == y == z ? 0 : mod(atan(sqrt(x*x + y*y), z),2pi)
   end
@@ -216,7 +216,7 @@ Base.show(io::IO, vec::VXYZ) =
     print(io, "vxyz($(vec.x),$(vec.y),$(vec.z)$(vec.cs == world_cs ? "" : ", ..."))")
 
 
-vxyz(x,y,z,cs=current_cs()) =
+vxyz(x::Real, y::Real, z::Real, cs::CS=current_cs()) =
   VXYZ(x,y,z,cs,Vec4f(convert(Float64,x),convert(Float64,y),convert(Float64,z), 0.0))
 vxyz(s::Vec4f,cs::CS) = VXYZ(s[1], s[2], s[3], cs, s)
 
@@ -330,24 +330,24 @@ import Base.+, Base.-, Base.*, Base./, Base.length
 #(+){T1,T2,T3,T4,T5,T6}(p::XYZ{T1,T2,T3},v::VXYZ{T4,T5,T6}) = xyz(p.x+v.x, p.y+v.y, p.z+v.z, p.raw+v.raw)
 
 
-add_x(p,x) = xyz(p.x+x, p.y, p.z, p.cs)
-add_y(p,y) = xyz(p.x, p.y+y, p.z, p.cs)
-add_z(p,z) = xyz(p.x, p.y, p.z+z, p.cs)
-add_xy(p,x,y) = xyz(p.x+x, p.y+y, p.z, p.cs)
-add_xz(p,x,z) = xyz(p.x+x, p.y, p.z+z, p.cs)
-add_yz(p,y,z) = xyz(p.x, p.y+y, p.z+z, p.cs)
-add_xyz(p,x,y,z) = xyz(p.x+x, p.y+y, p.z+z, p.cs)
+add_x(p::Loc, x::Real) = xyz(p.x+x, p.y, p.z, p.cs)
+add_y(p::Loc, y::Real) = xyz(p.x, p.y+y, p.z, p.cs)
+add_z(p::Loc, z::Real) = xyz(p.x, p.y, p.z+z, p.cs)
+add_xy(p::Loc, x::Real, y::Real) = xyz(p.x+x, p.y+y, p.z, p.cs)
+add_xz(p::Loc, x::Real, z::Real) = xyz(p.x+x, p.y, p.z+z, p.cs)
+add_yz(p::Loc, y::Real, z::Real) = xyz(p.x, p.y+y, p.z+z, p.cs)
+add_xyz(p::Loc, x::Real, y::Real, z::Real) = xyz(p.x+x, p.y+y, p.z+z, p.cs)
 
-(+)(a::XYZ,b::VXYZ) = xyz(a.raw + in_cs(b, a.cs).raw, a.cs)
-(+)(a::VXYZ,b::XYZ) = xyz(a.raw + in_cs(b, a.cs).raw, a.cs)
-(+)(a::VXYZ,b::VXYZ) = vxyz(a.raw + in_cs(b, a.cs).raw, a.cs)
-(-)(a::XYZ,b::VXYZ) = xyz(a.raw - in_cs(b, a.cs).raw, a.cs)
-(-)(a::VXYZ,b::VXYZ) = vxyz(a.raw - in_cs(b, a.cs).raw, a.cs)
-(-)(a::XYZ,b::XYZ) = vxyz(a.raw - in_cs(b, a.cs).raw, a.cs)
+(+)(a::XYZ, b::VXYZ) = xyz(a.raw + in_cs(b, a.cs).raw, a.cs)
+(+)(a::VXYZ, b::XYZ) = xyz(a.raw + in_cs(b, a.cs).raw, a.cs)
+(+)(a::VXYZ, b::VXYZ) = vxyz(a.raw + in_cs(b, a.cs).raw, a.cs)
+(-)(a::XYZ, b::VXYZ) = xyz(a.raw - in_cs(b, a.cs).raw, a.cs)
+(-)(a::VXYZ, b::VXYZ) = vxyz(a.raw - in_cs(b, a.cs).raw, a.cs)
+(-)(a::XYZ, b::XYZ) = vxyz(a.raw - in_cs(b, a.cs).raw, a.cs)
 (-)(a::VXYZ) = vxyz(-a.raw, a.cs)
-(*)(a::VXYZ,b::Real) = vxyz(a.raw * b, a.cs)
-(*)(a::Real,b::VXYZ) = vxyz(a * b.raw, b.cs)
-(/)(a::VXYZ,b::Real) = vxyz(a.raw / b, a.cs)
+(*)(a::VXYZ, b::Real) = vxyz(a.raw * b, a.cs)
+(*)(a::Real, b::VXYZ) = vxyz(a * b.raw, b.cs)
+(/)(a::VXYZ, b::Real) = vxyz(a.raw / b, a.cs)
 
 length(v::Vec) = norm(v.raw)
 
