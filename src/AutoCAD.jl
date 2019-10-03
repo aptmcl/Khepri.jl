@@ -393,7 +393,14 @@ realize(b::ACAD, s::SurfaceArc) =
     end
 
 #realize(b::ACAD, s::SurfaceElliptic_Arc) = ACADCircle(connection(b),
-#realize(b::ACAD, s::SurfaceEllipse) = ACADCircle(connection(b),
+realize(b::ACAD, s::SurfaceEllipse) =
+  if s.radius_x > s.radius_y
+    ACADSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x)
+  else
+    ACADSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y)
+  end
+
+
 realize(b::ACAD, s::SurfacePolygon) =
   ACADSurfaceClosedPolyLine(connection(b), s.vertices)
 realize(b::ACAD, s::SurfaceRegularPolygon) =
