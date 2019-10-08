@@ -30,9 +30,10 @@ export open_path,
 
 abstract type Path end
 
-import Base.getindex, Base.endof
+import Base.getindex, Base.firstindex, Base.lastindex
 getindex(p::Path, i::Real) = location_at_length(p, i)
-endof(p::Path) = length(p)
+firstindex(p::Path) = 0
+lastindex(p::Path) = length(p)
 getindex(p::Path, i::ClosedInterval) = subpath(p, i.left, i.right)
 
 abstract type OpenPath <: Path end
