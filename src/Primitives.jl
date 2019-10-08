@@ -52,13 +52,13 @@ circle = (op = request_operation("Circle");
 =#
 
 function parse_c_signature(sig)
-  m = match(r"^ *(public|) *(\w+) *([\[\]]*) +(\w+) *\( *(.*) *\)", sig)
+  m = match(r"^ *(public|) *(\w+) *([\[\]]*) +((?:\w|:|<|>)+) *\( *(.*) *\)", sig)
   ret = Symbol(m.captures[2])
   array_level = count(c -> c=='[', something(m.captures[3], ""))
   name = Symbol(m.captures[4])
   params = split(m.captures[5], r" *, *", keepempty=false)
   function parse_c_decl(decl)
-    m = match(r"^ *(\w+) *([\[\]]*) *(\w+)$", decl)
+    m = match(r"^ *((?:\w|:|<|>)+) *([\[\]]*) *(\w+)$", decl)
     (Symbol(m.captures[1]), count(c -> c=='[', something(m.captures[2], "")), Symbol(m.captures[3]))
   end
   (name, [parse_c_decl(decl) for decl in params], (ret, array_level))
@@ -113,9 +113,18 @@ Another option would be to have the table of generated methods separated
 from the channel on the backend side, but I'm afraid that will prevent multiple
 clients (not sure they are useful, though).
 =#
+
+function my_symbol(prefix, name)
+  Symbol(prefix * replace(string(name), ":" => "_"))
+end
+
+function translate(sym)
+  Symbol(replace(string(sym), r"[:<>]" => "_", ))
+end
+
 function rpc(prefix, str)
     name, params, ret = parse_c_signature(str)
-    func_name = Symbol(prefix, name)
+    func_name = my_symbol(prefix, name)
     #Expr(:(=), Expr(:call, esc(name), [p[1] for p in params]...), Expr(:call, :+, params[1][1], 2))
     esc(quote
         $func_name =
@@ -127,9 +136,9 @@ function rpc(prefix, str)
                   initiate_rpc_call(conn, opcode, $(string(name)))
                   take!(buf) # Reset the buffer just in case there was an encoding error on a previous call
                   write(buf, opcode)
-                  $([:($(Symbol("encode_", p[1], "_array"^p[2]))(buf, $(p[3]))) for p in params]...)
+                  $([:($(Symbol("encode_", translate(p[1]), "_array"^p[2]))(buf, $(p[3]))) for p in params]...)
                   write(conn, take!(buf))
-                  complete_rpc_call(conn, opcode, $(Symbol("decode_", ret[1], "_array"^ret[2]))(conn))
+                  complete_rpc_call(conn, opcode, $(Symbol("decode_", translate(ret[1]), "_array"^ret[2]))(conn))
                 end
                 $func_name(conn, $([:($(p[3])) for p in params]...))
           end
