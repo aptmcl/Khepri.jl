@@ -100,6 +100,32 @@ center_scaled_cs(cs::CS, x::Real, y::Real, z::Real) =
             xt, yt, zt)
     end
 
+rotated_around_p_v_cs(cs::CS, a::Real, b::Real, c::Real, u::Real, v::Real, w::Real, phi::Real) =
+  let u2 = u*u,
+      v2 = v*v,
+      w2 = w*w,
+      cosT = cos(phi),
+      oneMinusCosT = 1-cosT,
+      sinT = sin(phi),
+      m11 = u2 + (v2 + w2) * cosT,
+      m12 = u*v * oneMinusCosT - w*sinT,
+      m13 = u*w * oneMinusCosT + v*sinT,
+      m14 = (a*(v2 + w2) - u*(b*v + c*w))*oneMinusCosT + (b*w - c*v)*sinT,
+      m21 = u*v * oneMinusCosT + w*sinT,
+      m22 = v2 + (u2 + w2) * cosT,
+      m23 = v*w * oneMinusCosT - u*sinT,
+      m24 = (b*(u2 + w2) - v*(a*u + c*w))*oneMinusCosT + (c*u - a*w)*sinT,
+      m31 = u*w * oneMinusCosT - v*sinT,
+      m32 = v*w * oneMinusCosT + u*sinT,
+      m33 = w2 + (u2 + v2) * cosT,
+      m34 = (c*(u2 + v2) - w*(a*u + b*v))*oneMinusCosT + (a*v - b*u)*sinT
+    CS(cs.transform * SMatrix{4,4,Float64}([
+          m11 m12 m13 m14;
+          m21 m22 m23 m24;
+          m31 m32 m33 m32;
+          0 0 0 1]))
+  end
+
 global const world_cs = CS(Mat4f(I))
 global const current_cs = Parameter(world_cs)
 # Special cs for "transparent" vectors
@@ -125,6 +151,8 @@ const Vecs = Vector{<:Vec}
 #Base.==(cs0::CS, cs1::CS) = (cs0 === cs1) || (cs0.transform == cs1.transform)
 
 #translation_matrix(x::Real, y::Real, z::Real) = CS(SMatrix{4,4,Float64}())
+
+#Location
 
 struct XYZ <: Loc
   x::Real
@@ -162,28 +190,15 @@ xyz(s::Vec4f,cs::CS) =
 scaled_cs(p::XYZ, x::Real, y::Real, z::Real) = xyz(p.x, p.y, p.z, scaled_cs(p.cs, x, y, z))
 center_scaled_cs(p::XYZ, x::Real, y::Real, z::Real) = xyz(p.x/x, p.y/y, p.z/z, center_scaled_cs(p.cs, x, y, z))
 
-
-cx(p::Loc) = p.x
-cy(p::Loc) = p.y
-cz(p::Loc) = p.z
-
 cyl(rho::Real, phi::Real, z::Real, cs::CS=current_cs()) =
   xyz(rho*cos(phi), rho*sin(phi), z, cs)
 add_cyl(p::Loc, rho::Real, phi::Real, z::Real) =
   p + vcyl(rho, phi, z, p.cs)
-cyl_rho(p::Loc) =
-  let (x, y) = (p.x, p.y)
-    sqrt(x*x + y*y)
-  end
-cyl_phi(p::Loc) = sph_phi(p)
-cyl_z(p::Loc) = p.z
 
 pol(rho::Real, phi::Real, cs::CS=current_cs()) =
   cyl(rho, phi, 0, cs)
 add_pol(p::Loc, rho::Real, phi::Real) =
   p + vcyl(rho, phi, 0, p.cs)
-pol_rho = cyl_rho
-pol_phi = cyl_phi
 
 sph(rho::Real, phi::Real, psi::Real, cs::CS=current_cs()) =
   let sin_psi = sin(psi)
@@ -191,19 +206,8 @@ sph(rho::Real, phi::Real, psi::Real, cs::CS=current_cs()) =
   end
 add_sph(p::Loc, rho::Real, phi::Real, psi::Real) =
   p + vsph(rho, phi, psi, p.cs)
-sph_rho(p::Loc) =
-  let (x, y, z) = (p.x, p.y, p.z)
-    sqrt(x*x + y*y + z*z)
-  end
-sph_phi(p::Loc) =
-  let (x, y) = (p.x, p.y)
-    0 == x == y ? 0 : mod(atan(y, x),2pi)
-  end
-sph_psi(p::Loc) =
-  let (x, y, z) = (p.x, p.y, p.z)
-    0 == x == y == z ? 0 : mod(atan(sqrt(x*x + y*y), z),2pi)
-  end
 
+# Vector
 struct VXYZ <: Vec
     x::Real
     y::Real
@@ -237,6 +241,38 @@ vsph(rho::Real, phi::Real, psi::Real, cs::CS=current_cs()) =
 add_vsph(v::Vec, rho::Real, phi::Real, psi::Real) =
   v + vsph(rho, phi, psi, v.cs)
 
+# Selectors
+
+cx(p::Union{Loc,Vec}) = p.x
+cy(p::Union{Loc,Vec}) = p.y
+cz(p::Union{Loc,Vec}) = p.z
+
+sph_rho(p::Union{Loc,Vec}) =
+  let (x, y, z) = (p.x, p.y, p.z)
+    sqrt(x*x + y*y + z*z)
+  end
+sph_phi(p::Union{Loc,Vec}) =
+  let (x, y) = (p.x, p.y)
+    0 == x == y ? 0 : mod(atan(y, x),2pi)
+  end
+sph_psi(p::Union{Loc,Vec}) =
+  let (x, y, z) = (p.x, p.y, p.z)
+    0 == x == y == z ? 0 : mod(atan(sqrt(x*x + y*y), z),2pi)
+  end
+
+cyl_rho(p::Union{Loc,Vec}) =
+  let (x, y) = (p.x, p.y)
+    sqrt(x*x + y*y)
+  end
+cyl_phi(p::Union{Loc,Vec}) = sph_phi(p)
+cyl_z(p::Union{Loc,Vec}) = p.z
+
+pol_rho = cyl_rho
+pol_phi = cyl_phi
+
+
+
+
 unitized(v::Vec) = vxyz(v.raw./sqrt(sum(abs2, v.raw)), v.cs)
 
 in_cs(from_cs::CS, to_cs::CS) =
@@ -264,16 +300,6 @@ in_world(p) = in_cs(p, world_cs)
 
 export inverse_transformation
 inverse_transformation(p::Loc) = xyz(0,0,0, CS(inv(translated_cs(p.cs, p.x, p.y, p.z).transform)))
-
-
-#loc_in_world(p::Loc) = p.cs == world_cs ? p : xyz(p.cs.transform * p.raw, world_cs)
-#loc_in(p::Loc, cs::CS) = xyz(inv(p.cs.transform) * loc_in_world(p).raw, cs)
-#loc_in(p::Loc, q::Loc) = loc_in(p, q.cs)
-
-#vec_in_world(p::Loc) = p.cs == world_cs ? p : vxyz(p.cs.transform * p.raw, world_cs)
-#vec_in(p::Loc, cs::CS) = vxyz(inv(p.cs.transform) * vec_in_world(p).raw, cs)
-#vec_in(p::Loc, q::Loc) = vec_in(p, q.cs)
-
 
 
 cs_from_o_vx_vy_vz(o::Loc, ux::Vec, uy::Vec, uz::Vec) =
