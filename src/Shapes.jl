@@ -519,6 +519,9 @@ surface(c0::Shape, cs...) = surface([c0, cs...])
 #To be removed
 surface_from = surface
 
+@defproxy(surface_path, Shape2D, path::ClosedPath=[circular_path()])
+realize(b::Backend, s::SurfacePath) = backend_fill(b, s.path)
+
 surface_boundary(s::Shape2D, backend::Backend=current_backend()) =
     backend_surface_boundary(backend, s)
 
