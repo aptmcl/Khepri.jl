@@ -16,7 +16,10 @@ export open_path,
        centered_rectangular_path,
        open_polygonal_path,
        closed_polygonal_path,
+       open_spline_path,
+       closed_spline_path,
        path_set,
+       path_sequence,
        translate,
        stroke,
        fill,
@@ -91,6 +94,21 @@ ensure_no_repeated_locations(locs) =
         locs
     end
 
+# Splines
+
+struct OpenSplinePath <: OpenPath
+    vertices::Locs
+    v0::Union{Bool,Vec}
+    v1::Union{Bool,Vec}
+end
+open_spline_path(vertices=[u0(), x(), xy(), y()], v0=false, v1=false) =
+    OpenSplinePath(vertices, v0, v1)
+
+struct ClosedSplinePath <: ClosedPath
+    vertices::Locs
+end
+closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no_repeated_locations(vertices))
+
 # There is a set of operations over Paths:
 # 1. translate a path a given vector
 # 2. stroke a path
@@ -101,17 +119,19 @@ ensure_no_repeated_locations(locs) =
 
 translate(path::CircularPath, v::Vec) = circular_path(path.center + v, path.radius)
 translate(path::RectangularPath, v::Vec) = rectangular_path(path.corner + v, path.dx, path.dy)
-translate(path::OpenPolygonalPath, v::Vec) = open_polygonal_path(map(p->p+v, path.vertices))
-translate(path::ClosedPolygonalPath, v::Vec) = closed_polygonal_path(map(p->p+v, path.vertices))
+translate(path::OpenPolygonalPath, v::Vec) = open_polygonal_path(translate(path.vertices, v))
+translate(path::ClosedPolygonalPath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
 translate(path::ArcPath, v::Vec) = arc_path(path.center + v, path.radius, path.start_angle, path.amplitude)
-
+translate(path::OpenSplinePath, v::Vec) = open_polygonal_path(translate(path.vertices, v), path.v0, path.v1)
+translate(path::ClosedSplinePath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
+translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 
 curve_length(path::CircularPath) = 2*pi*path.radius
 curve_length(path::RectangularPath) = 2*(path.dx + path.dy)
 curve_length(path::OpenPolygonalPath) = curve_length(path.vertices)
 curve_length(path::ClosedPolygonalPath) = curve_length(path.vertices) + distance(path.vertices[end], path.vertices[1])
-curve_length(ps::Vector{<:Loc}) =
+curve_length(ps::Locs) =
   let p = ps[1]
       l = 0.0
     for i in 2:length(ps)
@@ -386,7 +406,18 @@ subpath_ending_at(pathOp::ArcOp, d::Real) =
 subpath(path::PathOps, a::Real, b::Real) =
     subpath_starting_at(subpath_ending_at(path, b), a)
 
+# A path sequence is a sequence of paths where the next element of the sequence
+# starts at the same place where the previous element ends.
 
+struct PathSequence <: Path
+    paths::Vector{<:Path}
+end
+
+path_sequence(paths...) =
+    PathSequence(ensure_connected_paths([paths...]))
+
+ensure_connected_paths(paths) = # AML: Finish this
+    paths
 
 
 # A path set is a set of independent paths.
@@ -453,6 +484,8 @@ export path_vertices, subpaths, subtract_paths
 
 path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
+path_vertices(path::OpenSplinePath) = path.vertices
+path_vertices(path::ClosedSplinePath) = path.vertices
 path_vertices(path::Path) = path_vertices(convert(ClosedPolygonalPath, path))
 
 subpaths(path::OpenPolygonalPath) =
