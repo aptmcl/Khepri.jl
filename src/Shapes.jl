@@ -431,17 +431,6 @@ closed_line(v0::Loc, v1::Loc, vs...) = closed_line([v0, v1, vs...])
           interpolator::Parameter{Any}=Parameter{Any}(missing))
 spline(v0::Loc, v1::Loc, vs...) = spline([v0, v1, vs...])
 
-curve_interpolator(pts::Locs) =
-    let pts = map(pts) do p
-                let v = in_world(p).raw
-                  SVector{3,Float64}(v[1], v[2], v[3])
-                end
-              end
-        Interpolations.scale(
-            interpolate(pts, BSpline(Cubic(Natural(OnGrid())))),
-            range(0,stop=1,length=size(pts, 1)))
-    end
-
 #=
 evaluate(s::Spline, t::Real) =
   let interpolator = s.interpolator
