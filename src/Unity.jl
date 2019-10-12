@@ -204,6 +204,10 @@ unity"public GameObject SurfacePolygon(Vector3[] ps)"
 
 realize(b::Unity, s::SurfacePolygon) =
   UnitySurfacePolygon(connection(b), reverse(s.vertices))
+
+backend_fill(b::Unity, path::ClosedPolygonalPath) =
+  UnitySurfacePolygon(connection(b), reverse(path.vertices))
+
 #=
 realize(b::Unity, s::SurfaceRegularPolygon) =
   UnitySurfaceClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
@@ -222,7 +226,11 @@ realize(b::Unity, s::Surface) =
   end
 backend_surface_boundary(b::Unity, s::Shape2D) =
     map(shape_from_ref, UnityCurvesFromSurface(connection(b), ref(s).value))
+=#
+backend_fill(b::Unity, path::ClosedPathSequence) =
+  backend_fill(b, convert(ClosedPolygonalPath, path))
 
+#=
 # Iterating over curves and surfaces
 
 Unity"public double[] CurveDomain(Entity ent)"
@@ -695,9 +703,9 @@ delete_all_shapes(b::Unity) = UnityDeleteAll(connection(b))
 backend_delete_shapes(b::Unity, shapes::Shapes) =
   UnityDeleteMany(connection(b), collect_ref(shapes))
 
-#=
-set_length_unit(unit::String, b::Unity) = UnitySetLengthUnit(connection(b), unit)
+set_length_unit(unit::String, b::Unity) = nothing # Unused, for now
 
+#=
 # Dimensions
 
 const UnityDimensionStyles = Dict(:architectural => "_ARCHTICK", :mechanical => "")
