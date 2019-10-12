@@ -287,6 +287,31 @@ backend_fill(b::ACAD, path::RectangularPath) =
         dy = path.dy
         ACADSurfaceClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
+backend_stroke(b::ACAD, path::OpenSplinePath) =
+  if (path.v0 == false) && (path.v1 == false)
+    #ACADSpline(connection(b), path.points)
+    ACADInterpSpline(connection(b),
+                     path.points,
+                     path.points[2]-path.points[1],
+                     path.points[end]-path.points[end-1])
+  elseif (path.v0 != false) && (path.v1 != false)
+    ACADInterpSpline(connection(b), path.points, path.v0, path.v1)
+  else
+    ACADInterpSpline(connection(b),
+                     path.points,
+                     path.v0 == false ? path.points[2]-path.points[1] : path.v0,
+                     path.v1 == false ? path.points[end-1]-path.points[end] : path.v1)
+  end
+backend_stroke(b::ACAD, path::ClosedSplinePath) =
+    ACADInterpClosedSpline(connection(b), path.vertices)
+backend_fill(b::ACAD, path::ClosedSplinePath) =
+    backend_fill_curves(b, ACADInterpClosedSpline(connection(b), path.vertices))
+
+backend_stroke(b::ACAD, path::PathSequence) =
+    backend_stroke_unite(b, map(path->backend_stroke(b, path), path.paths))
+backend_fill(b::ACAD, path::PathSequence) =
+    backend_fill_curves(b, map(path->backend_stroke(b, path), path.paths))
+
 backend_fill_curves(b::ACAD, refs::ACADIds) = ACADSurfaceFromCurves(connection(b), refs)
 backend_fill_curves(b::ACAD, ref::ACADId) = ACADSurfaceFromCurves(connection(b), [ref])
 
@@ -312,7 +337,7 @@ realize(b::ACAD, s::Point) =
   ACADPoint(connection(b), s.position)
 realize(b::ACAD, s::Line) =
   ACADPolyLine(connection(b), s.vertices)
-realize(b::ACAD, s::Spline) =
+realize(b::ACAD, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
     #ACADSpline(connection(b), s.points)
     ACADInterpSpline(connection(b),
