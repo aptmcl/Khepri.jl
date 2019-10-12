@@ -100,6 +100,7 @@ center_scaled_cs(cs::CS, x::Real, y::Real, z::Real) =
             xt, yt, zt)
     end
 
+export rotated_around_p_v_cs
 rotated_around_p_v_cs(cs::CS, a::Real, b::Real, c::Real, u::Real, v::Real, w::Real, phi::Real) =
   let u2 = u*u,
       v2 = v*v,
