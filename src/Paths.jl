@@ -19,7 +19,8 @@ export open_path,
        open_spline_path,
        closed_spline_path,
        path_set,
-       path_sequence,
+       open_path_sequence,
+       closed_path_sequence,
        translate,
        stroke,
        fill,
@@ -409,12 +410,16 @@ subpath(path::PathOps, a::Real, b::Real) =
 # A path sequence is a sequence of paths where the next element of the sequence
 # starts at the same place where the previous element ends.
 
-struct PathSequence <: Path
+struct OpenPathSequence <: OpenPath
     paths::Vector{<:Path}
 end
-
-path_sequence(paths...) =
-    PathSequence(ensure_connected_paths([paths...]))
+open_path_sequence(paths...) =
+    OpenPathSequence(ensure_connected_paths([paths...]))
+struct ClosedPathSequence <: ClosedPath
+    paths::Vector{<:Path}
+end
+closed_path_sequence(paths...) =
+    ClosedPathSequence(ensure_connected_paths([paths...]))
 
 ensure_connected_paths(paths) = # AML: Finish this
     paths
@@ -478,6 +483,57 @@ convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
     open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
     convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
+convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limit vectors
+  let interpolator = curve_interpolator(path.vertices),
+      fixed_normal(vn, vt) = norm(vn) < 1e-14 ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
+    open_polygonal_path(
+      map_division(
+        t-> let p = interpolator(t),
+                vt = Interpolations.gradient(interpolator, t)[1],
+                vn = fixed_normal(Interpolations.hessian(interpolator, t)[1], vt)
+                vy = cross(vt, vn)
+              loc_from_o_vx_vy(
+                xyz(p[1], p[2], p[3], world_cs),
+                vxyz(vn[1], vn[2], vn[3], world_cs),
+                vxyz(vy[1], vy[2], vy[3], world_cs))
+            end,
+        0.0, 1.0, 50)) # HACK this must be parameterized!
+    end
+
+curve_interpolator(pts::Locs) =
+    let pts = map(pts) do p
+                let v = in_world(p).raw
+                  SVector{3,Float64}(v[1], v[2], v[3])
+                end
+              end
+        Interpolations.scale(
+            interpolate(pts, BSpline(Cubic(Natural(OnGrid())))),
+            range(0,stop=1,length=size(pts, 1)))
+    end
+
+
+convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
+  let paths = path.paths,
+      vertices = []
+    append!(vertices, convert(OpenPolygonalPath, paths[1]).vertices)
+    for path in paths[2:end]
+      append!(vertices, convert(OpenPolygonalPath, path).vertices[2:end])
+    end
+    closed_polygonal_path(vertices)
+  end
+
+convert(::Type{OpenPolygonalPath}, path::OpenPathSequence) =
+  let paths = path.paths,
+      vertices = []
+    append!(vertices, convert(OpenPolygonalPath, paths[1]).vertices)
+    for path in paths[2:end]
+      append!(vertices, convert(OpenPolygonalPath, path).vertices[2:end])
+    end
+    open_polygonal_path(vertices)
+  end
+
+
+
 
 #### Utilities
 export path_vertices, subpaths, subtract_paths
