@@ -58,26 +58,27 @@ update_plugin() =
 checked_plugin = false
 
 check_plugin() =
-    begin
-        global checked_plugin
-        if ! checked_plugin
-            @info("Checking AutoCAD plugin...")
-            try
-                update_plugin()
-                @info("done.")
-                checked_plugin = true
-            catch exc
-                if isa(exc, Base.IOError)
-                    @error("""The AutoCAD plugin is outdated!
-                    Please, close AutoCAD and restart Khepri,
-                    only starting AutoCAD when requested by Khepri.""")
-                    throw(exc)
-                else
-                    throw(exc)
-                end
-            end
+  begin
+    global checked_plugin
+    if ! checked_plugin
+      @info("Checking AutoCAD plugin...")
+      for i in 1:10
+        try
+          update_plugin()
+          @info("done.")
+          checked_plugin = true
+          return
+        catch exc
+          if isa(exc, Base.IOError) && i < 10
+            @error("The AutoCAD plugin is outdated! Please, close AutoCAD.")
+            sleep(5)
+          else
+            throw(exc)
+          end
         end
+      end
     end
+  end
 
 
 #app = AutoCAD()
