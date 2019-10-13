@@ -1140,13 +1140,14 @@ realize(b::Backend, s::SlabOpening) =
 
 #TODO Pass the provided backend
 realize(b::Backend, s::Panel) =
-    let p1 = s.vertices[1],
-        p2 = s.vertices[2],
-        p3 = s.vertices[3],
-        n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
-        ref(irregular_prism(map(p -> in_world(p - n), s.vertices),
-                            in_world(n*2)))
-    end
+  let #p1 = s.vertices[1],
+      #p2 = s.vertices[2],
+      #p3 = s.vertices[3],
+      #n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
+      n = vertices_normal(s.vertices)*s.family.thickness
+    ref(irregular_prism(map(p -> in_world(p - n), s.vertices),
+                        in_world(n*2)))
+  end
 
 #=
 
