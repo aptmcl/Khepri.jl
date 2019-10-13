@@ -1025,7 +1025,7 @@ macro deffamily(name, parent, fields...)
                         based_on=nothing,
                         implemented_as=IdDict{Backend, Family}()) =
       $(struct_name)($(field_names...), based_on, implemented_as, Parameter{Any}(nothing))
-    $(instance_name)(family:: Family, implemented_as=family.implemented_as; $(instance_params...)) =
+    $(instance_name)(family:: Family, implemented_as=copy(family.implemented_as); $(instance_params...)) =
       $(struct_name)($(field_names...), family, implemented_as, Parameter{Any}(nothing))
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
