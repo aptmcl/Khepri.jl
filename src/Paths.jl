@@ -497,7 +497,7 @@ convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limi
                 vxyz(vn[1], vn[2], vn[3], world_cs),
                 vxyz(vy[1], vy[2], vy[3], world_cs))
             end,
-        0.0, 1.0, 50)) # HACK this must be parameterized!
+        0.0, 1.0, 64)) # HACK this must be parameterized!
     end
 
 curve_interpolator(pts::Locs) =
