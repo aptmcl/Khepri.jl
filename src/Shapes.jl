@@ -1151,8 +1151,9 @@ realize(b::Backend, s::Panel) =
       #p2 = s.vertices[2],
       #p3 = s.vertices[3],
       #n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
-      n = vertices_normal(s.vertices)*s.family.thickness
-    ref(irregular_prism(map(p -> p - n, s.vertices), n*2))
+      verts = in_world.(s.vertices)
+      n = vertices_normal(verts)*s.family.thickness
+    ref(irregular_prism(map(p -> p - n, verts), n*2))
   end
 
 #=
