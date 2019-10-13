@@ -473,11 +473,16 @@ quad_center(p0, p1, p2, p3) =
 quad_normal(p0, p1, p2, p3) =
   polygon_normal([p1 - p0, p2 - p1, p3 - p2, p0 - p3])
 
+vertices_normal(ps) =
+  polygon_normal(p-q for (p,q) in zip(ps, drop(cycle(ps), 1)))
+
 polygon_normal(vs) =
   unitized(
     sum(
       cross(v0,v1)
       for (v0,v1) in zip(vs, drop(cycle(vs), 1))))
+
+
 
 iterate_quads(f, ptss) =
   [[f(p0, p1, p2, p3)
