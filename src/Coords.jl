@@ -580,3 +580,11 @@ For the moment, I'll choose this one
 
 Base.broadcastable(p::Loc) = Ref(p)
 Base.broadcastable(v::Vec) = Ref(v)
+
+# equality
+
+Base.isequal(p::Loc, q::Loc) =
+  let wp = in_world(p),
+      wq = in_world(q)
+    isequal(wp.x, wq.x) && isequal(wp.y, wq.y) && isequal(wp.z, wq.z)
+  end
