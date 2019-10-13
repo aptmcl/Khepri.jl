@@ -206,7 +206,7 @@ realize(b::Unity, s::SurfacePolygon) =
   UnitySurfacePolygon(connection(b), reverse(s.vertices))
 
 backend_fill(b::Unity, path::ClosedPolygonalPath) =
-  UnitySurfacePolygon(connection(b), reverse(path.vertices))
+  UnitySurfacePolygon(connection(b), path.vertices)
 
 #=
 realize(b::Unity, s::SurfaceRegularPolygon) =
@@ -634,18 +634,18 @@ realize(b::Unity, s::Column) =
 unity"public GameObject Panel(Vector3[] pts, Vector3 n, Material material)"
 
 realize(b::Unity, s::Panel) =
-    let p1 = s.vertices[1],
-        p2 = s.vertices[2],
-        p3 = s.vertices[3],
-        n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
-        UnityPanel(
-          connection(b),
-          map(p -> p - n, s.vertices),
-          n*2,
-          realize(b, s.family))
-    end
-
-###
+  let #p1 = s.vertices[1],
+      #p2 = s.vertices[2],
+      #p3 = s.vertices[3],
+      #n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
+      verts = in_world.(s.vertices)
+      n = vertices_normal(verts)*s.family.thickness
+    UnityPanel(
+      connection(b),
+      map(p -> p - n, verts),
+      n*2,
+      realize(b, s.family))
+  end
 
 sweep_fractions(b, verts, height, thickness) =
     let p = add_z(verts[1], height/2)
