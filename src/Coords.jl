@@ -471,10 +471,17 @@ quad_center(p0, p1, p2, p3) =
   intermediate_loc(intermediate_loc(p0, p2), intermediate_loc(p1, p3))
 
 quad_normal(p0, p1, p2, p3) =
-  polygon_normal([p1 - p0, p2 - p1, p3 - p2, p0 - p3])
+  let p0 = in_world(p0),
+      p1 = in_world(p1),
+      p2 = in_world(p2),
+      p3 = in_world(p3)
+    polygon_normal([p1 - p0, p2 - p1, p3 - p2, p0 - p3])
+  end
 
 vertices_normal(ps) =
-  polygon_normal(p-q for (p,q) in zip(ps, drop(cycle(ps), 1)))
+  let ps = map(in_world, ps)
+    polygon_normal(p-q for (p,q) in zip(ps, drop(cycle(ps), 1)))
+  end
 
 polygon_normal(vs) =
   unitized(
