@@ -73,7 +73,7 @@ rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
 rhino"public Guid SurfaceEllipse(Point3d c, Vector3d n, double radiusX, double radiusY)"
 rhino"public Guid SurfaceArc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)"
 rhino"public Guid SurfaceClosedPolyLine(Point3d[] pts)"
-#rhino"public Guid[] SurfaceFromCurves(RhinoObject[] objs)"
+rhino"public Guid[] SurfaceFrom(Guid[] objs)"
 rhino"public Guid Sphere(Point3d c, double r)"
 rhino"public Guid Torus(Point3d c, Vector3d vz, double majorRadius, double minorRadius)"
 rhino"public Brep Cylinder(Point3d bottom, double radius, Point3d top)"
@@ -214,6 +214,25 @@ backend_stroke(b::RH, path::OpenPolygonalPath) =
 backend_stroke(b::RH, path::ClosedPolygonalPath) =
     RHClosedPolyLine(connection(b), path.vertices)
 
+backend_stroke(b::RH, path::OpenSplinePath) =
+  if (path.v0 == false) && (path.v1 == false)
+    #ACADSpline(connection(b), path.vertices)
+    RHSpline(connection(b), path.vertices)
+  elseif (path.v0 != false) && (path.v1 != false)
+    RHInterpSpline(connection(b), path.vertices, path.v0, path.v1)
+  else
+    RHInterpSpline(connection(b),
+                     path.vertices,
+                     path.v0 == false ? path.vertices[2]-path.vertices[1] : path.v0,
+                     path.v1 == false ? path.vertices[end-1]-path.vertices[end] : path.v1)
+  end
+backend_stroke(b::RH, path::ClosedSplinePath) =
+    RHInterpClosedSpline(connection(b), path.vertices)
+backend_fill(b::RH, path::ClosedSplinePath) =
+    backend_fill_curves(b, RHInterpClosedSpline(connection(b), path.vertices))
+
+
+
 backend_stroke_unite(b::RH, refs) = RHJoinCurves(connection(b), refs)
 
 #=backend_fill(b::RH, path::ClosedPolygonalPath) =
@@ -232,8 +251,8 @@ backend_fill(b::RH, path::RectangularPath) =
     end
 =#
 
-backend_fill_curves(b::RH, gs::Guids) = RHSurfaceFromCurves(connection(b), gs)
-backend_fill_curves(b::RH, g::Guid) = RHSurfaceFromCurves(connection(b), [g])
+backend_fill_curves(b::RH, gs::Guids) = RHSurfaceFrom(connection(b), gs)
+backend_fill_curves(b::RH, g::Guid) = RHSurfaceFrom(connection(b), [g])
 
 backend_stroke_line(b::RH, vs) = RHPolyLine(connection(b), vs)
 
