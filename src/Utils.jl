@@ -3,8 +3,8 @@ export List, Nil, Cons, list, cons, nil, head, tail
 abstract type List{T} end
 struct Nil{T} <: List{T} end
 struct Cons{T} <: List{T}
-    head::T
-    tail::List{T}
+  head::T
+  tail::List{T}
 end
 
 nil(T) = Nil{T}()
@@ -17,20 +17,20 @@ Base.getindex(lst::Nil, i) = throw(BoundsError(lst, i))
 Base.getindex(lst::Cons, i) = i == 1 ? lst.head : getindex(lst.tail, i-1)
 
 list(elts...) =
-    let l = nil()
-        for i = length(elts):-1:1
-            l = cons(elts[i], l)
-        end
-        l
+  let l = nil()
+    for i = length(elts):-1:1
+      l = cons(elts[i], l)
     end
+    l
+  end
 
 list(elts::T...) where {T} =
-    let l = nil(T)
-        for i = length(elts):-1:1
-            l = cons(elts[i], l)
-        end
-        l
+  let l = nil(T)
+    for i = length(elts):-1:1
+      l = cons(elts[i], l)
     end
+    l
+  end
 head(x::Cons) = x.head
 tail(x::Cons) = x.tail
 
@@ -40,56 +40,56 @@ import Base.==
 
 Base.show(io::IO, lst::Nil) = print(io, "list()")
 Base.show(io::IO, lst::Cons) =
-    begin
-        print(io, "list(")
-        show(io, head(lst))
-        for e in tail(lst)
-            print(io, ", ")
-            show(io, e)
-        end
-        print(io, ")")
+  begin
+    print(io, "list(")
+    show(io, head(lst))
+    for e in tail(lst)
+      print(io, ", ")
+      show(io, e)
     end
+    print(io, ")")
+  end
 
 Base.length(l::Nil) = 0
 Base.length(l::Cons) =
-    let n = 0
-        for i in l
-            n += 1
-        end
-        n
+  let n = 0
+    for i in l
+      n += 1
     end
+    n
+  end
 
 Base.map(f::Base.Callable, lst::List) = list((f(e) for e in lst)...)
 Base.filter(f::Function, lst::List) = list((e for e in lst if f(e))...)
 
 Base.cat() = list()
 Base.cat(lst::List, lsts::List...) =
-    let T = typeof(lst).parameters[1]
-        n = length(lst)
-        for l in lsts
-            T2 = typeof(l).parameters[1]
-            T = typejoin(T, T2)
-            n += length(l)
-        end
-        elems = Vector{T}(undef, n)
-        i = 1
-        for e in lst
-            elems[i] = e
-            i += 1
-        end
-        for lst in lsts
-            for e in lst
-                elems[i] = e
-                i += 1
-            end
-        end
-        let l = nil(T)
-            for i = i-1:-1:1
-                l = cons(elems[i], l)
-            end
-            l
-        end
+  let T = typeof(lst).parameters[1]
+    n = length(lst)
+    for l in lsts
+      T2 = typeof(l).parameters[1]
+      T = typejoin(T, T2)
+      n += length(l)
     end
+    elems = Vector{T}(undef, n)
+    i = 1
+    for e in lst
+      elems[i] = e
+      i += 1
+    end
+    for lst in lsts
+      for e in lst
+      elems[i] = e
+      i += 1
+      end
+    end
+    let l = nil(T)
+      for i = i-1:-1:1
+        l = cons(elems[i], l)
+      end
+      l
+    end
+  end
 
 Base.iterate(l::List, ::Nil) = nothing
 Base.iterate(l::List, state::Cons = l) = state.head, state.tail
@@ -97,9 +97,6 @@ Base.iterate(l::List, state::Cons = l) = state.head, state.tail
 # Lists can be converted to Arrays
 
 Base.convert(::Type{Array{S,1}}, l::List{T}) where {S, T <: S} = collect(T, l)
-
-
-
 
 
 export random, random_range, set_random_seed,
