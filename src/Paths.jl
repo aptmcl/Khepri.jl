@@ -515,9 +515,8 @@ curve_interpolator(pts::Locs) =
 convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
   let paths = path.paths,
       vertices = []
-    append!(vertices, convert(OpenPolygonalPath, paths[1]).vertices)
-    for path in paths[2:end]
-      append!(vertices, convert(OpenPolygonalPath, path).vertices[2:end])
+    for path in paths
+      append!(vertices, convert(OpenPolygonalPath, path).vertices[1:end-1])
     end
     closed_polygonal_path(vertices)
   end
@@ -525,10 +524,10 @@ convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
 convert(::Type{OpenPolygonalPath}, path::OpenPathSequence) =
   let paths = path.paths,
       vertices = []
-    append!(vertices, convert(OpenPolygonalPath, paths[1]).vertices)
-    for path in paths[2:end]
-      append!(vertices, convert(OpenPolygonalPath, path).vertices[2:end])
+    for path in paths[1:end-1]
+      append!(vertices, convert(OpenPolygonalPath, path).vertices[1:end-1])
     end
+    append!(vertices, convert(OpenPolygonalPath, paths[end]).vertices)
     open_polygonal_path(vertices)
   end
 
