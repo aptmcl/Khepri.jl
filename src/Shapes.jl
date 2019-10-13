@@ -787,6 +787,13 @@ backend_stroke(b::Backend, path::PathSet) =
 import Base.fill
 fill(path, backend=current_backend()) = backend_fill(backend, path)
 backend_fill(b, path) = backend_fill_curves(b, backend_stroke(b, path))
+
+backend_stroke(b::Backend, path::Union{OpenPathSequence,ClosedPathSequence}) =
+    backend_stroke_unite(b, map(path->backend_stroke(b, path), path.paths))
+backend_fill(b::Backend, path::ClosedPathSequence) =
+    backend_fill_curves(b, map(path->backend_stroke(b, path), path.paths))
+
+
 #####################################################################
 ## Conversions
 

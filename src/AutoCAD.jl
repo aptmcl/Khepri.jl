@@ -307,11 +307,6 @@ backend_stroke(b::ACAD, path::ClosedSplinePath) =
 backend_fill(b::ACAD, path::ClosedSplinePath) =
     backend_fill_curves(b, ACADInterpClosedSpline(connection(b), path.vertices))
 
-backend_stroke(b::ACAD, path::Union{OpenPathSequence,ClosedPathSequence}) =
-    backend_stroke_unite(b, map(path->backend_stroke(b, path), path.paths))
-backend_fill(b::ACAD, path::ClosedPathSequence) =
-    backend_fill_curves(b, map(path->backend_stroke(b, path), path.paths))
-
 backend_fill_curves(b::ACAD, refs::ACADIds) = ACADSurfaceFromCurves(connection(b), refs)
 backend_fill_curves(b::ACAD, ref::ACADId) = ACADSurfaceFromCurves(connection(b), [ref])
 
