@@ -485,7 +485,7 @@ convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
     convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
 convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limit vectors
   let interpolator = curve_interpolator(path.vertices),
-      fixed_normal(vn, vt) = norm(vn) < 1e-14 ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
+      fixed_normal(vn, vt) = norm(vn) < 1e-10 ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
     open_polygonal_path(
       map_division(
         t-> let p = interpolator(t),
