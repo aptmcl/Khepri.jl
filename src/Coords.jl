@@ -184,7 +184,6 @@ Base.show(io::IO, loc::XYZ) =
 
 xyz(x::Real, y::Real, z::Real,cs::CS=current_cs()) =
   XYZ(x,y,z,cs,Vec4f(convert(Float64,x),convert(Float64,y),convert(Float64,z), 1.0))
-
 xyz(s::Vec4f,cs::CS) =
   XYZ(s[1], s[2], s[3], cs, s)
 
@@ -274,8 +273,11 @@ pol_phi = cyl_phi
 
 
 
-unitized(v::Vec) = vxyz(v.raw./sqrt(sum(abs2, v.raw)), v.cs)
-
+unitized(v::Vec) =
+  let r = sqrt(sum(abs2, v.raw))
+    @assert r > 1e-15
+    vxyz(v.raw./r, v.cs)
+  end
 in_cs(from_cs::CS, to_cs::CS) =
     to_cs == world_cs ?
         from_cs.transform :
