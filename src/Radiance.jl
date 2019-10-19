@@ -485,3 +485,76 @@ export_CIE_Overcast_Sky(path::String) =
     end
     skypath
   end
+
+
+#=
+Materials
+=#
+
+struct RadianceMaterial
+  name::String
+  type::String
+  red::Real
+  green::Real
+  blue::Real
+  specularity::Union{Real, Nothing}
+  roughness::Union{Real, Nothing}
+  transmissivity::Union{Real, Nothing}
+  transmitted_specular::Union{Real, Nothing}
+end
+
+radiance_string(m::RadianceMaterial) =
+  isnothing(m.transmissivity) && isnothing(m.transmitted_specular) ?
+    isnothing(m.specularity) && isnothing(m.roughness) ?
+      "void $(m.type) $(m.name)\n0\n0\n3 $(m.red) $(m.green) $(m.blue)\n" :
+      "void $(m.type) $(m.name)\n0\n0\n5 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness)\n" :
+    "void $(m.type) $(m.name)\n0\n0\n7 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness) $(m.transmissivity) $(m.transmitted_specular)\n"
+
+Base.show(io::IO, mat::RadianceMaterial) =
+    print(io, radiance_string(mat))
+
+radiance_material(name::String, type::String;
+                  gray::Real=0.3,
+                  red::Real=gray, green::Real=gray, blue::Real=gray,
+                  specularity=nothing, roughness=nothing,
+                  transmissivity=nothing, transmitted_specular=nothing) =
+  RadianceMaterial(name, type,
+                   red, green, blue,
+                   specularity, roughness,
+                   transmissivity, transmitted_specular)
+
+plastic_material(name::String; args...) =
+  radiance_material(name, "plastic"; specularity=0, roughness=0, args...)
+
+metal_material(name::String; args...) =
+  radiance_material(name, "metal"; specularity=0, roughness=0, args...)
+
+glass_material(name::String; args...) =
+  radiance_material(name, "glass"; args...)
+
+#Some pre-defined materials
+material_white = create_plastic_material("white", gray=1.0)
+generic_ceiling_70 = create_plastic_material("GenericCeiling_70", gray=0.7)
+generic_ceiling_80 = create_plastic_material("GenericCeiling_80", gray=0.8)
+generic_ceiling_90 = create_plastic_material("HighReflectanceCeiling_90", gray=0.9)
+generic_floor_20 = create_plastic_material("GenericFloor_20", gray=0.2)
+generic_interior_wall_50 = create_plastic_material("GenericInteriorWall_50", gray=0.5)
+generic_interior_wall_70 = create_plastic_material("GenericInteriorWall_70", gray=0.7)
+generic_furniture_50 = create_plastic_material("GenericFurniture_50", gray=0.5)
+outside_facade_30 = create_plastic_material("OutsideFacade_30", gray=0.3)
+outside_facade_35 = create_plastic_material("OutsideFacade_35", gray=0.35)
+generic_glass_80 = create_glass_material("Glass_80", gray=0.8)
+generic_metal = create_metal_material("SheetMetal_80", gray=0.8)
+
+export material_white,
+       generic_ceiling_70,
+       generic_ceiling_80,
+       generic_ceiling_90,
+       generic_floor_20,
+       generic_interior_wall_50,
+       generic_interior_wall_70,
+       generic_furniture_50,
+       outside_facade_30,
+       outside_facade_35,
+       generic_glass_80,
+       generic_metal
