@@ -1,5 +1,10 @@
 export radiance,
-       save_rad
+       save_rad,
+       radiance_material,
+       radiance_plastic_material,
+       radiance_metal_material,
+       radiance_glass_material
+
 
 write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
   begin
@@ -523,38 +528,38 @@ radiance_material(name::String, type::String;
                    specularity, roughness,
                    transmissivity, transmitted_specular)
 
-plastic_material(name::String; args...) =
+radiance_plastic_material(name::String; args...) =
   radiance_material(name, "plastic"; specularity=0, roughness=0, args...)
 
-metal_material(name::String; args...) =
+radiance_metal_material(name::String; args...) =
   radiance_material(name, "metal"; specularity=0, roughness=0, args...)
 
-glass_material(name::String; args...) =
+radiance_glass_material(name::String; args...) =
   radiance_material(name, "glass"; args...)
 
 #Some pre-defined materials
-material_white = plastic_material("white", gray=1.0)
-generic_ceiling_70 = plastic_material("GenericCeiling_70", gray=0.7)
-generic_ceiling_80 = plastic_material("GenericCeiling_80", gray=0.8)
-generic_ceiling_90 = plastic_material("HighReflectanceCeiling_90", gray=0.9)
-generic_floor_20 = plastic_material("GenericFloor_20", gray=0.2)
-generic_interior_wall_50 = plastic_material("GenericInteriorWall_50", gray=0.5)
-generic_interior_wall_70 = plastic_material("GenericInteriorWall_70", gray=0.7)
-generic_furniture_50 = plastic_material("GenericFurniture_50", gray=0.5)
-outside_facade_30 = plastic_material("OutsideFacade_30", gray=0.3)
-outside_facade_35 = plastic_material("OutsideFacade_35", gray=0.35)
-generic_glass_80 = glass_material("Glass_80", gray=0.8)
-generic_metal = metal_material("SheetMetal_80", gray=0.8)
+radiance_material_white = radiance_plastic_material("white", gray=1.0)
+radiance_generic_ceiling_70 = radiance_plastic_material("GenericCeiling_70", gray=0.7)
+radiance_generic_ceiling_80 = radiance_plastic_material("GenericCeiling_80", gray=0.8)
+radiance_generic_ceiling_90 = radiance_plastic_material("HighReflectanceCeiling_90", gray=0.9)
+radiance_generic_floor_20 = radiance_plastic_material("GenericFloor_20", gray=0.2)
+radiance_generic_interior_wall_50 = radiance_plastic_material("GenericInteriorWall_50", gray=0.5)
+radiance_generic_interior_wall_70 = radiance_plastic_material("GenericInteriorWall_70", gray=0.7)
+radiance_generic_furniture_50 = radiance_plastic_material("GenericFurniture_50", gray=0.5)
+radiance_outside_facade_30 = radiance_plastic_material("OutsideFacade_30", gray=0.3)
+radiance_outside_facade_35 = radiance_plastic_material("OutsideFacade_35", gray=0.35)
+radiance_generic_glass_80 = radiance_glass_material("Glass_80", gray=0.8)
+radiance_generic_metal = radiance_metal_material("SheetMetal_80", gray=0.8)
 
-export material_white,
-       generic_ceiling_70,
-       generic_ceiling_80,
-       generic_ceiling_90,
-       generic_floor_20,
-       generic_interior_wall_50,
-       generic_interior_wall_70,
-       generic_furniture_50,
-       outside_facade_30,
-       outside_facade_35,
-       generic_glass_80,
-       generic_metal
+export radiance_material_white,
+       radiance_generic_ceiling_70,
+       radiance_generic_ceiling_80,
+       radiance_generic_ceiling_90,
+       radiance_generic_floor_20,
+       radiance_generic_interior_wall_50,
+       radiance_generic_interior_wall_70,
+       radiance_generic_furniture_50,
+       radiance_outside_facade_30,
+       radiance_outside_facade_35,
+       radiance_generic_glass_80,
+       radiance_generic_metal
