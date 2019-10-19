@@ -30,14 +30,14 @@ const render_color_dir = Parameter(".")
 const render_ext = Parameter(".png")
 
 render_pathname(name::String) =
-    realpath(
-        joinpath(
-            render_dir(),
-            render_user_dir(),
-            render_backend_dir(),
-            render_kind_dir(),
-            render_color_dir(),
-            "$(name)$(render_ext())"))
+    normpath(
+      joinpath(
+        render_dir(),
+        render_user_dir(),
+        render_backend_dir(),
+        render_kind_dir(),
+        render_color_dir(),
+        "$(name)$(render_ext())"))
 
 const render_width = Parameter(1024)
 const render_height = Parameter(768)
@@ -50,7 +50,7 @@ render_size(width::Integer, heigth::Integer) =
     (render_width(width), render_height(heigth))
 
 prepare_for_saving_file(path::String) =
-    let p = realpath(path)
+    let p = normpath(path)
         mkpath(dirname(p))
         rm(p, force=true)
         p
