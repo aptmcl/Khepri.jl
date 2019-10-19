@@ -1325,8 +1325,9 @@ beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); 
 # Columns are mainly vertical elements. A column has its center axis aligned with a line defined by two points
 
 @deffamily(column_family, Family,
-    width::Real=1.0,
-    height::Real=2.0)
+    #width::Real=1.0,
+    #height::Real=2.0,
+  profile::ClosedPath=rectangular_profile(1, 2))
 
 @defproxy(column, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
 column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
