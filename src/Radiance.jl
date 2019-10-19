@@ -533,18 +533,18 @@ glass_material(name::String; args...) =
   radiance_material(name, "glass"; args...)
 
 #Some pre-defined materials
-material_white = create_plastic_material("white", gray=1.0)
-generic_ceiling_70 = create_plastic_material("GenericCeiling_70", gray=0.7)
-generic_ceiling_80 = create_plastic_material("GenericCeiling_80", gray=0.8)
-generic_ceiling_90 = create_plastic_material("HighReflectanceCeiling_90", gray=0.9)
-generic_floor_20 = create_plastic_material("GenericFloor_20", gray=0.2)
-generic_interior_wall_50 = create_plastic_material("GenericInteriorWall_50", gray=0.5)
-generic_interior_wall_70 = create_plastic_material("GenericInteriorWall_70", gray=0.7)
-generic_furniture_50 = create_plastic_material("GenericFurniture_50", gray=0.5)
-outside_facade_30 = create_plastic_material("OutsideFacade_30", gray=0.3)
-outside_facade_35 = create_plastic_material("OutsideFacade_35", gray=0.35)
-generic_glass_80 = create_glass_material("Glass_80", gray=0.8)
-generic_metal = create_metal_material("SheetMetal_80", gray=0.8)
+material_white = plastic_material("white", gray=1.0)
+generic_ceiling_70 = plastic_material("GenericCeiling_70", gray=0.7)
+generic_ceiling_80 = plastic_material("GenericCeiling_80", gray=0.8)
+generic_ceiling_90 = plastic_material("HighReflectanceCeiling_90", gray=0.9)
+generic_floor_20 = plastic_material("GenericFloor_20", gray=0.2)
+generic_interior_wall_50 = plastic_material("GenericInteriorWall_50", gray=0.5)
+generic_interior_wall_70 = plastic_material("GenericInteriorWall_70", gray=0.7)
+generic_furniture_50 = plastic_material("GenericFurniture_50", gray=0.5)
+outside_facade_30 = plastic_material("OutsideFacade_30", gray=0.3)
+outside_facade_35 = plastic_material("OutsideFacade_35", gray=0.35)
+generic_glass_80 = glass_material("Glass_80", gray=0.8)
+generic_metal = metal_material("SheetMetal_80", gray=0.8)
 
 export material_white,
        generic_ceiling_70,
