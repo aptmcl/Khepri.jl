@@ -563,3 +563,51 @@ export radiance_material_white,
        radiance_outside_facade_35,
        radiance_generic_glass_80,
        radiance_generic_metal
+
+
+#=
+Radiance families need to know the different kinds of materials
+that go on each surface.
+In some cases it might be the same material, but in others, such
+as slabs, outside walls, etc, we will have different materials.
+=#
+
+abstract type RadianceFamily <: Family end
+
+struct RadianceMaterialFamily <: RadianceFamily
+  material::RadianceMaterial
+end
+
+radiance_material_family(mat::RadianceMaterial) =
+  RadianceMaterialFamily(mat)
+
+struct RadianceSlabFamily <: RadianceFamily
+  top_material::RadianceMaterial
+  bottom_material::RadianceMaterial
+end
+
+radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top) =
+  RadianceSlabFamily(top, bot)
+
+struct RadianceOutsideWallFamily <: RadianceFamily
+  out_material::RadianceMaterial
+  in_material::RadianceMaterial
+end
+
+radiance_outside_wall_family(out::RadianceMaterial, in::RadianceMaterial=out) =
+  RadianceOusideWallFamily(out, in)
+
+backend_get_family_ref(b::Radiance, f::Family, rf::RadianceMaterialFamily) = rf
+
+set_backend_family(default_wall_family(), radiance,
+  radiance_material_family(radiance_generic_interior_wall_70))
+set_backend_family(default_slab_family(), radiance,
+  radiance_slab_family(radiance_generic_floor_20, radiance_generic_ceiling_80))
+set_backend_family(default_beam_family(), radiance,
+  radiance_material_family(radiance_generic_metal))
+set_backend_family(default_column_family(), radiance,
+  radiance_material_family(radiance_generic_metal))
+set_backend_family(default_door_family(), radiance,
+  radiance_material_family(radiance_generic_furniture_50))
+set_backend_family(default_panel_family(), radiance,
+  radiance_material_family(radiance_glass_material("GenericGlass", gray=0.3)))
