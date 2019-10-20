@@ -562,8 +562,10 @@ export radiance_material_white,
        radiance_outside_facade_30,
        radiance_outside_facade_35,
        radiance_generic_glass_80,
-       radiance_generic_metal
-
+       radiance_generic_metal,
+       radiance_material_family,
+       radiance_slab_family,
+       radiance_outside_wall_family
 
 #=
 Radiance families need to know the different kinds of materials
@@ -595,7 +597,7 @@ struct RadianceOutsideWallFamily <: RadianceFamily
 end
 
 radiance_outside_wall_family(out::RadianceMaterial, in::RadianceMaterial=out) =
-  RadianceOusideWallFamily(out, in)
+  RadianceOutsideWallFamily(out, in)
 
 backend_get_family_ref(b::Radiance, f::Family, rf::RadianceMaterialFamily) = rf
 
