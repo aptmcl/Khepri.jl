@@ -280,7 +280,7 @@ rvt"public Element CreateColumnPoints(XYZ p0, XYZ p1, Level level0, Level level1
 
 #Columns are aligned along the center axis.
 
-realize(b::RVT, s::Column) =
+realize(b::RVT, s::FreeColumn) =
     let b = loc_from_o_phi(s.cb, s.angle)
         t = add_z(o, s.h)
         RVTCreateColumnPoints(connection(b), b, t,

@@ -631,7 +631,7 @@ realize(b::RH, s::Beam) =
     end
 
 #Columns are aligned along the center axis.
-realize(b::RH, s::Column) =
+realize(b::RH, s::FreeColumn) =
     let o = loc_from_o_phi(s.cb, s.angle)
         RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), s.family.width, s.family.height, s.h)
     end

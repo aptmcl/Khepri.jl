@@ -1332,7 +1332,7 @@ beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); 
 @defproxy(free_column, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
 free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
     let (c, h) = position_and_height(cb, ct)
-      column(c, h, angle, family)
+      free_column(c, h, angle, family)
     end
 
 @defproxy(column, Shape3D, cb::Loc=u0(), angle::Real=0,
