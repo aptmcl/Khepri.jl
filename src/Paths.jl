@@ -424,6 +424,8 @@ closed_path_sequence(paths...) =
 ensure_connected_paths(paths) = # AML: Finish this
     paths
 
+translate(path::T, v::Vec) where T<:Union{OpenPathSequence, ClosedPathSequence} =
+  T(translate.(path.paths, v))
 
 # A path set is a set of independent paths.
 
