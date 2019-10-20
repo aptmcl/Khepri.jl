@@ -1,8 +1,7 @@
 
 using StaticArrays
 using LinearAlgebra
-import LinearAlgebra.cross, LinearAlgebra.dot
-
+import LinearAlgebra.cross, LinearAlgebra.dot, LinearAlgebra.norm
 
 export Loc, Locs, LocOrZ,
        Vec, Vecs, VecOrZ,
@@ -39,7 +38,8 @@ export Loc, Locs, LocOrZ,
        scaled_cs,
        center_scaled_cs,
        translating_current_cs,
-       regular_polygon_vertices
+       regular_polygon_vertices,
+       norm
 
 #=
 Some useful terminology:
@@ -378,6 +378,7 @@ add_xyz(p::Loc, x::Real, y::Real, z::Real) = xyz(p.x+x, p.y+y, p.z+z, p.cs)
 (*)(a::Real, b::VXYZ) = vxyz(a * b.raw, b.cs)
 (/)(a::VXYZ, b::Real) = vxyz(a.raw / b, a.cs)
 
+norm(v::Vec) = norm(v.raw)
 length(v::Vec) = norm(v.raw)
 
 min_loc(p::Loc, q::Loc) =
