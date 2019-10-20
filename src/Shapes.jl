@@ -1228,13 +1228,13 @@ realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
     end
 
 realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
-    let op_base_height = op.loc.y,
-        op_height = op.family.height,
-        op_thickness = op.family.thickness,
-        op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-        op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, family))
-        ensure_ref(b, subtract_ref(b, w_ref, op_ref))
-    end
+  let op_base_height = op.loc.y,
+      op_height = op.family.height,
+      op_thickness = op.family.thickness,
+      op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
+      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, family))
+    ensure_ref(b, subtract_ref(b, w_ref, op_ref))
+  end
 
 realize(b::Backend, s::Door) =
   let base_height = s.wall.bottom_level.height + s.loc.y,
@@ -1329,12 +1329,15 @@ beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); 
     #height::Real=2.0,
   profile::ClosedPath=rectangular_profile(1, 2))
 
-@defproxy(column, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
-column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
+@defproxy(free_column, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
+free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
     let (c, h) = position_and_height(cb, ct)
       column(c, h, angle, family)
     end
 
+@defproxy(column, Shape3D, cb::Loc=u0(), angle::Real=0,
+  bottom_level::Level=default_level(), top_level::Level=upper_level(bottom_level),
+  family::ColumnFamily=default_column_family())
 
 # Tables and chairs
 
