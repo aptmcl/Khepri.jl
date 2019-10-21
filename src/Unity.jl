@@ -650,16 +650,16 @@ realize(b::Unity, s::Panel) =
   end
 
 sweep_fractions(b, verts, height, thickness) =
-    let p = add_z(verts[1], height/2)
-        q = add_z(verts[2], height/2)
-        (c, h) = position_and_height(p, q)
-        s = UnityNativeRef(UnityRightCuboid(connection(b), c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0))
-        if length(verts) > 2
-          (s, sweep_fractions(b, verts[2:end], height, thickness)...)
-        else
-          (s, )
-        end
+  let p = add_z(verts[1], height/2),
+      q = add_z(verts[2], height/2),
+      (c, h) = position_and_height(p, q),
+      s = UnityNativeRef(UnityRightCuboid(connection(b), c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0))
+    if length(verts) > 2
+      (s, sweep_fractions(b, verts[2:end], height, thickness)...)
+    else
+      (s, )
     end
+  end
 
 backend_wall(b::Unity, path, height, thickness, family) =
   curve_length(path) < 1e-9  ? # HACK!!!!!
@@ -671,6 +671,22 @@ backend_wall(b::Unity, path, height, thickness, family) =
 
 backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
     UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
+
+set_backend_family(default_curtain_wall_family().panel,
+  unity,
+  unity_material_family("Materials/Glass/GlassBlue"))
+set_backend_family(default_curtain_wall_family().boundary_frame,
+  unity,
+  unity_material_family("Materials/Metal/Steel"))
+set_backend_family(default_curtain_wall_family().transom_frame,
+  unity,
+  unity_material_family("Materials/Metal/Steel"))
+set_backend_family(default_curtain_wall_family().mullion_frame,
+  unity,
+  unity_material_family("Materials/Metal/Steel"))
+
+backend_curtain_wall(b::Unity, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
+  backend_wall(b, translate(path, vz(bottom)), height, thickness, getproperty(s.family, kind))
 
 ############################################
 #=
