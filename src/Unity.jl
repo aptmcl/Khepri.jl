@@ -622,7 +622,7 @@ realize(b::Unity, s::Beam) =
   end
 
 #Columns are aligned along the center axis.
-realize(b::Unity, s::Column) =
+realize(b::Unity, s::FreeColumn) =
   let profile = s.family.profile
       profile_u0 = profile.corner
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
@@ -632,6 +632,18 @@ realize(b::Unity, s::Column) =
       profile.dy, profile.dx, s.h, -s.angle,
       realize(b, s.family))
   end
+
+realize(b::Unity, s::Column) =
+    let profile = s.family.profile,
+        profile_u0 = profile.corner,
+        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
+        base_height = s.bottom_level.height,
+        height = s.top_level.height - base_height
+        # need to test whether it is rotation on center or on axis
+      UnityBeamRectSection(connection(b),
+        c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, height, -s.angle,
+        realize(b, s.family))
+    end
 
 unity"public GameObject Panel(Vector3[] pts, Vector3 n, Material material)"
 
@@ -749,6 +761,7 @@ unity"public GameObject CurrentParent()"
 unity"public GameObject SetCurrentParent(GameObject newParent)"
 unity"public void SetActive(GameObject obj, bool state)"
 unity"public void DeleteAllInParent(GameObject parent)"
+unity"public void SwitchToParent(GameObject newParent)"
 
 UnityLayer = Int
 
@@ -770,6 +783,9 @@ set_layer_active(layer::UnityLayer, status, b::Unity) =
 delete_all_shapes_in_layer(layer::UnityLayer, b::Unity) =
   UnityDeleteAllInParent(connection(b), layer)
 
+switch_to_layer(layer::UnityLayer, b::Unity) =
+  UnitySwitchToLayer(connection(b), layer)
+  
 # Experiment to speed up things
 
 canonicalize_layer(layer::UnityLayer, b::Unity) =

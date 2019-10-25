@@ -926,6 +926,13 @@ create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
 delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
   ACADDeleteAllInLayer(connection(b), layer)
 
+switch_to_layer(to, b::ACAD) =
+    if to != from
+      set_layer_active(to, true)
+      set_layer_active(from, false)
+      current_layer(to)
+    end
+
 # Materials
 ACADMaterial = Int
 

@@ -1682,18 +1682,11 @@ end
 @defop current_layer()
 @defop current_layer(layer)
 @defop set_layer_active(layer, status)
+@defop switch_to_layer(layer)
 @defop get_material(name::String)
 @defop create_material(name::String)
 @defop current_material()
 @defop current_material(material)
-
-export switch_to_layer
-switch_to_layer(to, from=current_layer()) =
-  begin
-    set_layer_active(to, true)
-    set_layer_active(from, false)
-    current_layer(to)
-  end
 
 angle_of_view(size, focal_length) = 2atan(size/2focal_length)
 
