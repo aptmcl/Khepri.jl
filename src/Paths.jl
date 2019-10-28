@@ -128,7 +128,7 @@ translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 
 path_length(path::CircularPath) = 2*pi*path.radius
-path_length(path::ArcPath) = 2*pi*path.radius*path.amplitude
+path_length(path::ArcPath) = path.radius*path.amplitude
 path_length(path::RectangularPath) = 2*(path.dx + path.dy)
 path_length(path::OpenPolygonalPath) = path_length(path.vertices)
 path_length(path::ClosedPolygonalPath) = path_length(path.vertices) + distance(path.vertices[end], path.vertices[1])
@@ -198,9 +198,9 @@ subpath(path::CircularPath, a::Real, b::Real) =
     arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
 subpath(path::ArcPath, a::Real, b::Real) =
   let Δα = (b - a)/path.radius
-    a/path_radius + Δα <= path.start_angle + path.amplitude ?
+    a/path.radius + Δα <= path.start_angle + path.amplitude ?
       arc_path(path.center, path.radius, a/path.radius + path.start_angle, Δα) :
-      error("Exceeded path length by ", path.start_angle + path.amplitude - a/path_radius - Δα)
+      error("Exceeded path length by ", path.start_angle + path.amplitude - a/path.radius - Δα)
   end
 subpath(path::RectangularPath, a::Real, b::Real) =
     subpath(convert(ClosedPolygonalPath, path), a, b)
