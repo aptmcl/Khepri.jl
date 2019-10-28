@@ -118,20 +118,20 @@ closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no
 # 6. Produce the meta representation of a path
 
 translate(path::CircularPath, v::Vec) = circular_path(path.center + v, path.radius)
+translate(path::ArcPath, v::Vec) = arc_path(path.center + v, path.radius, path.start_angle, path.amplitude)
 translate(path::RectangularPath, v::Vec) = rectangular_path(path.corner + v, path.dx, path.dy)
 translate(path::OpenPolygonalPath, v::Vec) = open_polygonal_path(translate(path.vertices, v))
 translate(path::ClosedPolygonalPath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
-translate(path::ArcPath, v::Vec) = arc_path(path.center + v, path.radius, path.start_angle, path.amplitude)
 translate(path::OpenSplinePath, v::Vec) = open_polygonal_path(translate(path.vertices, v), path.v0, path.v1)
 translate(path::ClosedSplinePath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
 translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 
 path_length(path::CircularPath) = 2*pi*path.radius
+path_length(path::ArcPath) = 2*pi*path.radius*path.amplitude
 path_length(path::RectangularPath) = 2*(path.dx + path.dy)
 path_length(path::OpenPolygonalPath) = path_length(path.vertices)
 path_length(path::ClosedPolygonalPath) = path_length(path.vertices) + distance(path.vertices[end], path.vertices[1])
-path_length(path::ArcPath) = 2*pi*path.radius*path.amplitude
 path_length(ps::Locs) =
   let p = ps[1]
       l = 0.0
@@ -144,7 +144,14 @@ path_length(ps::Locs) =
   end
 
 location_at_length(path::CircularPath, d::Real) =
-    loc_from_o_phi(path.center + vpol(path.radius, d/path.radius), d/path.radius+pi/2)
+  loc_from_o_phi(path.center + vpol(path.radius, d/path.radius), d/path.radius + pi/2)
+location_at_length(path::ArcPath, d::Real) =
+  let Δα = d/path.radius
+    Δα <= path.amplitude ?
+      loc_from_o_phi(path.center + vpol(path.radius, path.start_angle + Δα),
+                     path.start_angle + Δα + pi/2) :
+      error("Exceeded path length by ", Δα - path.amplitude)
+  end
 location_at_length(path::RectangularPath, d::Real) =
     let d = d % (2*(path.dx + path.dy)) # remove multiple periods
         p = path.corner
@@ -189,6 +196,12 @@ location_at_length(path::ClosedPolygonalPath, d::Real) =
 
 subpath(path::CircularPath, a::Real, b::Real) =
     arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
+subpath(path::ArcPath, a::Real, b::Real) =
+  let Δα = (b - a)/path.radius
+    a/path_radius + Δα <= path.start_angle + path.amplitude ?
+      arc_path(path.center, path.radius, a/path.radius + path.start_angle, Δα) :
+      error("Exceeded path length by ", path.start_angle + path.amplitude - a/path_radius - Δα)
+  end
 subpath(path::RectangularPath, a::Real, b::Real) =
     subpath(convert(ClosedPolygonalPath, path), a, b)
 subpath(path::ClosedPolygonalPath, a::Real, b::Real) =
