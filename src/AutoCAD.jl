@@ -650,7 +650,7 @@ slice_ref(b::ACAD, r::ACADNativeRef, p::Loc, v::Vec) =
     (ACADSlice(connection(b), r.value, p, v); r)
 
 slice_ref(b::ACAD, r::ACADUnionRef, p::Loc, v::Vec) =
-    map(r->slice_ref(b, r, p, v), r.values)
+    ACADUnionRef(map(r->slice_ref(b, r, p, v), r.values))
 
 unite_refs(b::ACAD, refs::Vector{<:ACADRef}) =
     ACADUnionRef(tuple(refs...))
