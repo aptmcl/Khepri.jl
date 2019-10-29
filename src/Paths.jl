@@ -31,6 +31,9 @@ export open_path,
        subpath,
        subpaths
 
+
+path_tolerance = Parameter(1e-13)
+
 abstract type Path end
 
 import Base.getindex, Base.firstindex, Base.lastindex
@@ -128,7 +131,7 @@ translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 
 path_length(path::CircularPath) = 2*pi*path.radius
-path_length(path::ArcPath) = path.radius*path.amplitude
+path_length(path::ArcPath) = path.radius*abs(path.amplitude)
 path_length(path::RectangularPath) = 2*(path.dx + path.dy)
 path_length(path::OpenPolygonalPath) = path_length(path.vertices)
 path_length(path::ClosedPolygonalPath) = path_length(path.vertices) + distance(path.vertices[end], path.vertices[1])
@@ -146,17 +149,18 @@ path_length(ps::Locs) =
 location_at_length(path::CircularPath, d::Real) =
   loc_from_o_phi(path.center + vpol(path.radius, d/path.radius), d/path.radius + pi/2)
 location_at_length(path::ArcPath, d::Real) =
-  let Δα = d/path.radius
-    Δα <= path.amplitude ?
-      loc_from_o_phi(path.center + vpol(path.radius, path.start_angle + Δα),
-                     path.start_angle + Δα + pi/2) :
+  let Δα = d/path.radius,
+      s = sign(path.amplitude)
+    Δα <= abs(path.amplitude) + path_tolerance() ?
+      loc_from_o_phi(path.center + vpol(path.radius, path.start_angle + Δα*s),
+                     path.start_angle + (Δα + pi/2)*s) :
       error("Exceeded path length by ", Δα - path.amplitude)
   end
 location_at_length(path::RectangularPath, d::Real) =
     let d = d % (2*(path.dx + path.dy)) # remove multiple periods
         p = path.corner
         for (delta, phi) in zip([path.dx, path.dy, path.dx, path.dy], [0, pi/2, pi, 3pi/2])
-            if d - delta < 0
+            if d - delta < path_tolerance()
                 return loc_from_o_phi(add_pol(p, d, phi), phi)
             else
                 p = add_pol(p, delta, phi)
@@ -169,7 +173,7 @@ location_at_length(path::OpenPolygonalPath, d::Real) =
         for i in 2:length(path.vertices)
             pp = path.vertices[i]
             delta = distance(p, pp)
-            if d - delta < 0
+            if d - delta < path_tolerance()
                 phi = pol_phi(pp - p)
                 return loc_from_o_phi(add_pol(p, d, phi), phi)
             else
@@ -184,7 +188,7 @@ location_at_length(path::ClosedPolygonalPath, d::Real) =
         for i in countfrom(1)
             pp = path.vertices[i%length(path.vertices)+1]
             delta = distance(p, pp)
-            if d - delta < 0
+            if d - delta < path_tolerance()
                 phi = pol_phi(pp - p)
                 return loc_from_o_phi(add_pol(p, d, phi), phi)
             else
@@ -198,7 +202,7 @@ subpath(path::CircularPath, a::Real, b::Real) =
     arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
 subpath(path::ArcPath, a::Real, b::Real) =
   let Δα = (b - a)/path.radius
-    a/path.radius + Δα <= path.start_angle + path.amplitude ?
+    a/path.radius + Δα <= path.start_angle + path.amplitude + path_tolerance() ?
       arc_path(path.center, path.radius, a/path.radius + path.start_angle, Δα) :
       error("Exceeded path length by ", path.start_angle + path.amplitude - a/path.radius - Δα)
   end
@@ -226,7 +230,7 @@ subpath_starting_at(path::OpenPolygonalPath, d::Real) =
                 d -= delta
             end
         end
-        abs(d) < 1e-9 ?
+        abs(d) < path_tolerance() ?
           path :
           error("Exceeded path length by ", d)
     end
@@ -241,14 +245,14 @@ subpath_ending_at(path::OpenPolygonalPath, d::Real) =
             if diff < 0
                 mp = p1 + (p2 - p1)*d/delta
                 return open_polygonal_path([pts[1:i-1]..., mp])
-            elseif abs(diff) < 1e-9
+            elseif abs(diff) < path_tolerance()
                 return open_polygonal_path(pts[1:i])
             else
               p1 = p2
               d -= delta
             end
         end
-        abs(d) < 1e-9 ?
+        abs(d) < path_tolerance() ?
           path :
           error("Exceeded path length by ", d)
     end
@@ -339,7 +343,7 @@ location_at_length(path::PathOps, d::Real) =
         start = path.start
         for op in ops
             delta = path_length(op)
-            if d < delta
+            if d < delta + path_tolerance()
                 return location_at_length(op, start, d)
             else
                 start = location_at_length(op, start, delta)
@@ -365,7 +369,7 @@ subpath_starting_at(path::PathOps, d::Real) =
             delta = path_length(op)
             if d == delta
                 return PathOps(start, ops[i+1:end], false)
-            elseif d < delta
+            elseif d < delta + path_tolerance()
                 op = subpath_starting_at(op, d)
                 return PathOps(start, [op, ops[i+1:end]...], false)
             else
@@ -382,7 +386,7 @@ subpath_ending_at(path::PathOps, d::Real) =
             delta = path_length(op)
             if d == delta
                 return PathOps(path.start, ops[1:i], false)
-            elseif d < delta
+            elseif d < delta + path_tolerance()
                 return PathOps(path.start, [ops[1:i-1]..., subpath_ending_at(op, d)], false)
             else
                 d -= delta
@@ -437,8 +441,21 @@ ensure_connected_paths(paths) = # AML: Finish this
 
 translate(path::T, v::Vec) where T<:PathSequence =
   T(translate.(path.paths, v))
-path_length(path::T) where T<:PathSequence =
+path_length(path::PathSequence) =
   sum(map(path_length, path.paths))
+location_at_length(path::PathSequence, d::Real) =
+  let paths = path.paths
+    for path in paths
+      delta = path_length(path)
+      if d <= delta + path_tolerance()
+          return location_at_length(path, d)
+      else
+          d -= delta
+      end
+    end
+    error("Exceeded path length by ", d)
+  end
+
 # A path set is a set of independent paths.
 
 struct PathSet <: Path
@@ -460,7 +477,7 @@ convert(::Type{Path}, vs::Locs) =
         open_polygonal_path(vs)
     end
 convert(::Type{ClosedPath}, p::OpenPath) =
-    if isa(p.ops[end], CloseOp) || distance(path_start(p), path_end(p)) < 1e-16 #HACK Use a global
+    if isa(p.ops[end], CloseOp) || distance(path_start(p), path_end(p)) < path_tolerance()
         closed_path(p.ops)
     else
         error("Can't convert to a Closed Path: $p")
@@ -492,6 +509,11 @@ convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
         r = path.radius
         closed_polygonal_path([c + vpol(r, phi) for phi in division(0, 2pi, 64, false)])
     end
+convert(::Type{OpenPolygonalPath}, path::ArcPath) =
+    let c = path.center
+        r = path.radius
+        open_polygonal_path([c + vpol(r, phi) for phi in division(path.start_angle, path.amplitude, 32, true)])
+    end
 
 convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
     open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
@@ -499,7 +521,7 @@ convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
     convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
 convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limit vectors
   let interpolator = curve_interpolator(path.vertices),
-      fixed_normal(vn, vt) = norm(vn) < 1e-10 ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
+      fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
     open_polygonal_path(
       map_division(
         t-> let p = interpolator(t),
