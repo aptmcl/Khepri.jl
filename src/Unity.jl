@@ -674,7 +674,7 @@ sweep_fractions(b, verts, height, thickness) =
   end
 
 backend_wall(b::Unity, path, height, thickness, family) =
-  curve_length(path) < 1e-9  ? # HACK!!!!!
+  path_length(path) < 1e-9  ? # HACK!!!!!
     UnityEmptyRef() :
     let c = connection(b)
       UnitySetCurrentMaterial(c, realize(b, family))
@@ -784,8 +784,8 @@ delete_all_shapes_in_layer(layer::UnityLayer, b::Unity) =
   UnityDeleteAllInParent(connection(b), layer)
 
 switch_to_layer(layer::UnityLayer, b::Unity) =
-  UnitySwitchToLayer(connection(b), layer)
-  
+  UnitySwitchToParent(connection(b), layer)
+
 # Experiment to speed up things
 
 canonicalize_layer(layer::UnityLayer, b::Unity) =
