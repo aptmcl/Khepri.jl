@@ -91,6 +91,8 @@ struct ClosedPolygonalPath <: ClosedPath
 end
 closed_polygonal_path(vertices=[u0(), x(), xy(), y()]) = ClosedPolygonalPath(ensure_no_repeated_locations(vertices))
 
+PolygonalPath = Union{OpenPolygonalPath, ClosedPolygonalPath}
+
 ensure_no_repeated_locations(locs) =
     begin
         @assert (locs[1] != locs[end])
