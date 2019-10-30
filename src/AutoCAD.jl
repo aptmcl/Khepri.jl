@@ -314,13 +314,9 @@ backend_fill_curves(b::ACAD, ref::ACADId) = ACADSurfaceFromCurves(connection(b),
 backend_stroke_line(b::ACAD, vs) = ACADPolyLine(connection(b), vs)
 
 backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
-    let end_angle = start_angle + amplitude
-        if end_angle > start_angle
-            ACADArc(connection(b), center, vz(1, center.cs), radius, start_angle, end_angle)
-        else
-            ACADArc(connection(b), center, vz(1, center.cs), radius, end_angle, start_angle)
-        end
-    end
+  let end_angle = start_angle + amplitude
+    ACADArc(connection(b), center, vz(1, center.cs), radius, start_angle, end_angle)
+  end
 backend_stroke_unite(b::ACAD, refs) = ACADJoinCurves(connection(b), refs)
 
 
