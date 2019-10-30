@@ -462,6 +462,7 @@ location_at_length(path::PathSequence, d::Real) =
     error("Exceeded path length by ", d)
   end
 
+import Base.convert
 convert(::Type{PathOps}, path::PathSequence) =
   let start = in_world(location_at_length(path, 0)),
       path_length = path_length(path),
