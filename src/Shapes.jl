@@ -187,7 +187,8 @@ collect_ref(s::Shape) = collect_ref(s.ref.backend, ref(s))
 collect_ref(ss::Shapes) = mapreduce(collect_ref, vcat, ss, init=[])
 
 #=
-Whenever a shape is created, it might be eagerly realized in its backend,
+Whenever a shape is created, it might be replaced by another shape (e.g., when
+it is necessary to avoid collisions), it might be eagerly realized in its backend,
 depending on the kind of shape and on the kind of backend (and/or its current state).
 Another possibility is for the shape to be saved in some container.
 It might also be necessary to record the control flow that caused the shape to be created.
@@ -196,7 +197,16 @@ The protocol after_init takes care of that.
 =#
 
 after_init(a::Any) = a
-after_init(s::Shape) = maybe_trace(maybe_collect(maybe_realize(s)))
+after_init(s::Shape) = maybe_trace(maybe_collect(maybe_realize(maybe_replace(s))))
+
+#=
+Shapes might need to be replaced with other shapes. For example, when elements
+join at precise locations, it might be easier, from the programming point of
+view, to just duplicate the joining element. However, from the constructive
+point of view, just one joining element needs to be produced.
+=#
+
+maybe_replace(s::Any) = s
 
 #=
 Many backends can immediately realize a shape while supporting further modifications
@@ -229,6 +239,12 @@ collecting_shapes(fn) =
         collected_shapes()
     end
 maybe_collect(s::Shape) = (in_shape_collection() && collect_shape!(s); s)
+
+######################################################
+
+
+
+
 
 ######################################################
 #Traceability
@@ -834,10 +850,29 @@ frame_at(s::SurfaceCircle, u::Real, v::Real) = add_pol(s.center, u, v)
 
 #####################################################################
 # BIM
-abstract type Measure <: Proxy end
+#=
+Building Information Modeling is more than just shapes.
+Each BIM element is connected to other BIM elements. A wall is connected to its
+windows and doors. A floor is connected to its walls, and stairs. Stairs connect
+different floors, etc.
 
-@defproxy(level, Measure, height::Real=0.0)
+This graph of objects needs to be build programmatically and that is one problem.
+The other problem is portability, as we want this to work in backends that are
+not BIM tools.
 
+We will start with the simplest of BIM elements, namely, levels, slabs, walls,
+windows and doors.
+=#
+
+abstract type BIMElement <: Proxy end
+abstract type Measure <: BIMElement end
+BIMElements = Vector{<:BIMElement}
+
+@defproxy(level, Measure, height::Real=0, elements::BIMElements=BIMElement[])
+levels_cache = Dict{Real,Level}()
+maybe_replace(level::Level) = get!(levels_cache, level.height, level)
+
+current_levels() = values(level_cache)
 default_level = Parameter{Level}(level())
 default_level_to_level_height = Parameter{Real}(3)
 upper_level(lvl, height=default_level_to_level_height()) = level(lvl.height + height, backend=backend(lvl))
@@ -846,7 +881,7 @@ Base.:(==)(l1::Level, l2::Level) = l1.height == l2.height
 #default implementation
 realize(b::Backend, s::Level) = s.height
 
-export default_level, default_level_to_level_height, upper_level
+export all_levels, default_level, default_level_to_level_height, upper_level
 
 #=
 @defproxy(polygonal_mass, Shape3D, points::Locs, height::Real)
