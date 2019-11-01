@@ -92,7 +92,7 @@ create_Unity_connection() =
         create_backend_connection("Unity", 11002)
     end
 
-const unity = Unity(LazyParameter(TCPSocket, create_Unity_connection))
+const unity = Unity(Parameter(false), LazyParameter(TCPSocket, create_Unity_connection))
 
 backend_name(b::Unity) = "Unity"
 
@@ -674,14 +674,14 @@ sweep_fractions(b, verts, height, thickness) =
   end
 
 backend_wall(b::Unity, path, height, thickness, family) =
-  path_length(path) < 1e-9  ? # HACK!!!!!
+  path_length(path) < path_tolerance() ?
     UnityEmptyRef() :
     let c = connection(b)
       UnitySetCurrentMaterial(c, realize(b, family))
       backend_wall_path(b, path, height, thickness)
     end
 
-backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
+backend_wall_path(b::Unity, path::PolygonalPath, height, thickness) =
     UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
 
 set_backend_family(default_curtain_wall_family().panel,

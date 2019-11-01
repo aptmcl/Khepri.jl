@@ -12,6 +12,7 @@ export Shape,
        set_length_unit,
        collecting_shapes,
        collected_shapes,
+       with_transaction,
        surface_boundary,
        curve_domain,
        surface_domain,
@@ -209,20 +210,43 @@ point of view, just one joining element needs to be produced.
 maybe_replace(s::Any) = s
 
 #=
-Many backends can immediately realize a shape while supporting further modifications
+Backends might need to immediately realize a shape while supporting further modifications
 e.g., using boolean operations. Others, however, cannot do that and can only realize
 shapes by request, presumably, when they have complete information about them.
+A middle term might be a backend that supports both modes.
 =#
 
+delay_realize(b::Backend, s::Shape) = nothing
+force_realize(b::Backend, s::Shape) = (ref(s); s)
+
+maybe_realize(s::Shape, b::Backend=backend(s)) = maybe_realize(b, s)
+maybe_realize(b::Backend, s::Shape) = force_realize(b, s)
+
 abstract type LazyBackend{K,T} <: Backend{K,T} end
-
-maybe_realize(s::Shape, b::Backend=backend(s)) =
-  maybe_realize(b, s)
-
-maybe_realize(b::Backend, s::Shape) = force_realize(s)
 maybe_realize(b::LazyBackend, s::Shape) = delay_realize(b, s)
 delay_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
-force_realize(s::Shape) = (ref(s); s)
+
+abstract type EagerOrLazyBackend{K,T} <: Backend{K,T} end
+maybe_realize(b::EagerOrLazyBackend, s::Shape) =
+  use_lazy_realize(b, s) ?
+    delay_realize(b, s) :
+    force_realize(b, s)
+use_lazy_realize(b::EagerOrLazyBackend, s::Shape) = b.use_lazy_realize()
+
+#=
+Even if a backend is eager, it might be necessary to temporarily delay the
+realization of shapes, particularly, when the construction is incremental.
+=#
+
+with_transaction(fn) =
+  let b = current_backend()
+    let r = with(b.use_lazy_realize, true) do
+              fn()
+            end
+      maybe_realize(r)
+      r
+    end
+  end
 
 #=
 Frequently, we need to collect all shapes that are created:
@@ -239,11 +263,6 @@ collecting_shapes(fn) =
         collected_shapes()
     end
 maybe_collect(s::Shape) = (in_shape_collection() && collect_shape!(s); s)
-
-######################################################
-
-
-
 
 
 ######################################################
@@ -1158,6 +1177,35 @@ realize_slab_openings(b::Backend, s::Slab, s_ref, openings) =
     end
 
 #=
+Deleting a BIM element is dependent on the backend.
+But for usual backends, we use a protocol. First, we delete childs, then we
+remove ourselves from parents, finally we delete outselves.
+
+NOTE: I'm not sure this is a good idea! Constructing elements and then delete
+them will create all sorts of problems! I don't want to follow this road.
+
+@defshapeop(delete_element)
+backend_delete_element(b::Backend, e::BIMElement) =
+  let childs = child_elements(e),
+      parents = parent_elements(e)
+    map(childs) do child
+      backend_remove_child_from_parent(b, child, e)
+    end
+    map(parents) do parent
+      backend_remove_child_from_parent(b, e, parent)
+    end
+    delete_shape(e)
+  end
+
+child_elements(s::Wall) = [s.windows..., s.doors...]
+parent_elements(s::Wall) = [s.bottom_level]
+
+backend_remove_child_from_parent(b::Backend, c::Window, p::Wall) =
+  p.windows =
+=#
+
+
+#=
 Should we eliminate this?
 The rational is that an opening is not an object (like a door or a window)
 However, it might be interesting to have a computational object to store properties of the opening
@@ -1653,7 +1701,8 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
 #Backends might use different communication mechanisms, e.g., sockets, COM, RMI, etc
 
 #We start with socket-based communication
-struct SocketBackend{K,T} <: Backend{K,T}
+struct SocketBackend{K,T} <: EagerOrLazyBackend{K,T}
+  use_lazy_realize::Parameter{Bool}
   connection::LazyParameter{TCPSocket}
 end
 
