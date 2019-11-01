@@ -149,7 +149,9 @@ abstract type Proxy end
 backend(s::Proxy) = s.ref.backend
 realized(s::Proxy) = s.ref.created == s.ref.deleted + 1
 # This is so stupid. We need call-next-method.
-really_mark_deleted(s::Proxy) = s.ref.deleted = s.ref.created
+really_mark_deleted(s::Proxy) = really_mark_deleted(s.ref)
+really_mark_deleted(ref::LazyRef) = ref.deleted = ref.created
+really_mark_deleted(s::Any) = nothing
 mark_deleted(s::Proxy) = really_mark_deleted(s)
 # We also need to propagate this to all dependencies
 mark_deleted(ss::Array{<:Proxy}) = foreach(mark_deleted, ss)
@@ -838,6 +840,7 @@ abstract type Measure <: Proxy end
 default_level = Parameter{Level}(level())
 default_level_to_level_height = Parameter{Real}(3)
 upper_level(lvl, height=default_level_to_level_height()) = level(lvl.height + height, backend=backend(lvl))
+Base.:(==)(l1::Level, l2::Level) = l1.height == l2.height
 
 #default implementation
 realize(b::Backend, s::Level) = s.height
@@ -1188,6 +1191,44 @@ wall(p0::Loc, p1::Loc;
        family=family,
        offset=offset)
 
+#=
+Walls can be joined. That is very important because the wall needs to have
+uniform thickness along the entire path.
+=#
+export join_walls
+join_walls(wall1, wall2) =
+  if wall1.bottom_level != wall2.bottom_level
+    error("Walls with different bottom levels")
+  elseif wall1.top_level != wall2.top_level
+    error("Walls with different top levels")
+  elseif wall1.family != wall2.family
+    error("Walls with different families")
+  elseif wall1.offset != wall2.offset
+    error("Walls with different offsets")
+  else
+    let w = wall(join_paths(wall1.path, wall2.path),
+                 wall1.bottom_level, wall1.top_level,
+                 wall1.family, wall1.offset),
+        len = path_length(wall1.path)
+      for (es,l) in ((wall1.doors, 0), (wall2.doors, len))
+        for e in es
+          add_door(w, e.loc, e.family)
+        end
+      end
+      for (es,l) in ((wall1.windows, 0), (wall2.windows, len))
+        for e in es
+          add_window(w, e.loc, e.family)
+        end
+      end
+      for w in (wall1, wall2)
+        delete_shapes(w.doors)
+        delete_shapes(w.windows)
+        delete_shape(w)
+      end
+      w
+    end
+  end
+
 # Right and Left considering observer looking along with curve direction
 r_thickness(w::Wall) = (+1+w.offset)/2*w.family.thickness
 l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
@@ -1198,7 +1239,7 @@ l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(door, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
+@defproxy(door, Shape3D, loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
 
 # Window
 
@@ -1207,7 +1248,7 @@ l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
+@defproxy(window, Shape3D, loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
 # Default implementation
 realize(b::Backend, w::Wall) =
@@ -1265,12 +1306,11 @@ realize(b::Backend, s::Window) =
 
 ##
 
-export add_door
-add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
+door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
   backend_add_door(backend(w), w, loc, family)
 
 backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
-    let d = door(w, loc, family=family)
+    let d = door(loc, family=family)
         push!(w.doors, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
@@ -1279,12 +1319,11 @@ backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
     end
 
 #
-export add_window
-add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
+window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
   backend_add_window(backend(w), w, loc, family)
 
 backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
-    let d = window(w, loc, family=family)
+    let d = window(loc, family=family)
         push!(w.windows, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))

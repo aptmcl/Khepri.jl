@@ -16,11 +16,13 @@ export open_path,
        centered_rectangular_path,
        open_polygonal_path,
        closed_polygonal_path,
+       polygonal_path,
        open_spline_path,
        closed_spline_path,
        path_set,
        open_path_sequence,
        closed_path_sequence,
+       path_sequence,
        translate,
        stroke,
        fill,
@@ -29,10 +31,12 @@ export open_path,
        path_start,
        path_end,
        subpath,
+       join_paths,
        subpaths
 
 
 path_tolerance = Parameter(1e-10)
+coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
 
 abstract type Path end
 
@@ -41,6 +45,8 @@ getindex(p::Path, i::Real) = location_at_length(p, i)
 firstindex(p::Path) = 0
 lastindex(p::Path) = path_length(p)
 getindex(p::Path, i::ClosedInterval) = subpath(p, i.left, i.right)
+path_start(p::Path) = location_at_length(p, 0)
+path_end(p::Path) = location_at_length(p, path_length(p))
 
 abstract type OpenPath <: Path end
 abstract type ClosedPath <: Path end
@@ -95,11 +101,25 @@ closed_polygonal_path(vertices=[u0(), x(), xy(), y()]) = ClosedPolygonalPath(ens
 
 PolygonalPath = Union{OpenPolygonalPath, ClosedPolygonalPath}
 
+polygonal_path(vertices) =
+  coincident_path_location(vertices[1], vertices[end]) ?
+    closed_polygonal_path(vertices[1:end-1]) :
+    open_polygonal_path(vertices)
+
 ensure_no_repeated_locations(locs) =
     begin
         @assert (locs[1] != locs[end])
         locs
     end
+
+path_start(path::PolygonalPath) = path.vertices[1]
+path_end(path::OpenPolygonalPath) = path.vertices[end]
+path_end(path::ClosedPolygonalPath) = path.vertices[1]
+
+join_paths(p1::OpenPolygonalPath, p2::OpenPolygonalPath) =
+  coincident_path_location(path_end(p1), path_start(p2)) ?
+    polygonal_path([p1.vertices..., p2.vertices...]) :
+    error("Paths are non contiguous")
 
 # Splines
 
@@ -429,18 +449,22 @@ subpath(path::PathOps, a::Real, b::Real) =
 # starts at the same place where the previous element ends.
 
 struct OpenPathSequence <: OpenPath
-    paths::Vector{<:Path}
+  paths::Vector{<:Path}
 end
 open_path_sequence(paths...) =
-    OpenPathSequence(ensure_connected_paths([paths...]))
+  OpenPathSequence(ensure_connected_paths([paths...]))
 struct ClosedPathSequence <: ClosedPath
-    paths::Vector{<:Path}
+  paths::Vector{<:Path}
 end
 closed_path_sequence(paths...) =
-    ClosedPathSequence(ensure_connected_paths([paths...]))
+  ClosedPathSequence(ensure_connected_paths([paths...]))
 
 PathSequence = Union{OpenPathSequence, ClosedPathSequence}
 
+path_sequence(paths...) =
+  coincident_path_location(path_start(paths[1]), path_end(paths[end])) ?
+    closed_path_sequence(paths...) :
+    open_path_sequence(paths...)
 
 ensure_connected_paths(paths) = # AML: Finish this
     paths
@@ -462,12 +486,13 @@ location_at_length(path::PathSequence, d::Real) =
     error("Exceeded path length by ", d)
   end
 
+
+
 import Base.convert
 convert(::Type{PathOps}, path::PathSequence) =
   let start = in_world(location_at_length(path, 0)),
-      path_length = path_length(path),
       ops = mapfoldl(convert_to_path_ops, vcat, path.paths, init=PathOp[])
-    PathOps(start, ops, abs(distance(start, location_at_length(path, path_length))) < path_tolerance())
+    PathOps(start, ops, coincident_path_location(start, path_end(path)))
   end
 convert_to_path_ops(path::ArcPath) =
   [ArcOp(path.radius, path.start_angle, path.amplitude)]
@@ -502,7 +527,7 @@ convert(::Type{Path}, vs::Locs) =
     open_polygonal_path(vs)
   end
 convert(::Type{ClosedPath}, p::OpenPath) =
-  if isa(p.ops[end], CloseOp) || distance(path_start(p), path_end(p)) < path_tolerance()
+  if isa(p.ops[end], CloseOp) || coincident_path_location(path_start(p), path_end(p))
     closed_path(p.ops)
   else
     error("Can't convert to a Closed Path: $p")
@@ -618,8 +643,3 @@ subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
     subtract_polygon_vertices(
       path_vertices(path1),
       path_vertices(path2)))
-
-path_start(path::OpenPolygonalPath) = path.vertices[1]
-path_end(path::OpenPolygonalPath) = path.vertices[end]
-path_start(path::ClosedPolygonalPath) = path.vertices[1]
-path_end(path::ClosedPolygonalPath) = path.vertices[1]
