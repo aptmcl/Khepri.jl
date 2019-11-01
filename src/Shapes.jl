@@ -156,6 +156,7 @@ mark_deleted(s::Proxy) = really_mark_deleted(s)
 # We also need to propagate this to all dependencies
 mark_deleted(ss::Array{<:Proxy}) = foreach(mark_deleted, ss)
 mark_deleted(s::Any) = nothing
+marked_deleted(s::Proxy) = s.ref.deleted == s.ref.created
 
 ref(s::Proxy) =
   if s.ref.created == s.ref.deleted
@@ -399,7 +400,7 @@ macro defproxy(name, parent, fields...)
     $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
           selector_names, field_names)...)
     Khepri.mark_deleted(v::$(struct_name)) =
-      begin
+      if ! marked_deleted(v)
         really_mark_deleted(v)
         $(map(field_name -> :(mark_deleted(v.$(field_name))), field_names)...)
       end
@@ -1239,7 +1240,7 @@ l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(door, Shape3D, loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
+@defproxy(door, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
 
 # Window
 
@@ -1248,7 +1249,7 @@ l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(window, Shape3D, loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
+@defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
 # Default implementation
 realize(b::Backend, w::Wall) =
@@ -1306,11 +1307,12 @@ realize(b::Backend, s::Window) =
 
 ##
 
+export add_door
 add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
   backend_add_door(backend(w), w, loc, family)
 
 backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
-    let d = door(loc, family=family)
+    let d = door(w, loc, family=family)
         push!(w.doors, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
@@ -1319,11 +1321,12 @@ backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
     end
 
 #
+export add_window
 add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
   backend_add_window(backend(w), w, loc, family)
 
 backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
-    let d = window(loc, family=family)
+    let d = window(w, loc, family=family)
         push!(w.windows, d)
         if realized(w)
             set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
