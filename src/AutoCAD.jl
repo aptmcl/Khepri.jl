@@ -252,7 +252,7 @@ create_ACAD_connection() =
         create_backend_connection("AutoCAD", 11000)
     end
 
-const autocad = ACAD(Parameter(false), LazyParameter(TCPSocket, create_ACAD_connection))
+const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection))
 
 backend_name(b::ACAD) = "AutoCAD"
 

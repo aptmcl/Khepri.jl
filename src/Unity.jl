@@ -92,7 +92,7 @@ create_Unity_connection() =
         create_backend_connection("Unity", 11002)
     end
 
-const unity = Unity(Parameter(false), LazyParameter(TCPSocket, create_Unity_connection))
+const unity = Unity(LazyParameter(TCPSocket, create_Unity_connection))
 
 backend_name(b::Unity) = "Unity"
 

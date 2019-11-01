@@ -190,7 +190,7 @@ void_ref(b::RH) = RHNativeRef(zeros(UInt8, 16))
 
 create_RH_connection() = create_backend_connection("Rhinoceros", 12000)
 
-const rhino = RH(Parameter(false), LazyParameter(TCPSocket, create_RH_connection))
+const rhino = RH(LazyParameter(TCPSocket, create_RH_connection))
 reset_rhino_connection() = reset(rhino.connection)
 
 # This should not be done automatically

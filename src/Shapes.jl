@@ -216,37 +216,28 @@ shapes by request, presumably, when they have complete information about them.
 A middle term might be a backend that supports both modes.
 =#
 
-delay_realize(b::Backend, s::Shape) = nothing
+delay_realize(b::Backend, s::Shape) = s
 force_realize(b::Backend, s::Shape) = (ref(s); s)
 
 maybe_realize(s::Shape, b::Backend=backend(s)) = maybe_realize(b, s)
-maybe_realize(b::Backend, s::Shape) = force_realize(b, s)
-
-abstract type LazyBackend{K,T} <: Backend{K,T} end
-maybe_realize(b::LazyBackend, s::Shape) = delay_realize(b, s)
-delay_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
-
-abstract type EagerOrLazyBackend{K,T} <: Backend{K,T} end
-maybe_realize(b::EagerOrLazyBackend, s::Shape) =
-  use_lazy_realize(b, s) ?
-    delay_realize(b, s) :
-    force_realize(b, s)
-use_lazy_realize(b::EagerOrLazyBackend, s::Shape) = b.use_lazy_realize()
 
 #=
 Even if a backend is eager, it might be necessary to temporarily delay the
 realization of shapes, particularly, when the construction is incremental.
 =#
 
+delaying_realize = Parameter(false)
+maybe_realize(b::Backend, s::Shape) =
+  delaying_realize() ?
+    delay_realize(b, s) :
+    force_realize(b, s)
+
+abstract type LazyBackend{K,T} <: Backend{K,T} end
+maybe_realize(b::LazyBackend, s::Shape) = delay_realize(b, s)
+delay_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
+
 with_transaction(fn) =
-  let b = current_backend()
-    let r = with(b.use_lazy_realize, true) do
-              fn()
-            end
-      maybe_realize(r)
-      r
-    end
-  end
+  maybe_realize(with(fn, delaying_realize, true))
 
 #=
 Frequently, we need to collect all shapes that are created:
@@ -1296,12 +1287,12 @@ join_walls(wall1, wall2) =
         len = path_length(wall1.path)
       for (es,l) in ((wall1.doors, 0), (wall2.doors, len))
         for e in es
-          add_door(w, e.loc, e.family)
+          add_door(w, e.loc+vx(l), e.family)
         end
       end
       for (es,l) in ((wall1.windows, 0), (wall2.windows, len))
         for e in es
-          add_window(w, e.loc, e.family)
+          add_window(w, e.loc+vx(l), e.family)
         end
       end
       for w in (wall1, wall2)
@@ -1312,6 +1303,11 @@ join_walls(wall1, wall2) =
       w
     end
   end
+
+join_walls(walls...) =
+  reduce(join_walls, walls)
+
+
 
 # Right and Left considering observer looking along with curve direction
 r_thickness(w::Wall) = (+1+w.offset)/2*w.family.thickness
@@ -1701,13 +1697,11 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
 #Backends might use different communication mechanisms, e.g., sockets, COM, RMI, etc
 
 #We start with socket-based communication
-struct SocketBackend{K,T} <: EagerOrLazyBackend{K,T}
-  use_lazy_realize::Parameter{Bool}
+struct SocketBackend{K,T} <: Backend{K,T}
   connection::LazyParameter{TCPSocket}
 end
 
 connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
-
 
 reset_backend(b::SocketBackend) =
   begin

@@ -17,7 +17,7 @@ void_ref(b::ARCH) = ARCHNativeRef(-1)
 
 create_archicad_connection() = create_backend_connection("ArchiCAD", 8080)
 
-const archicad = ARCH(Parameter(false), LazyParameter(TCPSocket, create_archicad_connection))
+const archicad = ARCH(LazyParameter(TCPSocket, create_archicad_connection))
 
 encode_std__vector_double_ = encode_double_array
 #current_backend(archicad)
