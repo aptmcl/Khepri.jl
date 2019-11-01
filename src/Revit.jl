@@ -63,7 +63,7 @@ void_ref(b::RVT) = RVTNativeRef(RVTVoidId)
 
 create_RVT_connection() = create_backend_connection("Revit", 11001)
 
-const revit = RVT(LazyParameter(TCPSocket, create_RVT_connection))
+const revit = RVT(Parameter(false), LazyParameter(TCPSocket, create_RVT_connection))
 
 # Levels
 
