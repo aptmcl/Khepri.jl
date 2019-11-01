@@ -1306,7 +1306,7 @@ realize(b::Backend, s::Window) =
 
 ##
 
-door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
+add_door(w::Wall=required(), loc::Loc=u0(), family::DoorFamily=default_door_family()) =
   backend_add_door(backend(w), w, loc, family)
 
 backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
@@ -1319,7 +1319,7 @@ backend_add_door(b::Backend, w::Wall, loc::Loc, family::DoorFamily) =
     end
 
 #
-window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
+add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_window_family()) =
   backend_add_window(backend(w), w, loc, family)
 
 backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
