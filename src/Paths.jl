@@ -631,11 +631,11 @@ subpaths(path::OpenPolygonalPath) =
   let ps = path.vertices
     map((p0, p1)->open_polygonal_path([p0, p1]), ps[1:end-1], ps[2:end])
   end
-
 subpaths(path::ClosedPolygonalPath) =
   let ps = path.vertices
       map((p0, p1)->open_polygonal_path([p0, p1]), ps, [ps[2:end]..., ps[1]])
   end
+subpaths(path::Path) = subpaths(convert(OpenPolygonalPath, path))
 
 
 subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
