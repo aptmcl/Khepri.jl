@@ -618,9 +618,9 @@ backend_chair(b::RH, c, angle, family) =
 backend_rectangular_table_and_chairs(b::RH, c, angle, family) =
     RHTableAndChairs(connection(b), c, angle, ref(family))
 
-backend_slab(b::RH, profile, thickness) =
+backend_slab(b::RH, profile, holes, thickness, family) =
     map_ref(b,
-            r->RHExtrusion(connection(b), r, thickness),
+            r->RHExtrusion(connection(b), r, vz(thickness)),
             ensure_ref(b, backend_fill(b, profile)))
 
 #Beams are aligned along the top axis.
@@ -636,7 +636,7 @@ realize(b::RH, s::FreeColumn) =
         RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), s.family.width, s.family.height, s.h)
     end
 
-backend_wall(b::RH, path, height, thickness) =
+backend_wall(b::RH, path, height, thickness, family) =
     RHPathWall(connection(b), backend_stroke(b, path), thickness, height)
 
 ############################################
