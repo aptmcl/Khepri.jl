@@ -698,10 +698,9 @@ realize(b::ACAD, s::Rotate) =
   end
 
 realize(b::ACAD, s::Mirror) =
-  and_delete_shape(map_ref(s.shape) do r
-                    ACADMirror(connection(b), r, s.p, s.n, false)
-                   end,
-                   s.shape)
+  map_ref(s.shape) do r
+    ACADMirror(connection(b), r, s.p, s.n, false)
+  end
 
 realize(b::ACAD, s::UnionMirror) =
   let r0 = ref(s.shape),
