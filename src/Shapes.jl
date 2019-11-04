@@ -885,7 +885,7 @@ maybe_replace(level::Level) = get!(levels_cache, level.height, level)
 current_levels() = values(level_cache)
 default_level = Parameter{Level}(level())
 default_level_to_level_height = Parameter{Real}(3)
-upper_level(lvl, height=default_level_to_level_height()) = level(lvl.height + height, backend=backend(lvl))
+upper_level(lvl=default_level(), height=default_level_to_level_height()) = level(lvl.height + height, backend=backend(lvl))
 Base.:(==)(l1::Level, l2::Level) = l1.height == l2.height
 
 #default implementation
@@ -1343,17 +1343,16 @@ realize_wall_no_openings(b::Backend, w::Wall) =
   end
 
 realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
-    let w_base_height = w.bottom_level.height,
-        w_height = w.top_level.height - w_base_height,
-        w_path = translate(w.path, vz(w_base_height)),
-        w_thickness = w.family.thickness
-        for opening in openings
-            w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
-            # This must be saved in the wall
-            realize(b, opening)
-        end
-        w_ref
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      w_path = translate(w.path, vz(w_base_height)),
+      w_thickness = w.family.thickness
+    for opening in openings
+      w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
+      ref(opening)
     end
+    w_ref
+  end
 
 realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
   let op_base_height = op.loc.y,
@@ -1405,13 +1404,13 @@ add_window(w::Wall=required(), loc::Loc=u0(), family::WindowFamily=default_windo
   backend_add_window(backend(w), w, loc, family)
 
 backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
-    let d = window(w, loc, family=family)
-        push!(w.windows, d)
-        if realized(w)
-            set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
-        end
-        w
+  let d = window(w, loc, family=family)
+    push!(w.windows, d)
+    if realized(w)
+        set_ref!(w, realize_wall_openings(b, w, ref(w), [d]))
     end
+    w
+  end
 
 #=
 A curtain wall is a special kind of wall that is made of a frame with windows.
