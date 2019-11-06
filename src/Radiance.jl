@@ -1,5 +1,16 @@
+#=
+
+A backend for Radiance
+
+To visualize RAD files, check
+https://www.ladybug.tools/spider-rad-viewer/rad-viewer/r7/rad-viewer.html
+
+=#
+
+
 export radiance,
        save_rad,
+       @save_rad,
        radiance_material,
        radiance_plastic_material,
        radiance_metal_material,
@@ -158,13 +169,21 @@ save_rad(path::String, b::RadianceBackend=radiance) =
     end
   end
 
+macro save_rad()
+  :(save_rad(splitext($(string(__source__.file)))[1]*".rad"))
+end
+
 #
 
-current_backend(radiance)
+#current_backend(radiance)
 
 delete_all_shapes(b::Radiance) =
+  begin
+    with(current_backend, autocad) do
+      delete_all_shapes()
+  end
   (empty!(b.shapes); nothing)
-
+end
 
 
 
