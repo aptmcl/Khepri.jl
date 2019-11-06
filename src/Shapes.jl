@@ -5,6 +5,7 @@ export Shape,
        backend,
        backend_name,
        current_backend,
+       no_current_backend,
        switch_to_backend,
        void_ref,
        delete_shape, delete_shapes,
@@ -332,17 +333,20 @@ showit(s, a) = begin
 end
 
 # The undefined backend
-struct Undefined_Backend <: Backend{Int,Int} end
-connection(b::Undefined_Backend) = throw(UndefinedBackendException())
-void_ref(b::Undefined_Backend) = EmptyRef{Int,Int}()
-const current_backend = Parameter{Backend}(Undefined_Backend())
+struct UndefinedBackend <: Backend{Int,Int} end
+connection(b::UndefinedBackend) = throw(UndefinedBackendException())
+void_ref(b::UndefinedBackend) = EmptyRef{Int,Int}()
+const undefined_backend = UndefinedBackend()
+
+const current_backend = Parameter{Backend}(undefined_backend)
+no_current_backend() = current_backend() == undefined_backend
 
 # Side-effect full operations need to have a backend selected and will generate an exception if there is none
 
 struct UndefinedBackendException <: Exception end
 Base.show(io::IO, e::UndefinedBackendException) = print(io, "No current backend.")
 
-realize(::Undefined_Backend, ::Shape) = throw(UndefinedBackendException())
+realize(::UndefinedBackend, ::Shape) = throw(UndefinedBackendException())
 
 # Many functions default the backend to the current_backend and throw an error if there is none.
 # We will simplify their definition with a macro:
@@ -372,8 +376,8 @@ macro defshapeop(name_params)
     end
 end
 
-backend(backend::Backend) = switch_to_backend(current_backend(), backend)
 
+backend(backend::Backend) = switch_to_backend(current_backend(), backend)
 switch_to_backend(from::Backend, to::Backend) = current_backend(to)
 
 @defop current_backend_name()
