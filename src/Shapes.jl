@@ -5,7 +5,7 @@ export Shape,
        backend,
        backend_name,
        current_backend,
-       no_current_backend,
+       has_current_backend,
        switch_to_backend,
        void_ref,
        delete_shape, delete_shapes,
@@ -339,7 +339,7 @@ void_ref(b::UndefinedBackend) = EmptyRef{Int,Int}()
 const undefined_backend = UndefinedBackend()
 
 const current_backend = Parameter{Backend}(undefined_backend)
-no_current_backend() = current_backend() == undefined_backend
+has_current_backend() = current_backend() != undefined_backend
 
 # Side-effect full operations need to have a backend selected and will generate an exception if there is none
 
