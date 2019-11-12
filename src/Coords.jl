@@ -39,7 +39,8 @@ export Loc, Locs, LocOrZ,
        center_scaled_cs,
        translating_current_cs,
        regular_polygon_vertices,
-       norm
+       norm,
+       angle_between
 
 #=
 Some useful terminology:
@@ -481,6 +482,15 @@ quad_normal(p0, p1, p2, p3) =
     polygon_normal([p1 - p0, p2 - p1, p3 - p2, p0 - p3])
   end
 
+vertices_center(pts) =
+  let pts = map(in_world, pts),
+      n=length(pts),
+      xs=[cx(p) for p in pts],
+      ys=[cy(p) for p in pts],
+      zs=[cz(p) for p in pts]
+    xyz(sum(xs)/n, sum(ys)/n, sum(zs)/n, world_cs)
+  end
+
 vertices_normal(ps) =
   let ps = map(in_world, ps)
     polygon_normal(p-q for (p,q) in zip(ps, drop(cycle(ps), 1)))
@@ -597,4 +607,27 @@ Base.isequal(p::Loc, q::Loc) =
   let wp = in_world(p),
       wq = in_world(q)
     isequal(wp.x, wq.x) && isequal(wp.y, wq.y) && isequal(wp.z, wq.z)
+  end
+
+# angle between
+
+angle_between(v1, v2) =
+  let v1 = in_world(v1),
+      v2 = in_world(v2)
+    acos(dot(v1, v2)/(norm(v1)*norm(v2)))
+  end
+
+################################################################################
+# To embed Khepri, it becomes useful to convert entities into 'raw' data
+
+raw_point(v::Union{XYZ, VXYZ}) =
+  let o = in_world(v)
+    (o.x, o.y, o.z)
+  end
+
+raw_plane(v::XYZ) =
+  let o = in_world(v),
+      vx = in_world(vx(1, c.cs))
+      vy = in_world(vy(1, c.cs))
+    (o.x, o.y, o.z, vx.x, vx.y, vx.z, vy.x, vy.y, vy.z)
   end
