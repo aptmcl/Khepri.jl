@@ -1134,6 +1134,11 @@ export backend_family, set_backend_family
     thickness::Real=0.2,
     coating_thickness::Real=0.0)
 
+slab_family_elevation(b::Backend, family::SlabFamily) =
+  family.coating_thickness - family.thickness
+slab_family_thickness(b::Backend, family::SlabFamily) =
+  family.coating_thickness + family.thickness
+
 @defproxy(slab, Shape3D, contour::ClosedPath=rectangular_path(),
           level::Level=default_level(), family::SlabFamily=default_slab_family(),
           openings::Vector{<:ClosedPath}=ClosedPath[])
@@ -1143,12 +1148,11 @@ realize(b::Backend, s::Slab) =
     realize_slab(b, s.contour, s.openings, s.level, s.family)
 
 realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::Family) =
-    let base = vz(level.height + family.coating_thickness - family.thickness),
-        thickness = family.coating_thickness + family.thickness
+    let base = vz(level.height + slab_family_elevation(b, family)),
+        thickness = slab_family_thickness(b, family)
         # Change this to a better named protocol?
         backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, family)
     end
-
 #
 export add_slab_opening
 add_slab_opening(s::Slab=required(), contour::ClosedPath=circular_path()) =
@@ -1162,7 +1166,7 @@ add_slab_opening(s::Slab=required(), contour::ClosedPath=circular_path()) =
 
 realize_slab_openings(b::Backend, s::Slab, s_ref, openings) =
     let s_base_height = s.level.height,
-        s_thickness = s.family.thickness
+        s_thickness = slab_family_thickness(b, s.family)
         for opening in openings
             op_path = translate(opening, vz(s_base_height-1.1*s_thickness))
             op_ref = ensure_ref(b, backend_slab(b, op_path, s_thickness*1.2))
@@ -1171,58 +1175,23 @@ realize_slab_openings(b::Backend, s::Slab, s_ref, openings) =
         s_ref
     end
 
-#=
-Deleting a BIM element is dependent on the backend.
-But for usual backends, we use a protocol. First, we delete childs, then we
-remove ourselves from parents, finally we delete outselves.
-
-NOTE: I'm not sure this is a good idea! Constructing elements and then delete
-them will create all sorts of problems! I don't want to follow this road.
-
-@defshapeop(delete_element)
-backend_delete_element(b::Backend, e::BIMElement) =
-  let childs = child_elements(e),
-      parents = parent_elements(e)
-    map(childs) do child
-      backend_remove_child_from_parent(b, child, e)
-    end
-    map(parents) do parent
-      backend_remove_child_from_parent(b, e, parent)
-    end
-    delete_shape(e)
-  end
-
-child_elements(s::Wall) = [s.windows..., s.doors...]
-parent_elements(s::Wall) = [s.bottom_level]
-
-backend_remove_child_from_parent(b::Backend, c::Window, p::Wall) =
-  p.windows =
-=#
-
-
-#=
-Should we eliminate this?
-The rational is that an opening is not an object (like a door or a window)
-However, it might be interesting to have a computational object to store properties of the opening
-@defproxy(slab_opening, Shape3D, slab::Slab=required(), contour::ClosedPath=rectangular_path())
-# Default implementation
-realize(b::Backend, s::SlabOpening) =
-    let base = vz(s.slab.level.height + s.slab.family.coating_thickness - s.slab.family.thickness - 1)
-        thickness = s.slab.family.coating_thickness + s.slab.family.thickness + 1
-        opening_ref = ensure_ref(b, backend_slab(b, translate(s.contour, base), thickness))
-        # This is a dangerous side effect. Is this really the correct approach?
-        set_ref!(s.slab, ensure_ref(b, subtract_ref(b, ref(s.slab), opening_ref)))
-        opening_ref
-    end
-=#
-
 # Roof
 
 @deffamily(roof_family, Family,
     thickness::Real=0.2,
     coating_thickness::Real=0.0)
 
-@defproxy(roof, Shape3D, contour::ClosedPath=rectangular_path(), level::Level=default_level(), family::RoofFamily=default_roof_family())
+slab_family_elevation(b::Backend, family::RoofFamily) =
+  family.thickness - family.coating_thickness
+slab_family_thickness(b::Backend, family::RoofFamily) =
+  family.coating_thickness + family.thickness
+
+@defproxy(roof, Shape3D, contour::ClosedPath=rectangular_path(),
+          level::Level=default_level(), family::RoofFamily=default_roof_family(),
+          openings::Vector{<:ClosedPath}=ClosedPath[])
+
+realize(b::Backend, s::Roof) =
+    realize_slab(b, s.contour, s.openings, s.level, s.family)
 
 # Panel
 
