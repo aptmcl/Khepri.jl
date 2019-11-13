@@ -1181,8 +1181,7 @@ realize_slab_openings(b::Backend, s::Slab, s_ref, openings) =
     thickness::Real=0.2,
     coating_thickness::Real=0.0)
 
-slab_family_elevation(b::Backend, family::RoofFamily) =
-  family.thickness - family.coating_thickness
+slab_family_elevation(b::Backend, family::RoofFamily) = 0
 slab_family_thickness(b::Backend, family::RoofFamily) =
   family.coating_thickness + family.thickness
 
