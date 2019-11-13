@@ -787,8 +787,8 @@ realize(b::ACAD, s::FreeColumn) =
       profile_u0 = profile.corner
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
       # need to test whether it is rotation on center or on axis
-      o = loc_from_o_phi(s.cb, s.angle)
-    ACADCenteredBox(connection(b), add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h)
+      o = loc_from_o_phi(c, s.angle)
+    ACADCenteredBox(connection(b), o, profile.dx, profile.dy, s.h)
   end
 
 realize(b::ACAD, s::Column) =
