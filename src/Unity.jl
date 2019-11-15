@@ -237,17 +237,15 @@ Unity"public double[] CurveDomain(Entity ent)"
 Unity"public double CurveLength(Entity ent)"
 Unity"public Frame3d CurveFrameAt(Entity ent, double t)"
 Unity"public Frame3d CurveFrameAtLength(Entity ent, double l)"
+=#
 
 backend_map_division(b::Unity, f::Function, s::Shape1D, n::Int) =
-    let conn = connection(b)
-        r = ref(s).value
-        (t1, t2) = UnityCurveDomain(conn, r)
-        map_division(t1, t2, n) do t
-            f(UnityCurveFrameAt(conn, r, t))
-        end
+  let (t1, t2) = curve_domain(s)
+    map_division(t1, t2, n) do t
+      f(frame_at(s, t))
     end
-
-
+  end
+#=
 Unity"public Vector3d RegionNormal(Entity ent)"
 Unity"public Point3d RegionCentroid(Entity ent)"
 Unity"public double[] SurfaceDomain(Entity ent)"
@@ -382,6 +380,17 @@ backend_loft_curves(b::Unity, profiles::Shapes, rails::Shapes, ruled::Bool, clos
                              collect_ref(rails),
                              ruled, closed),
                     vcat(profiles, rails))
+
+            MAYBE USE THIS
+            ruled_surface(s1, s2) =
+                let pts1 = map_division(in_world, s1, 20),
+                    pts2 = map_division(in_world, s2, 20)
+                  iterate_quads((p0, p1, p2, p3)->(surface_polygon([p0,p1,p3]), surface_polygon([p1,p2,p3])),
+                                [pts1, pts2])
+                end
+
+            ruled_surface(s1, s2)
+
 
 backend_loft_surfaces(b::Unity, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
     backend_loft_curves(b, profiles, rails, ruled, closed)
@@ -577,6 +586,7 @@ backend_get_family_ref(b::Unity, f::Family, uf::UnityResourceFamily) = UnityLoad
 
 set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Plaster/Plaster1"))
 set_backend_family(default_slab_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
+set_backend_family(default_roof_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
 set_backend_family(default_beam_family(), unity, unity_material_family("Materials/Metal/Aluminum"))
 set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
 set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
@@ -678,11 +688,79 @@ backend_wall(b::Unity, path, height, thickness, family) =
     UnityEmptyRef() :
     let c = connection(b)
       UnitySetCurrentMaterial(c, realize(b, family))
-      backend_wall_path(b, path, height, thickness)
+      backend_wall_path(
+          b,
+          path,
+          height*0.999, #We reduce height just a bit to avoid Z-fighting
+          thickness)
     end
 
 backend_wall_path(b::Unity, path::PolygonalPath, height, thickness) =
     UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
+
+backend_wall_path(b::Unity, path::RectangularPath, height, thickness) =
+    backend_wall_path(b, convert(OpenPolygonalPath, path), height, thickness)
+
+
+#=
+realize(b::Radiance, w::Wall) =
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w),
+      w_path = translate(w.path, vz(w_base_height)),
+      w_paths = subpaths(w_path),
+      r_w_paths = subpaths(offset(w_path, r_thickness)),
+      l_w_paths = subpaths(offset(w_path, l_thickness)),
+      openings = [w.doors..., w.windows...],
+      prevlength = 0
+    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
+      let currlength = prevlength + path_length(w_seg_path),
+          c_r_w_path = closed_path_for_height(r_w_path, w_height),
+          c_l_w_path = closed_path_for_height(l_w_path, w_height)
+        realize_pyramid_fustrum(b, w, "wall", c_l_w_path, c_r_w_path, false)
+        openings = filter(openings) do op
+          if prevlength <= op.loc.x < currlength ||
+             prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
+            let op_height = op.family.height,
+                op_at_start = op.loc.x <= prevlength,
+                op_at_end = op.loc.x + op.family.width >= currlength,
+                op_path = subpath(w_path,
+                                  max(prevlength, op.loc.x),
+                                  min(currlength, op.loc.x + op.family.width)),
+                r_op_path = offset(op_path, r_thickness),
+                l_op_path = offset(op_path, l_thickness),
+                fixed_r_op_path =
+                  open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
+                                       path_end(op_at_end ? r_w_path : r_op_path)]),
+                fixed_l_op_path =
+                  open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
+                                       path_end(op_at_end ? l_w_path : l_op_path)]),
+                c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
+                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
+                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
+              realize_pyramid_fustrum(b, w, "wall", c_r_op_path, c_l_op_path, false)
+              c_r_w_path =
+                closed_polygonal_path(
+                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
+              c_l_w_path =
+                closed_polygonal_path(
+                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
+              # preserve if not totally contained
+              ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
+            end
+          else
+            true
+          end
+        end
+        prevlength = currlength
+        realize_polygon(b, w, "wall", c_l_w_path, false)
+        realize_polygon(b, w, "wall", c_r_w_path, true)
+      end
+    end
+    void_ref(b)
+  end
+=#
 
 set_backend_family(default_curtain_wall_family().panel,
   unity,
