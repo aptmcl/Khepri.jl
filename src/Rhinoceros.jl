@@ -624,17 +624,35 @@ backend_slab(b::RH, profile, holes, thickness, family) =
             ensure_ref(b, backend_fill(b, profile)))
 
 #Beams are aligned along the top axis.
-# THIS NEEDS TO BE FIXED TO USE PROFILES
 realize(b::RH, s::Beam) =
-    let o = loc_from_o_phi(s.cb, s.angle)
-        RHXYCenteredBox(connection(b), add_y(o, -s.family.height/2), vx(1, o.cs), vy(1, o.cs), s.family.width, s.family.height, s.h)
-    end
+  let profile = s.family.profile
+      profile_u0 = profile.corner
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+      # need to test whether it is rotation on center or on axis
+      o = add_y(loc_from_o_phi(s.cb, s.angle), -profile.dy/2)
+    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h)
+  end
 
 #Columns are aligned along the center axis.
 realize(b::RH, s::FreeColumn) =
-    let o = loc_from_o_phi(s.cb, s.angle)
-        RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), s.family.width, s.family.height, s.h)
-    end
+  let profile = s.family.profile
+      profile_u0 = profile.corner
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+      # need to test whether it is rotation on center or on axis
+      o = loc_from_o_phi(c, s.angle)
+    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h)
+  end
+
+realize(b::RH, s::Column) =
+  let profile = s.family.profile,
+      profile_u0 = profile.corner,
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
+      base_height = s.bottom_level.height,
+      height = s.top_level.height - base_height,
+      # need to test whether it is rotation on center or on axis
+      o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
+    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height)
+  end
 
 backend_wall(b::RH, path, height, thickness, family) =
     RHPathWall(connection(b), backend_stroke(b, path), thickness, height)
