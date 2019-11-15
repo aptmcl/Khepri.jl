@@ -503,7 +503,7 @@ evaluate(s::Spline, t::Real) =
 
 curve_domain(s::Spline) = (0.0, 1.0)
 frame_at(s::Spline, t::Real) = evaluate(s, t)
-map_division(f::Function, s::Spline, n::Int, backend::Backend=current_backend()) =
+map_division(f::Function, s::Spline, n::Int, backend::Backend=backend(s)) =
   backend_map_division(backend, f, s, n)
 #=HACK, THIS IS NOT READY, YET. COMPARE WITH THE BACKEND VERSION!!!!!!
   let (t1, t2) = curve_domain(s)
