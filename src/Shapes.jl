@@ -1722,11 +1722,11 @@ and_delete_shapes(r::Any, shapes::Shapes) =
     r
   end
 
-and_mark_deleted(r::Any, shape::Shape) =
-    begin
-        mark_deleted(shape)
-        r
-    end
+and_mark_deleted(r::Any, shape) =
+  begin
+    mark_deleted(shape)
+    r
+  end
 
 realize_and_delete_shapes(shape::Shape, shapes::Shapes) =
     and_delete_shapes(ref(shape), shapes)

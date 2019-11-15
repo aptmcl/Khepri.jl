@@ -593,11 +593,12 @@ backend_extrusion(b::ACAD, s::Shape, v::Vec) =
         s)
 
 backend_sweep(b::ACAD, path::Shape, profile::Shape, rotation::Real, scale::Real) =
-  map_ref(profile) do profile_r
-    map_ref(path) do path_r
-      ACADSweep(connection(b), path_r, profile_r, rotation, scale)
-    end
-  end
+  and_mark_deleted(
+    map_ref(profile) do profile_r
+      map_ref(path) do path_r
+        ACADSweep(connection(b), path_r, profile_r, rotation, scale)
+      end
+  end, [profile, path])
 
 backend_revolve_point(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
   realize(b, arc(loc_from_o_vz(p, n), distance(profile, p), start_angle, amplitude))
