@@ -207,4 +207,6 @@ cull(template, as) =
 export errormsg
 
 errormsg(e) =
-  sprint((io, e) -> showerror(io, e, backtrace(), backtrace=true), e)
+  let b = backtrace()
+    sprint((io, e) -> showerror(io, e, b, backtrace=true), e)
+  end
