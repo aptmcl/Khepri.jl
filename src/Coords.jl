@@ -622,12 +622,14 @@ angle_between(v1, v2) =
 
 raw_point(v::Union{XYZ, VXYZ}) =
   let o = in_world(v)
-    (o.x, o.y, o.z)
+    (float(o.x), float(o.y), float(o.z))
   end
 
 raw_plane(v::XYZ) =
   let o = in_world(v),
       vx = in_world(vx(1, c.cs))
       vy = in_world(vy(1, c.cs))
-    (o.x, o.y, o.z, vx.x, vx.y, vx.z, vy.x, vy.y, vy.z)
+    (float(o.x), float(o.y), float(o.z),
+     float(vx.x), float(vx.y), float(vx.z),
+     float(vy.x), float(vy.y), float(vy.z))
   end
