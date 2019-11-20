@@ -921,9 +921,11 @@ bar_counter = Parameter(0)
 added_bars = Parameter(Dict())
 
 add_node!(p, family, load=false, reuse=false) =
-  get!(added_nodes(), p) do
-    node_counter(node_counter()+1)
-    truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
+  let p = in_world(p)
+    get!(added_nodes(), p) do
+      node_counter(node_counter()+1)
+      truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
+    end
   end
 
 current_nodes_ids() = 0:node_counter()
@@ -939,6 +941,8 @@ struct truss_bar_data
 end
 
 add_bar!(p0, p1, rotation, family) =
+  let p0 = in_world(p0),
+      p1 = in_world(p1)
     get(added_bars(), (p1, p0)) do
         get!(added_bars(), (p0, p1)) do
             bar_counter(bar_counter()+1)
@@ -949,6 +953,7 @@ add_bar!(p0, p1, rotation, family) =
                            family)
         end
     end
+  end
 
 current_bars_ids() = 0:bar_counter()
 
