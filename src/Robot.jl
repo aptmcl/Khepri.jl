@@ -921,13 +921,10 @@ bar_counter = Parameter(0)
 added_bars = Parameter(Dict())
 
 add_node!(p, family, load=false, reuse=false) =
-    begin
-        #isreuse && for/or(k(v)(in_hash(added_nodes()))(),
-        #                  distance(k, p) < isreuse && k) || #We should check that the families are the same. What about the loads?
-        #                   ||
-        node_counter(node_counter()+1)
-        added_nodes()[p] = truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
-    end
+  get!(added_nodes(), p) do
+    node_counter(node_counter()+1)
+    truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
+  end
 
 current_nodes_ids() = 0:node_counter()
 
@@ -942,14 +939,15 @@ struct truss_bar_data
 end
 
 add_bar!(p0, p1, rotation, family) =
-    begin
-        bar_counter(bar_counter()+1)
-        added_bars()[bar_counter()] =
+    get(added_bars(), (p1, p0)) do
+        get!(added_bars(), (p0, p1)) do
+            bar_counter(bar_counter()+1)
             truss_bar_data(bar_counter(),
                            added_nodes()[p0],
                            added_nodes()[p1],
                            rotation,
                            family)
+        end
     end
 
 current_bars_ids() = 0:bar_counter()
@@ -966,7 +964,7 @@ new_robot_analysis(process_results, create_truss, v=nothing) =
             node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
-                create_node(nds, node_id, p.x, p.y, p.z)
+                create_node(nds, node_id, float(p.x), float(p.y), float(p.z))
                 support = node_family.support
                 if support != false
                     if ! support.created
@@ -1221,7 +1219,7 @@ show_truss_deformation(results;
       disps = displacements(nodes(results))
       disp = (node) -> node_displacement_vector(disps, node.id, I_LRT_NODE_DISPLACEMENT)
     for node in values(added_nodes())
-      d = disp(node)
+      d = disp(node)*factor
       p = node.loc
       with(current_layer, no_deformation_layer) do
         sphere(p, node_radius)
@@ -1236,7 +1234,7 @@ show_truss_deformation(results;
           with(current_layer, no_deformation_layer) do
             cylinder(p0, bar_radius, p1)
           end
-          let (d0, d1) = (disp(node0), disp(node1))
+          let (d0, d1) = (disp(node0)*factor, disp(node1)*factor)
             with(current_layer, deformation_layer) do
               cylinder(p0+d0, bar_radius, p1+d1)
             end
