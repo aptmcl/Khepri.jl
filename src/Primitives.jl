@@ -151,7 +151,7 @@ end
 =#
 
 struct Signature{T}
-  description::String
+  description::AbstractString
 end
 
 # C++
@@ -189,14 +189,14 @@ parse_signature(sig::Signature{:Python}) =
 
 mutable struct RemoteFunction
   signature::Signature
-  local_name::String
-  remote_name::String
+  local_name::AbstractString
+  remote_name::AbstractString
   opcode::Int
   encoder::Function
   buffer::IOBuffer
 end
 
-remote_function(sig::Signature, local_name::String, remote_name::String, encoder::Function) =
+remote_function(sig::Signature, local_name::AbstractString, remote_name::AbstractString, encoder::Function) =
   RemoteFunction(sig, local_name, remote_name, -1, encoder, IOBuffer())
 
 ensure_opcode(f::RemoteFunction, conn) =
