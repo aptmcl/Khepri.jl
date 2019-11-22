@@ -146,3 +146,103 @@ function rpc(prefix, str)
         #export $func_name
       end)
 end
+
+#=
+=#
+
+struct Signature{T}
+  description::String
+end
+
+# C++
+parse_signature(sig::Signature{:CPP}) =
+  let func_name(name) = replace(name, ":" => "_"),
+      type_name(name) = replace(name, r"[:<>]" => "_"),
+      m = match(r"^ *(public|) *(\w+) *([\[\]]*) +((?:\w|:|<|>)+) *\( *(.*) *\)", sig.description),
+      ret = type_name(m.captures[2]),
+      array_level = count(c -> c=='[', something(m.captures[3], "")),
+      name = m.captures[4],
+      params = split(m.captures[5], r" *, *", keepempty=false),
+      parse_c_decl(decl) =
+        let m = match(r"^ *((?:\w|:|<|>)+) *([\[\]]*) *(\w+)$", decl)
+          (type_name(m.captures[1]), count(c -> c=='[', something(m.captures[2], "")), Symbol(m.captures[3]))
+        end
+    (func_name(name), name, [parse_c_decl(decl) for decl in params], (ret, array_level))
+  end
+
+# C#
+parse_signature(sig::Signature{:CS}) =
+  let m = match(r"^ *(public|) *(\w+) *([\[\]]*) +(\w+) *\( *(.*) *\)", sig.description),
+      ret = m.captures[2],
+      array_level = count(c -> c=='[', something(m.captures[3], "")),
+      name = m.captures[4],
+      params = split(m.captures[5], r" *, *", keepempty=false),
+      parse_c_decl(decl) =
+        let m = match(r"^ *(\w+) *([\[\]]*) *(\w+)$", decl)
+          (m.captures[1], count(c -> c=='[', something(m.captures[2], "")), Symbol(m.captures[3]))
+    end
+    (name, name, [parse_c_decl(decl) for decl in params], (ret, array_level))
+  end
+
+parse_signature(sig::Signature{:Python}) =
+  (:yeah, :whatever)
+
+mutable struct RemoteFunction
+  signature::Signature
+  local_name::String
+  remote_name::String
+  opcode::Int
+  encoder::Function
+  buffer::IOBuffer
+end
+
+remote_function(sig::Signature, local_name::String, remote_name::String, encoder::Function) =
+  RemoteFunction(sig, local_name, remote_name, -1, encoder, IOBuffer())
+
+ensure_opcode(f::RemoteFunction, conn) =
+  f.opcode == -1 ?
+    f.opcode = Int32(request_operation(conn, f.remote_name)) :
+    f.opcode
+
+reset_opcode(f::RemoteFunction, conn) =
+  f.opcode = -1
+
+call_remote(f::RemoteFunction, conn, args...) =
+  f.code(ensure_remote(f, conn), conn, buffer, args...)
+
+#
+lang_rpc(lang, str) =
+  let sig = Signature{lang}(str),
+      (local_name, remote_name, params, ret) = parse_signature(sig)
+    esc(quote
+         remote_function(
+           $(sig),
+           $(local_name),
+           $(remote_name),
+           (opcode, conn, buf, $([:($(p[3])) for p in params]...)) -> begin
+              initiate_rpc_call(conn, opcode, $(remote_name))
+              take!(buf) # Reset the buffer just in case there was an encoding error on a previous call
+              write(buf, opcode)
+              $([:($(Symbol("encode_", p[1], "_array"^p[2]))(buf, $(p[3]))) for p in params]...)
+              write(conn, take!(buf))
+              complete_rpc_call(conn, opcode, $(Symbol("decode_", ret[1], "_array"^ret[2]))(conn))
+            end)
+      end)
+  end
+
+cpp_rpc(str) = lang_rpc(:CPP, str)
+cs_rpc(str) = lang_rpc(:CS, str)
+
+#=
+macro arch_str(str)
+    cpp_rpc(str)
+end
+
+macro acad_str(str)
+    cs_rpc(str)
+end
+
+@macroexpand arch"int api::createCircle(double x1, double y1, double r)"
+@macroexpand acad"int createCircle(double x1, double y1, double r)"
+
+=#
