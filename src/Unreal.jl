@@ -2,7 +2,7 @@ export unreal, fast_unreal,
        unreal_material_family
 
 macro unreal_str(str)
-    cpp_rpc("Unreal", str)
+    cpp_rpc(str)
 end
 
 # We need some additional Encoders
