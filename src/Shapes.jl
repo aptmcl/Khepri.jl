@@ -1673,6 +1673,9 @@ struct SocketBackend{K,T} <: Backend{K,T}
   remote::NamedTuple
 end
 
+SocketBackend{K,T}(c::LazyParameter{TCPSocket}) where K,T =
+  SocketBackend{K,T}(c, ())
+
 connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
 
 reset_backend(b::SocketBackend) =
