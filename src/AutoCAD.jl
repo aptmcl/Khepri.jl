@@ -1032,37 +1032,37 @@ select_positions(prompt::String, b::ACAD) =
 # HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
 
 select_point(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, @get_remote GetPoint)
+  select_one_with_prompt(prompt, b, @get_remote b GetPoint)
 
 select_points(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, @get_remote GetPoints)
+  select_many_with_prompt(prompt, b, @get_remote b GetPoints)
 
 select_curve(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, @get_remote GetCurve)
+  select_one_with_prompt(prompt, b, @get_remote b GetCurve)
 
 select_curves(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, @get_remote GetCurves)
+  select_many_with_prompt(prompt, b, @get_remote b GetCurves)
 
 
 select_surface(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, @get_remote GetSurface)
+  select_one_with_prompt(prompt, b, @get_remote b GetSurface)
 
 select_surfaces(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, @get_remote GetSurfaces)
+  select_many_with_prompt(prompt, b, @get_remote b GetSurfaces)
 
 
 select_solid(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, @get_remote GetSolid)
+  select_one_with_prompt(prompt, b, @get_remote b GetSolid)
 
 select_solids(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, @get_remote GetSolids)
+  select_many_with_prompt(prompt, b, @get_remote b GetSolids)
 
 
 select_shape(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, @get_remote GetShape)
+  select_one_with_prompt(prompt, b, @get_remote b GetShape)
 
 select_shapes(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, @get_remote GetShapes)
+  select_many_with_prompt(prompt, b, @get_remote b GetShapes)
 
 
 captured_shape(b::ACAD, handle) =
