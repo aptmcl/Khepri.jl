@@ -216,7 +216,7 @@ reset_opcode(f::RemoteFunction, conn) =
   f.opcode = -1
 
 call_remote(f::RemoteFunction, conn, args...) =
-  f.encoder(ensure_opcode(f, conn), conn, buffer, args...)
+  f.encoder(ensure_opcode(f, conn), conn, f.buffer, args...)
 
 (f::RemoteFunction)(conn, args...) = call_remote(f, conn, args...)
 
