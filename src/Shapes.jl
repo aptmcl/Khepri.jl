@@ -1674,7 +1674,7 @@ struct SocketBackend{K,T} <: Backend{K,T}
 end
 
 SocketBackend{K,T}(c::LazyParameter{TCPSocket}) where {K,T} =
-  SocketBackend{K,T}(c, ())
+  SocketBackend{K,T}(c, NamedTuple{}())
 
 connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
 
