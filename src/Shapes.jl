@@ -1682,6 +1682,13 @@ macro remote(b, call)
   end
 end
 
+macro get_remote(b, op)
+  let b = esc(b)
+    :(getfield(getfield($(b), :remote), $(QuoteNode(op))))
+  end
+end
+
+
 SocketBackend{K,T}(c::LazyParameter{TCPSocket}) where {K,T} =
   SocketBackend{K,T}(c, NamedTuple{}())
 
@@ -1689,6 +1696,9 @@ connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
 
 reset_backend(b::SocketBackend) =
   begin
+    for f in b.remote
+      reset_opcode(f)
+    end
     close(b.connection())
     reset(b.connection)
   end
