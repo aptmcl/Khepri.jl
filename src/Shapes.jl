@@ -672,7 +672,7 @@ realize(b::Backend, s::RevolveSurface) =
 @defproxy(loft_points, Shape1D, profiles::Shapes0D=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false)
 @defproxy(loft_curves, Shape2D, profiles::Shapes1D=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false)
 @defproxy(loft_surfaces, Shape3D, profiles::Shapes2D=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false)
-@defproxy(loft_curve_point, Shape2D, profile::Shapes1D=circle(), point::Shapes=point(z(1)))
+@defproxy(loft_curve_point, Shape2D, profile::Shapes1D=circle(), point::Shape0D=point(z(1)))
 @defproxy(loft_surface_point, Shape3D, profile::Shape2D=surface_circle(), point::Shapes=point(z(1)))
 
 loft(profiles::Shapes=Shape[], rails::Shapes=Shape[], ruled::Bool=false, closed::Bool=false) =
