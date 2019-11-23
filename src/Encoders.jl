@@ -24,7 +24,7 @@ export encode_String, decode_String,
        encode_object, decode_object,
        encode_object_array, decode_object_array
 
-encode_String(c::IO, v::String) = begin
+encode_String(c::IO, v::AbstractString) = begin
   str = string(v)
   size = length(str)
   array = UInt8[]
@@ -315,7 +315,7 @@ encode_object_array(c::IO, v::Vector) = begin
   for e in v encode_object(c, e) end
 end
 
-create_backend_connection(backend::String, port::Integer) =
+create_backend_connection(backend::AbstractString, port::Integer) =
   for i in 1:10
     try
       return connect(port)
