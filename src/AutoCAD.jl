@@ -429,14 +429,14 @@ realize(b::ACAD, s::SurfaceArc) =
         end_angle = s.start_angle + s.amplitude
         if end_angle > s.start_angle
             @remote(b, SurfaceFromCurves(
-                [@remote b Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle),
-                 @remote b PolyLine([add_pol(s.center, s.radius, end_angle),
-                                              add_pol(s.center, s.radius, s.start_angle)])]))
+                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)),
+                 @remote(b, PolyLine([add_pol(s.center, s.radius, end_angle),
+                                              add_pol(s.center, s.radius, s.start_angle)]))]))
         else
             @remote(b, SurfaceFromCurves(
-                [@remote b Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle),
-                 @remote b PolyLine([add_pol(s.center, s.radius, s.start_angle),
-                                              add_pol(s.center, s.radius, end_angle)])]))
+                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)),
+                 @remote(b, PolyLine([add_pol(s.center, s.radius, s.start_angle),
+                                              add_pol(s.center, s.radius, end_angle)]))]))
         end
     end
 
@@ -811,7 +811,7 @@ realize(b::ACAD, s::Column) =
     end
 
 backend_wall(b::ACAD, path, height, thickness, family) =
-  @remote(b, Thicken(@remote b Extrude(backend_stroke(b, path), vz(height)), thickness))
+  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), thickness))
 
 ############################################
 
@@ -917,6 +917,9 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 =#
 
 # Lights
+backend_pointlight(b::ACAD, loc::Loc, color::RGB, range::Real, intensity::Real) =
+  # HACK: Fix this
+  @remote(b, SpotLight(loc, intensity, range, loc+vz(-1)))
 
 backend_spotlight(b::ACAD, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
     @remote(b, SpotLight(loc, hotspot, falloff, loc + dir))
