@@ -227,8 +227,7 @@ retrieve results and, finally, creates the remote_function object.
 =#
 
 remote_function_meta_program(sig, local_name, remote_name, params, ret) =
-    esc(quote
-         remote_function(
+    esc(:(remote_function(
            $(sig),
            $(local_name),
            $(remote_name),
@@ -239,35 +238,14 @@ remote_function_meta_program(sig, local_name, remote_name, params, ret) =
               $([:($(Symbol("encode_", p[1], "_array"^p[2]))(buf, $(p[3]))) for p in params]...)
               write(conn, take!(buf))
               complete_rpc_call(conn, opcode, $(Symbol("decode_", ret[1], "_array"^ret[2]))(conn))
-            end)
-      end)
+            end)))
 
-lang_rpc(lang, str) =
-  let sig = Signature{lang}(str),
+lang_rpc(lang, sigs) =
+  [let sig = Signature{lang}(str),
       (local_name, remote_name, params, ret) = parse_signature(sig)
-    quote
-      $local_name = $(remote_function_meta_program(sig, local_name, remote_name, params, ret))
-    end
-  end
-
-#=
-Standard specializations
-=#
-
-cpp_rpc(str) = lang_rpc(:CPP, str)
-cs_rpc(str) = lang_rpc(:CS, str)
-
-#=
-To simplify the definition of the remote functions, we will use string syntax
-=#
-
-macro cs_str(str)
-    cs_rpc(str)
-end
-
-macro cpp_str(str)
-    cpp_rpc(str)
-end
+    (Symbol(local_name), remote_function_meta_program(sig, local_name, remote_name, params, ret))
+   end
+   for str in split(sigs, "\n") if str != ""]
 
 #=
 Given that remote apps might fail, it might be necessary to reset a connection.
@@ -282,44 +260,17 @@ support multiple separate connections.
 The idea is that a particular remote application will store all of its functions
 in a struct, as follows:
 
-@remote_functions begin
-  cs"int add(int a, int b)"
-  cs"int sub(int a, int b)"
-end
+"""
 
-This might expand into, e.g., a named tuple that looks like
-
-(add = lang_rpc(:CS, "int add(int a, int b)"),
- sub = lang_rpc(:CS, "int sub(int a, int b)"))
-
+@remote_functions :CS """
+  int add(int a, int b)
+  int sub(int a, int b)
+"""
 =#
-#=
-macro remote_functions(ast)
-  let names = [a.args[1] for a in ast.args if a isa Expr && a.head == :(=)])
-    quote
-      let $ast
-        () -> ($names...)
-      end
-    end
-  end
-=#
+
 export remote_functions
-macro remote_functions(ast)
-  quote
-    ([a for a in ast.args if a isa Expr && a.head == :(=)]...)
+macro remote_functions(lang, str)
+  let remotes = lang_rpc(lang.value, str)
+    Expr(:tuple, [Expr(:(=), remote...) for remote in remotes]...)
   end
 end
-
-#=
-macro arch_str(str)
-    cpp_rpc(str)
-end
-
-macro acad_str(str)
-    cs_rpc(str)
-end
-
-@macroexpand arch"int api::createCircle(double x1, double y1, double r)"
-@macroexpand acad"int createCircle(double x1, double y1, double r)"
-
-=#
