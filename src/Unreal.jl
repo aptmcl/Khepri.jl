@@ -217,11 +217,15 @@ realize(b::Unreal, s::Text) =
     connection(b),
     s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Fonts/Inconsolata-Regular", s.height)
 
-=#
-unreal"public Actor Sphere(Vector3 center, float radius)"
+unreal_functions() =
+  @remote_functions begin
+    unreal"public Actor Sphere(Vector3 center, float radius)"
+  end
 
 realize(b::Unreal, s::Sphere) =
-  UnrealSphere(connection(b), s.center, s.radius)
+  b.Sphere(s.center, s.radius)
+  =#
+
 
 #=
 #=
