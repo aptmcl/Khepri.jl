@@ -308,6 +308,7 @@ macro remote_functions(ast)
   quote
     ([a for a in ast.args if a isa Expr && a.head == :(=)]...)
   end
+end
 
 #=
 macro arch_str(str)
