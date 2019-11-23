@@ -219,138 +219,6 @@ public double MTextHeight(Entity ent)
 public void SaveAs(String pathname, String format)
 """
 
-acad"public void SetLengthUnit(String unit)"
-acad"public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)"
-acad"public void View(Point3d position, Point3d target, double lens)"
-acad"public void ViewTop()"
-acad"public Point3d ViewCamera()"
-acad"public Point3d ViewTarget()"
-acad"public double ViewLens()"
-acad"public byte Sync()"
-acad"public byte Disconnect()"
-acad"public ObjectId Copy(ObjectId id)"
-
-acad"public Entity Point(Point3d p)"
-acad"public Point3d PointPosition(Entity ent)"
-
-acad"public Entity PolyLine(Point3d[] pts)"
-acad"public Point3d[] LineVertices(ObjectId id)"
-
-acad"public Entity Spline(Point3d[] pts)"
-acad"public Entity InterpSpline(Point3d[] pts, Vector3d tan0, Vector3d tan1)"
-acad"public Entity ClosedPolyLine(Point3d[] pts)"
-acad"public Entity ClosedSpline(Point3d[] pts)"
-acad"public Entity InterpClosedSpline(Point3d[] pts)"
-acad"public Point3d[] SplineInterpPoints(Entity ent)"
-acad"public Vector3d[] SplineTangents(Entity ent)"
-
-acad"public Entity Circle(Point3d c, Vector3d n, double r)"
-acad"public Point3d CircleCenter(Entity ent)"
-acad"public Vector3d CircleNormal(Entity ent)"
-acad"public double CircleRadius(Entity ent)"
-
-acad"public Entity Ellipse(Point3d c, Vector3d n, Vector3d majorAxis, double radiusRatio)"
-
-acad"public Entity Arc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)"
-acad"public Point3d ArcCenter(Entity ent)"
-acad"public Vector3d ArcNormal(Entity ent)"
-acad"public double ArcRadius(Entity ent)"
-acad"public double ArcStartAngle(Entity ent)"
-acad"public double ArcEndAngle(Entity ent)"
-
-acad"public ObjectId JoinCurves(ObjectId[] ids)"
-
-acad"public Entity Text(string str, Point3d corner, Vector3d vx, Vector3d vy, double height)"
-acad"public Entity SurfaceFromCurve(Entity curve)"
-acad"public Entity SurfaceCircle(Point3d c, Vector3d n, double r)"
-acad"public Entity SurfaceEllipse(Point3d c, Vector3d n, Vector3d majorAxis, double radiusRatio)"
-acad"public Entity SurfaceArc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)"
-acad"public Entity SurfaceClosedPolyLine(Point3d[] pts)"
-acad"public ObjectId[] SurfaceFromCurves(ObjectId[] ids)"
-acad"public ObjectId[] CurvesFromSurface(ObjectId id)"
-acad"public Entity Sphere(Point3d c, double r)"
-acad"public Entity Torus(Point3d c, Vector3d vz, double majorRadius, double minorRadius)"
-acad"public Entity ConeFrustum(Point3d bottom, double base_radius, Point3d top, double top_radius)"
-acad"public Entity Cylinder(Point3d bottom, double radius, Point3d top)"
-acad"public Entity Cone(Point3d bottom, double radius, Point3d top)"
-acad"public Entity Box(Frame3d frame, double dx, double dy, double dz)"
-acad"public Entity CenteredBox(Frame3d frame, double dx, double dy, double dz)"
-acad"public ObjectId IrregularPyramidMesh(Point3d[] pts, Point3d apex)"
-acad"public ObjectId IrregularPyramid(Point3d[] pts, Point3d apex)"
-acad"public ObjectId IrregularPyramidFrustum(Point3d[] bpts, Point3d[] tpts)"
-
-acad"public ObjectId Thicken(ObjectId obj, double thickness)"
-acad"public ObjectId NurbSurfaceFrom(ObjectId id)"
-acad"public ObjectId Extrude(ObjectId profileId, Vector3d dir)"
-acad"public ObjectId Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)"
-acad"public ObjectId Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)"
-acad"public ObjectId Unite(ObjectId objId0, ObjectId objId1)"
-acad"public ObjectId Intersect(ObjectId objId0, ObjectId objId1)"
-acad"public ObjectId Subtract(ObjectId objId0, ObjectId objId1)"
-acad"public void Slice(ObjectId id, Point3d p, Vector3d n)"
-acad"public ObjectId Revolve(ObjectId profileId, Point3d p, Vector3d n, double startAngle, double amplitude)"
-acad"public void Transform(ObjectId id, Frame3d frame)"
-acad"public void Move(ObjectId id, Vector3d v)"
-acad"public void Scale(ObjectId id, Point3d p, double s)"
-acad"public void Rotate(ObjectId id, Point3d p, Vector3d n, double a)"
-acad"public ObjectId Mirror(ObjectId id, Point3d p, Vector3d n, bool copy)"
-acad"public Point3d[] BoundingBox(ObjectId[] ids)"
-acad"public void ZoomExtents()"
-acad"public ObjectId CreateLayer(string name)"
-acad"public void SetLayerColor(ObjectId id, byte r, byte g, byte b)"
-acad"public void SetShapeColor(ObjectId id, byte r, byte g, byte b)"
-acad"public ObjectId CurrentLayer()"
-acad"public void SetCurrentLayer(ObjectId id)"
-acad"public ObjectId ShapeLayer(ObjectId objId)"
-acad"public void SetShapeLayer(ObjectId objId, ObjectId layerId)"
-acad"public void SetSystemVariableInt(string name, int value)"
-acad"public int Command(string cmd)"
-acad"public void DisableUpdate()"
-acad"public void EnableUpdate()"
-
-acad"public bool IsPoint(Entity e)"
-acad"public bool IsCircle(Entity e)"
-acad"public bool IsPolyLine(Entity e)"
-acad"public bool IsSpline(Entity e)"
-acad"public bool IsInterpSpline(Entity e)"
-acad"public bool IsClosedPolyLine(Entity e)"
-acad"public bool IsClosedSpline(Entity e)"
-acad"public bool IsInterpClosedSpline(Entity e)"
-acad"public bool IsEllipse(Entity e)"
-acad"public bool IsArc(Entity e)"
-acad"public bool IsText(Entity e)"
-acad"public byte ShapeCode(ObjectId id)"
-
-acad"public BIMLevel FindOrCreateLevelAtElevation(double elevation)"
-acad"public BIMLevel UpperLevel(BIMLevel currentLevel, double addedElevation)"
-acad"public double GetLevelElevation(BIMLevel level)"
-
-acad"public FloorFamily FloorFamilyInstance(double totalThickness, double coatingThickness)"
-acad"public Entity LightweightPolyLine(Point2d[] pts, double[] angles, double elevation)"
-acad"public Entity SurfaceLightweightPolyLine(Point2d[] pts, double[] angles, double elevation)"
-acad"public ObjectId CreatePathFloor(Point2d[] pts, double[] angles, BIMLevel level, FloorFamily family)"
-
-acad"public ObjectId CreateBlockFromShapes(String baseName, ObjectId[] ids)"
-acad"public ObjectId CreateBlockInstance(ObjectId id, Frame3d frame)"
-acad"public ObjectId CreateInstanceFromBlockNamed(String name, Frame3d frame)"
-acad"public ObjectId CreateInstanceFromBlockNamedAtRotated(String name, Point3d c, double angle)"
-acad"public ObjectId CreateRectangularTableFamily(double length, double width, double height, double top_thickness, double leg_thickness)"
-acad"public ObjectId Table(Point3d c, double angle, ObjectId family)"
-acad"public ObjectId CreateChairFamily(double length, double width, double height, double seat_height, double thickness)"
-acad"public ObjectId Chair(Point3d c, double angle, ObjectId family)"
-acad"public ObjectId CreateRectangularTableAndChairsFamily(ObjectId tableFamily, ObjectId chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)"
-acad"public ObjectId TableAndChairs(Point3d c, double angle, ObjectId family)"
-acad"public ObjectId CreateAlignedDimension(Point3d p0, Point3d p1, Point3d p, double scale, String mark)"
-acad"public String TextString(Entity ent)"
-acad"public Point3d TextPosition(Entity ent)"
-acad"public double TextHeight(Entity ent)"
-acad"public String MTextString(Entity ent)"
-acad"public Point3d MTextPosition(Entity ent)"
-acad"public double MTextHeight(Entity ent)"
-
-acad"public void SaveAs(String pathname, String format)"
-
-
 abstract type ACADKey end
 const ACADId = Int
 const ACADIds = Vector{ACADId}
@@ -380,63 +248,63 @@ backend_name(b::ACAD) = "AutoCAD"
 
 backend_stroke_color(b::ACAD, path::Path, color::RGB) =
     let r = backend_stroke(b, path)
-        ACADSetShapeColor(connection(b), r, color.r, color.g, color.b)
+        @remote b SetShapeColor(r, color.r, color.g, color.b)
         r
     end
 
 backend_stroke(b::ACAD, path::CircularPath) =
-    ACADCircle(connection(b), path.center, vz(1, path.center.cs), path.radius)
+    @remote b Circle(path.center, vz(1, path.center.cs), path.radius)
 backend_stroke(b::ACAD, path::RectangularPath) =
     let c = path.corner,
         dx = path.dx,
         dy = path.dy
-        ACADClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
+        @remote b ClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
 backend_stroke(b::ACAD, path::ArcPath) =
     backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
 
 backend_stroke(b::ACAD, path::OpenPolygonalPath) =
-  	ACADPolyLine(connection(b), path.vertices)
+  	@remote b PolyLine(path.vertices)
 backend_stroke(b::ACAD, path::ClosedPolygonalPath) =
-    ACADClosedPolyLine(connection(b), path.vertices)
+    @remote b ClosedPolyLine(path.vertices)
 backend_fill(b::ACAD, path::ClosedPolygonalPath) =
-    ACADSurfaceClosedPolyLine(connection(b), path.vertices)
+    @remote b SurfaceClosedPolyLine(path.vertices)
 backend_fill(b::ACAD, path::RectangularPath) =
     let c = path.corner,
         dx = path.dx,
         dy = path.dy
-        ACADSurfaceClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
+        @remote b SurfaceClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
 backend_stroke(b::ACAD, path::OpenSplinePath) =
   if (path.v0 == false) && (path.v1 == false)
-    #ACADSpline(connection(b), path.vertices)
-    ACADInterpSpline(connection(b),
+    #@remote b Spline(path.vertices)
+    @remote b InterpSpline(
                      path.vertices,
                      path.vertices[2]-path.vertices[1],
                      path.vertices[end]-path.vertices[end-1])
   elseif (path.v0 != false) && (path.v1 != false)
-    ACADInterpSpline(connection(b), path.vertices, path.v0, path.v1)
+    @remote b InterpSpline(path.vertices, path.v0, path.v1)
   else
-    ACADInterpSpline(connection(b),
+    @remote b InterpSpline(
                      path.vertices,
                      path.v0 == false ? path.vertices[2]-path.vertices[1] : path.v0,
                      path.v1 == false ? path.vertices[end-1]-path.vertices[end] : path.v1)
   end
 backend_stroke(b::ACAD, path::ClosedSplinePath) =
-    ACADInterpClosedSpline(connection(b), path.vertices)
+    @remote b InterpClosedSpline(path.vertices)
 backend_fill(b::ACAD, path::ClosedSplinePath) =
-    backend_fill_curves(b, ACADInterpClosedSpline(connection(b), path.vertices))
+    backend_fill_curves(b, @remote b InterpClosedSpline(path.vertices))
 
-backend_fill_curves(b::ACAD, refs::ACADIds) = ACADSurfaceFromCurves(connection(b), refs)
-backend_fill_curves(b::ACAD, ref::ACADId) = ACADSurfaceFromCurves(connection(b), [ref])
+backend_fill_curves(b::ACAD, refs::ACADIds) = @remote b SurfaceFromCurves(refs)
+backend_fill_curves(b::ACAD, ref::ACADId) = @remote b SurfaceFromCurves([ref])
 
-backend_stroke_line(b::ACAD, vs) = ACADPolyLine(connection(b), vs)
+backend_stroke_line(b::ACAD, vs) = @remote b PolyLine(vs)
 
 backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
   let end_angle = start_angle + amplitude
-    ACADArc(connection(b), center, vz(1, center.cs), radius, start_angle, end_angle)
+    @remote b Arc(center, vz(1, center.cs), radius, start_angle, end_angle)
   end
-backend_stroke_unite(b::ACAD, refs) = ACADJoinCurves(connection(b), refs)
+backend_stroke_unite(b::ACAD, refs) = @remote b JoinCurves(refs)
 
 
 
@@ -445,57 +313,57 @@ realize(b::ACAD, s::EmptyShape) =
 realize(b::ACAD, s::UniversalShape) =
   ACADUniversalRef()
 realize(b::ACAD, s::Point) =
-  ACADPoint(connection(b), s.position)
+  @remote b Point(s.position)
 realize(b::ACAD, s::Line) =
-  ACADPolyLine(connection(b), s.vertices)
+  @remote b PolyLine(s.vertices)
 realize(b::ACAD, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
-    #ACADSpline(connection(b), s.points)
-    ACADInterpSpline(connection(b),
+    #@remote b Spline(s.points)
+    @remote b InterpSpline(
                      s.points,
                      s.points[2]-s.points[1],
                      s.points[end]-s.points[end-1])
   elseif (s.v0 != false) && (s.v1 != false)
-    ACADInterpSpline(connection(b), s.points, s.v0, s.v1)
+    @remote b InterpSpline(s.points, s.v0, s.v1)
   else
-    ACADInterpSpline(connection(b),
+    @remote b InterpSpline(
                      s.points,
                      s.v0 == false ? s.points[2]-s.points[1] : s.v0,
                      s.v1 == false ? s.points[end-1]-s.points[end] : s.v1)
   end
 realize(b::ACAD, s::ClosedSpline) =
-  ACADInterpClosedSpline(connection(b), s.points)
+  @remote b InterpClosedSpline(s.points)
 realize(b::ACAD, s::Circle) =
-  ACADCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+  @remote b Circle(s.center, vz(1, s.center.cs), s.radius)
 realize(b::ACAD, s::Arc) =
   if s.radius == 0
-    ACADPoint(connection(b), s.center)
+    @remote b Point(s.center)
   elseif s.amplitude == 0
-    ACADPoint(connection(b), s.center + vpol(s.radius, s.start_angle, s.center.cs))
+    @remote b Point(s.center + vpol(s.radius, s.start_angle, s.center.cs))
   elseif abs(s.amplitude) >= 2*pi
-    ACADCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+    @remote b Circle(s.center, vz(1, s.center.cs), s.radius)
   else
     end_angle = s.start_angle + s.amplitude
     if end_angle > s.start_angle
-      ACADArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)
+      @remote b Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)
     else
-      ACADArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)
+      @remote b Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)
     end
   end
 
 realize(b::ACAD, s::Ellipse) =
   if s.radius_x > s.radius_y
-    ACADEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x)
+    @remote b Ellipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x)
   else
-    ACADEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y)
+    @remote b Ellipse(s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y)
   end
 realize(b::ACAD, s::EllipticArc) =
   error("Finish this")
 
 realize(b::ACAD, s::Polygon) =
-  ACADClosedPolyLine(connection(b), s.vertices)
+  @remote b ClosedPolyLine(s.vertices)
 realize(b::ACAD, s::RegularPolygon) =
-  ACADClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
+  @remote b ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::Rectangle) =
   ACADClosedPolyLine(
     connection(b),
@@ -504,43 +372,43 @@ realize(b::ACAD, s::Rectangle) =
      add_xy(s.corner, s.dx, s.dy),
      add_y(s.corner, s.dy)])
 realize(b::ACAD, s::SurfaceCircle) =
-  ACADSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+  @remote b SurfaceCircle(s.center, vz(1, s.center.cs), s.radius)
 realize(b::ACAD, s::SurfaceArc) =
-    #ACADSurfaceArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
+    #@remote b SurfaceArc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
     if s.radius == 0
-        ACADPoint(connection(b), s.center)
+        @remote b Point(s.center)
     elseif s.amplitude == 0
-        ACADPoint(connection(b), s.center + vpol(s.radius, s.start_angle, s.center.cs))
+        @remote b Point(s.center + vpol(s.radius, s.start_angle, s.center.cs))
     elseif abs(s.amplitude) >= 2*pi
-        ACADSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+        @remote b SurfaceCircle(s.center, vz(1, s.center.cs), s.radius)
     else
         end_angle = s.start_angle + s.amplitude
         if end_angle > s.start_angle
-            ACADSurfaceFromCurves(connection(b),
-                [ACADArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle),
-                 ACADPolyLine(connection(b), [add_pol(s.center, s.radius, end_angle),
+            @remote b SurfaceFromCurves(
+                [@remote b Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle),
+                 @remote b PolyLine([add_pol(s.center, s.radius, end_angle),
                                               add_pol(s.center, s.radius, s.start_angle)])])
         else
-            ACADSurfaceFromCurves(connection(b),
-                [ACADArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle),
-                 ACADPolyLine(connection(b), [add_pol(s.center, s.radius, s.start_angle),
+            @remote b SurfaceFromCurves(
+                [@remote b Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle),
+                 @remote b PolyLine([add_pol(s.center, s.radius, s.start_angle),
                                               add_pol(s.center, s.radius, end_angle)])])
         end
     end
 
-#realize(b::ACAD, s::SurfaceElliptic_Arc) = ACADCircle(connection(b),
+#realize(b::ACAD, s::SurfaceElliptic_Arc) = @remote b Circle(
 realize(b::ACAD, s::SurfaceEllipse) =
   if s.radius_x > s.radius_y
-    ACADSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x)
+    @remote b SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x)
   else
-    ACADSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y)
+    @remote b SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y)
   end
 
 
 realize(b::ACAD, s::SurfacePolygon) =
-  ACADSurfaceClosedPolyLine(connection(b), s.vertices)
+  @remote b SurfaceClosedPolyLine(s.vertices)
 realize(b::ACAD, s::SurfaceRegularPolygon) =
-  ACADSurfaceClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
+  @remote b SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::SurfaceRectangle) =
   ACADSurfaceClosedPolyLine(
     connection(b),
@@ -549,13 +417,13 @@ realize(b::ACAD, s::SurfaceRectangle) =
      add_xy(s.corner, s.dx, s.dy),
      add_y(s.corner, s.dy)])
 realize(b::ACAD, s::Surface) =
-  let #ids = map(r->ACADNurbSurfaceFrom(connection(b),r), ACADSurfaceFromCurves(connection(b), collect_ref(s.frontier)))
-      ids = ACADSurfaceFromCurves(connection(b), collect_ref(s.frontier))
+  let #ids = map(r->@remote b NurbSurfaceFrom(r), @remote b SurfaceFromCurves(collect_ref(s.frontier)))
+      ids = @remote b SurfaceFromCurves(collect_ref(s.frontier))
     foreach(mark_deleted, s.frontier)
     ids
   end
 backend_surface_boundary(b::ACAD, s::Shape2D) =
-    map(c -> shape_from_ref(c, b), ACADCurvesFromSurface(connection(b), ref(s).value))
+    map(c -> shape_from_ref(c, b), @remote b CurvesFromSurface(ref(s).value))
 
 # Iterating over curves and surfaces
 
@@ -624,7 +492,7 @@ acad"public double[] SurfaceDomain(Entity ent)"
 acad"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
 
 backend_surface_domain(b::ACAD, s::Shape2D) =
-    tuple(ACADSurfaceDomain(connection(b), ref(s).value)...)
+    tuple(@remote b SurfaceDomain(ref(s).value)...)
 
 backend_map_division(b::ACAD, f::Function, s::Shape2D, nu::Int, nv::Int) =
     let conn = connection(b)
@@ -665,52 +533,50 @@ realize(b::ACAD, s::Text) =
 realize(b::ACAD, s::Sphere) =
   @remote(b, Sphere(s.center, s.radius))
 
-
-
 realize(b::ACAD, s::Torus) =
-  ACADTorus(connection(b), s.center, vz(1, s.center.cs), s.re, s.ri)
+  @remote b Torus(s.center, vz(1, s.center.cs), s.re, s.ri)
 realize(b::ACAD, s::Cuboid) =
-  ACADIrregularPyramidFrustum(connection(b), [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
+  @remote b IrregularPyramidFrustum([s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
 realize(b::ACAD, s::RegularPyramidFrustum) =
-    ACADIrregularPyramidFrustum(connection(b),
+    @remote b IrregularPyramidFrustum(
                                 regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                                 regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed))
 realize(b::ACAD, s::RegularPyramid) =
-  ACADIrregularPyramid(connection(b),
+  @remote b IrregularPyramid(
                           regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                           add_z(s.cb, s.h))
 realize(b::ACAD, s::IrregularPyramid) =
-  ACADIrregularPyramid(connection(b), s.bs, s.t)
+  @remote b IrregularPyramid(s.bs, s.t)
 realize(b::ACAD, s::RegularPrism) =
   let ps = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-    ACADIrregularPyramidFrustum(connection(b),
+    @remote b IrregularPyramidFrustum(
                                    ps,
                                    map(p -> add_z(p, s.h), ps))
   end
 realize(b::ACAD, s::IrregularPyramidFrustum) =
-    ACADIrregularPyramidFrustum(connection(b), s.bs, s.ts)
+    @remote b IrregularPyramidFrustum(s.bs, s.ts)
 
 realize(b::ACAD, s::IrregularPrism) =
-  ACADIrregularPyramidFrustum(connection(b),
+  @remote b IrregularPyramidFrustum(
                               s.bs,
                               map(p -> (p + s.v), s.bs))
 ## FIXME: deal with the rotation angle
 realize(b::ACAD, s::RightCuboid) =
-  ACADCenteredBox(connection(b), s.cb, s.width, s.height, s.h)
+  @remote b CenteredBox(s.cb, s.width, s.height, s.h)
 realize(b::ACAD, s::Box) =
-  ACADBox(connection(b), s.c, s.dx, s.dy, s.dz)
+  @remote b Box(s.c, s.dx, s.dy, s.dz)
 realize(b::ACAD, s::Cone) =
-  ACADCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
+  @remote b Cone(add_z(s.cb, s.h), s.r, s.cb)
 realize(b::ACAD, s::ConeFrustum) =
-  ACADConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
+  @remote b ConeFrustum(s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
 realize(b::ACAD, s::Cylinder) =
-  ACADCylinder(connection(b), s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
-#realize(b::ACAD, s::Circle) = ACADCircle(connection(b),
+  @remote b Cylinder(s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
+#realize(b::ACAD, s::Circle) = @remote b Circle(
 
 backend_extrusion(b::ACAD, s::Shape, v::Vec) =
     and_mark_deleted(
         map_ref(s) do r
-            ACADExtrude(connection(b), r, v)
+            @remote b Extrude(r, v)
         end,
         s)
 
@@ -718,7 +584,7 @@ backend_sweep(b::ACAD, path::Shape, profile::Shape, rotation::Real, scale::Real)
   and_mark_deleted(
     map_ref(profile) do profile_r
       map_ref(path) do path_r
-        ACADSweep(connection(b), path_r, profile_r, rotation, scale)
+        @remote b Sweep(path_r, profile_r, rotation, scale)
       end
   end, [profile, path])
 
@@ -732,12 +598,12 @@ backend_revolve_surface(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Re
 acad_revolution(b::ACAD, profile::Shape, p::Loc, n::Vec, start_angle::Real, amplitude::Real) =
   and_delete_shape(
     map_ref(profile) do r
-      ACADRevolve(connection(b), r, p, n, start_angle, amplitude)
+      @remote b Revolve(r, p, n, start_angle, amplitude)
     end,
     profile)
 
 backend_loft_curves(b::ACAD, profiles::Shapes, rails::Shapes, ruled::Bool, closed::Bool) =
-  and_delete_shapes(ACADLoft(connection(b),
+  and_delete_shapes(@remote b Loft(
                              collect_ref(profiles),
                              collect_ref(rails),
                              ruled, closed),
@@ -747,7 +613,7 @@ backend_loft_surfaces(b::ACAD, profiles::Shapes, rails::Shapes, ruled::Bool, clo
     backend_loft_curves(b, profiles, rails, ruled, closed)
 
 backend_loft_curve_point(b::ACAD, profile::Shape, point::Shape) =
-    and_delete_shapes(ACADLoft(connection(b),
+    and_delete_shapes(@remote b Loft(
                                vcat(collect_ref(profile), collect_ref(point)),
                                [],
                                true, false),
@@ -757,16 +623,16 @@ backend_loft_surface_point(b::ACAD, profile::Shape, point::Shape) =
     backend_loft_curve_point(b, profile, point)
 
 unite_ref(b::ACAD, r0::ACADNativeRef, r1::ACADNativeRef) =
-    ensure_ref(b, ACADUnite(connection(b), r0.value, r1.value))
+    ensure_ref(b, @remote b Unite(r0.value, r1.value))
 
 intersect_ref(b::ACAD, r0::ACADNativeRef, r1::ACADNativeRef) =
-    ensure_ref(b, ACADIntersect(connection(b), r0.value, r1.value))
+    ensure_ref(b, @remote b Intersect(r0.value, r1.value))
 
 subtract_ref(b::ACAD, r0::ACADNativeRef, r1::ACADNativeRef) =
-    ensure_ref(b, ACADSubtract(connection(b), r0.value, r1.value))
+    ensure_ref(b, @remote b Subtract(r0.value, r1.value))
 
 slice_ref(b::ACAD, r::ACADNativeRef, p::Loc, v::Vec) =
-    (ACADSlice(connection(b), r.value, p, v); r)
+    (@remote b Slice(r.value, p, v); r)
 
 slice_ref(b::ACAD, r::ACADUnionRef, p::Loc, v::Vec) =
     ACADUnionRef(map(r->slice_ref(b, r, p, v), r.values))
@@ -786,7 +652,7 @@ realize(b::ACAD, s::Slice) =
 
 realize(b::ACAD, s::Move) =
   let r = map_ref(s.shape) do r
-            ACADMove(connection(b), r, s.v)
+            @remote b Move(r, s.v)
             r
           end
     mark_deleted(s.shape)
@@ -795,7 +661,7 @@ realize(b::ACAD, s::Move) =
 
 realize(b::ACAD, s::Transform) =
   let r = map_ref(s.shape) do r
-            ACADTransform(connection(b), r, s.xform)
+            @remote b Transform(r, s.xform)
             r
           end
     mark_deleted(s.shape)
@@ -804,7 +670,7 @@ realize(b::ACAD, s::Transform) =
 
 realize(b::ACAD, s::Scale) =
   let r = map_ref(s.shape) do r
-            ACADScale(connection(b), r, s.p, s.s)
+            @remote b Scale(r, s.p, s.s)
             r
           end
     mark_deleted(s.shape)
@@ -813,7 +679,7 @@ realize(b::ACAD, s::Scale) =
 
 realize(b::ACAD, s::Rotate) =
   let r = map_ref(s.shape) do r
-            ACADRotate(connection(b), r, s.p, s.v, s.angle)
+            @remote b Rotate(r, s.p, s.v, s.angle)
             r
           end
     mark_deleted(s.shape)
@@ -822,14 +688,14 @@ realize(b::ACAD, s::Rotate) =
 
 realize(b::ACAD, s::Mirror) =
   and_mark_deleted(map_ref(s.shape) do r
-                    ACADMirror(connection(b), r, s.p, s.n, false)
+                    @remote b Mirror(r, s.p, s.n, false)
                    end,
                    s.shape)
 
 realize(b::ACAD, s::UnionMirror) =
   let r0 = ref(s.shape),
       r1 = map_ref(s.shape) do r
-            ACADMirror(connection(b), r, s.p, s.n, true)
+            @remote b Mirror(r, s.p, s.n, true)
           end
     UnionRef((r0,r1))
   end
@@ -847,14 +713,14 @@ realize(b::ACAD, s::SurfaceGrid) =
 realize(b::ACAD, s::Thicken) =
   and_mark_deleted(
     map_ref(s.shape) do r
-      ACADThicken(connection(b), r, s.thickness)
+      @remote b Thicken(r, s.thickness)
     end,
     s.shape)
 
 # backend_frame_at
 backend_frame_at(b::ACAD, s::Circle, t::Real) = add_pol(s.center, s.radius, t)
 
-backend_frame_at(b::ACAD, c::Shape1D, t::Real) = ACADCurveFrameAt(connection(b), ref(c).value, t)
+backend_frame_at(b::ACAD, c::Shape1D, t::Real) = @remote b CurveFrameAt(ref(c).value, t)
 
 #backend_frame_at(b::ACAD, s::Surface, u::Real, v::Real) =
     #What should we do with v?
@@ -862,28 +728,28 @@ backend_frame_at(b::ACAD, c::Shape1D, t::Real) = ACADCurveFrameAt(connection(b),
 
 #backend_frame_at(b::ACAD, s::SurfacePolygon, u::Real, v::Real) =
 
-backend_frame_at(b::ACAD, s::Shape2D, u::Real, v::Real) = ACADSurfaceFrameAt(connection(b), ref(s).value, u, v)
+backend_frame_at(b::ACAD, s::Shape2D, u::Real, v::Real) = @remote b SurfaceFrameAt(ref(s).value, u, v)
 
 # BIM
 backend_get_family(b::ACAD, f::TableFamily) =
-    ACADCreateRectangularTableFamily(connection(b), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
+    @remote b CreateRectangularTableFamily(f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
 backend_get_family(b::ACAD, f::ChairFamily) =
-    ACADCreateChairFamily(connection(b), f.length, f.width, f.height, f.seat_height, f.thickness)
+    @remote b CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness)
 backend_get_family(b::ACAD, f::TableChairFamily) =
-    ACADCreateRectangularTableAndChairsFamily(connection(b),
+    @remote b CreateRectangularTableAndChairsFamily(
         realize(b, f.table_family), realize(b, f.chair_family),
         f.table_family.length, f.table_family.width,
         f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
         f.spacing)
 
 backend_rectangular_table(b::ACAD, c, angle, family) =
-    ACADTable(connection(b), c, angle, realize(b, family))
+    @remote b Table(c, angle, realize(b, family))
 
 backend_chair(b::ACAD, c, angle, family) =
-    ACADChair(connection(b), c, angle, realize(b, family))
+    @remote b Chair(c, angle, realize(b, family))
 
 backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
-    ACADTableAndChairs(connection(b), c, angle, realize(b, family))
+    @remote b TableAndChairs(c, angle, realize(b, family))
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
   let c = connection(b)
@@ -900,9 +766,9 @@ realize(b::ACAD, s::Beam) =
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
       # need to test whether it is rotation on center or on axis
       o = loc_from_o_phi(s.cb, s.angle)
-    ACADCenteredBox(connection(b), add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h)
+    @remote b CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h)
   end
-#    ACADCenteredBox(connection(b), s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h)
+#    @remote b CenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h)
 
 #Columns are aligned along the center axis.
 realize(b::ACAD, s::FreeColumn) =
@@ -911,7 +777,7 @@ realize(b::ACAD, s::FreeColumn) =
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
       # need to test whether it is rotation on center or on axis
       o = loc_from_o_phi(c, s.angle)
-    ACADCenteredBox(connection(b), o, profile.dx, profile.dy, s.h)
+    @remote b CenteredBox(o, profile.dx, profile.dy, s.h)
   end
 
 realize(b::ACAD, s::Column) =
@@ -922,7 +788,7 @@ realize(b::ACAD, s::Column) =
         height = s.top_level.height - base_height,
         # need to test whether it is rotation on center or on axis
         o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
-      ACADCenteredBox(connection(b), add_y(o, -profile.dy/2), profile.dx, profile.dy, height)
+      @remote b CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, height)
     end
 
 backend_wall(b::ACAD, path, height, thickness, family) =
@@ -981,10 +847,10 @@ backend_wall_path(b::ACAD, path::OpenPolygonalPath, height, thickness) =
 ############################################
 
 backend_bounding_box(b::ACAD, shapes::Shapes) =
-  ACADBoundingBox(connection(b), collect_ref(shapes))
+  @remote b BoundingBox(collect_ref(shapes))
 
 set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
-  ACADView(connection(b), camera, target, lens)
+  @remote b View(camera, target, lens)
 
 get_view(b::ACAD) =
   let c = connection(b)
@@ -1002,19 +868,19 @@ acad"public void Delete(ObjectId id)"
 acad"public void DeleteMany(ObjectId[] ids)"
 
 backend_delete_shapes(b::ACAD, shapes::Shapes) =
-  ACADDeleteMany(connection(b), collect_ref(shapes))
+  @remote b DeleteMany(collect_ref(shapes))
 
 delete_all_shapes(b::ACAD) =
   ACADDeleteAll(connection(b))
 
-set_length_unit(unit::String, b::ACAD) = ACADSetLengthUnit(connection(b), unit)
+set_length_unit(unit::String, b::ACAD) = @remote b SetLengthUnit(unit)
 
 # Dimensions
 
 const ACADDimensionStyles = Dict(:architectural => "_ARCHTICK", :mechanical => "")
 
 dimension(p0::Loc, p1::Loc, p::Loc, scale::Real, style::Symbol, b::ACAD=current_backend()) =
-    ACADCreateAlignedDimension(connection(b), p0, p1, p,
+    @remote b CreateAlignedDimension(p0, p1, p,
         scale,
         ACADDimensionStyles[style])
 
@@ -1031,19 +897,19 @@ current_layer(b::ACAD)::ACADLayer =
   ACADCurrentLayer(connection(b))
 
 current_layer(layer::ACADLayer, b::ACAD) =
-  ACADSetCurrentLayer(connection(b), layer)
+  @remote b SetCurrentLayer(layer)
 
 create_layer(name::String, b::ACAD) =
-  ACADCreateLayer(connection(b), name)
+  @remote b CreateLayer(name)
 
 create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
-  let layer = ACADCreateLayer(connection(b), name)
-    ACADSetLayerColor(connection(b), layer, color.r, color.g, color.b)
+  let layer = @remote b CreateLayer(name)
+    @remote b SetLayerColor(layer, color.r, color.g, color.b)
     layer
   end
 
 delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
-  ACADDeleteAllInLayer(connection(b), layer)
+  @remote b DeleteAllInLayer(layer)
 
 switch_to_layer(to, b::ACAD) =
     if to != from
@@ -1059,15 +925,15 @@ current_material(b::ACAD)::ACADMaterial =
   -1 #ACADCurrentMaterial(connection(b))
 
 current_material(material::ACADMaterial, b::ACAD) =
-  -1 #ACADSetCurrentMaterial(connection(b), material)
+  -1 #@remote b SetCurrentMaterial(material)
 
 get_material(name::String, b::ACAD) =
-  -1 #ACADCreateMaterial(connection(b), name)
+  -1 #@remote b CreateMaterial(name)
 
 # Blocks
 
 realize(b::ACAD, s::Block) =
-    ACADCreateBlockFromShapes(connection(b), s.name, collect_ref(s.shapes))
+    @remote b CreateBlockFromShapes(s.name, collect_ref(s.shapes))
 
 realize(b::ACAD, s::BlockInstance) =
     ACADCreateBlockInstance(
@@ -1093,10 +959,10 @@ acad"public Entity SpotLight(Point3d position, double hotspot, double falloff, P
 acad"public Entity IESLight(String webFile, Point3d position, Point3d target, Vector3d rotation)"
 
 backend_spotlight(b::ACAD, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
-    ACADSpotLight(connection(b), loc, hotspot, falloff, loc + dir)
+    @remote b SpotLight(loc, hotspot, falloff, loc + dir)
 
 backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::Real, gamma::Real) =
-    ACADIESLight(connection(b), file, loc, loc + dir, vxyz(alpha, beta, gamma))
+    @remote b IESLight(file, loc, loc + dir, vxyz(alpha, beta, gamma))
 
 # User Selection
 
@@ -1175,7 +1041,7 @@ In case we need to realize an Unknown shape, we just copy it
 =#
 
 realize(b::ACAD, s::Unknown) =
-    ACADCopy(connection(b), s.baseref)
+    @remote b Copy(s.baseref)
 
 
 acad"public Point3d[] GetPosition(string prompt)"
@@ -1183,7 +1049,7 @@ acad"public Point3d[] GetPosition(string prompt)"
 select_position(prompt::String, b::ACAD) =
   begin
     @info "$(prompt) on the $(b) backend."
-    let ans = ACADGetPosition(connection(b), prompt)
+    let ans = @remote b GetPosition(prompt)
       length(ans) > 0 ? ans[1] : nothing
     end
   end
@@ -1252,23 +1118,23 @@ acad"public long GetHandleFromShape(Entity e)"
 acad"public ObjectId GetShapeFromHandle(long h)"
 
 captured_shape(b::ACAD, handle) =
-  shape_from_ref(ACADGetShapeFromHandle(connection(b), handle),
+  shape_from_ref(@remote b GetShapeFromHandle(handle),
                  b)
 #
 captured_shapes(b::ACAD, handles) =
   map(handles) do handle
-      shape_from_ref(ACADGetShapeFromHandle(connection(b), handle),
+      shape_from_ref(@remote b GetShapeFromHandle(handle),
                      b)
   end
 
 generate_captured_shape(s::Shape, b::ACAD) =
-    println("captured_shape(autocad, $(ACADGetHandleFromShape(connection(b), ref(s).value)))")
+    println("captured_shape(autocad, $(@remote b GetHandleFromShape(ref(s).value)))")
 
 generate_captured_shapes(ss::Shapes, b::ACAD) =
   begin
     print("captured_shapes(autocad, [")
     for s in ss
-      print(ACADGetHandleFromShape(connection(b), ref(s).value))
+      print(@remote b GetHandleFromShape(ref(s).value))
       print(", ")
     end
     println("])")
@@ -1331,10 +1197,10 @@ all_shapes_in_layer(layer, b::ACAD) =
 
 acad"public void SelectShapes(ObjectId[] ids)"
 highlight_shape(s::Shape, b::ACAD) =
-    ACADSelectShapes(connection(b), collect_ref(s))
+    @remote b SelectShapes(collect_ref(s))
 
 highlight_shapes(ss::Shapes, b::ACAD) =
-    ACADSelectShapes(connection(b), collect_ref(ss))
+    @remote b SelectShapes(collect_ref(ss))
 
 
 
@@ -1353,7 +1219,7 @@ convert_render_exposure(b::ACAD, v::Real) = -4.05*v + 8.8
 convert_render_quality(b::ACAD, v::Real) = round(Int, 25.5 + 24.5*v)
 
 render_view(path::String, b::ACAD) =
-    ACADRender(connection(b),
+    @remote b Render(
                render_width(), render_height(),
                path,
                convert_render_quality(b, render_quality()),
@@ -1367,4 +1233,4 @@ mentalray_render_view(name::String) =
     end
 
 save_as(pathname::String, format::String, b::ACAD) =
-    ACADSaveAs(connection(b), pathname, format)
+    @remote b SaveAs(pathname, format)
