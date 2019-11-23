@@ -1164,7 +1164,7 @@ render_view(path::String, b::ACAD) =
 
 export mentalray_render_view
 mentalray_render_view(name::String) =
-    let conn = connection(current_backend())
+    let b = current_backend()
         @remote(b, SetSystemVariableInt("SKYSTATUS", 2)) # skystatus:background-and-illumination
         @remote(b, Command("._-render P _R $(render_width()) $(render_height()) _yes $(prepare_for_saving_file(render_pathname(name)))\n"))
     end
