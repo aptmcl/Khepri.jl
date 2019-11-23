@@ -1673,6 +1673,15 @@ struct SocketBackend{K,T} <: Backend{K,T}
   remote::NamedTuple
 end
 
+# To simplify remote calls
+macro remote(b, call)
+  let op = call.args[1],
+      args = map(esc, call.args[2:end]),
+      b = esc(b)
+    :(call_remote(getfield(getfield($(b), :remote), $(QuoteNode(op))), $(b).connection(), $(args...)))
+  end
+end
+
 SocketBackend{K,T}(c::LazyParameter{TCPSocket}) where {K,T} =
   SocketBackend{K,T}(c, NamedTuple{}())
 
