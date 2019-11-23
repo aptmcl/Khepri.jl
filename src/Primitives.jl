@@ -199,7 +199,7 @@ mutable struct RemoteFunction
   signature::Signature
   local_name::AbstractString
   remote_name::AbstractString
-  opcode::Int
+  opcode::Int32
   encoder::Function
   buffer::IOBuffer
 end
@@ -212,7 +212,7 @@ ensure_opcode(f::RemoteFunction, conn) =
     f.opcode = Int32(request_operation(conn, f.remote_name)) :
     f.opcode
 
-reset_opcode(f::RemoteFunction, conn) =
+reset_opcode(f::RemoteFunction) =
   f.opcode = -1
 
 call_remote(f::RemoteFunction, conn, args...) =
