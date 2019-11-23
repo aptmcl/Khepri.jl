@@ -217,6 +217,51 @@ public String MTextString(Entity ent)
 public Point3d MTextPosition(Entity ent)
 public double MTextHeight(Entity ent)
 public void SaveAs(String pathname, String format)
+public double[] CurveDomain(Entity ent)
+public double CurveLength(Entity ent)
+public Frame3d CurveFrameAt(Entity ent, double t)
+public Frame3d CurveFrameAtLength(Entity ent, double l)
+public Point3d[] CurvePointsAt(Entity ent, double[] ts)
+public Vector3d[] CurveTangentsAt(Entity ent, double[] ts)
+public Vector3d[] CurveNormalsAt(Entity ent, double[] ts)
+public Vector3d RegionNormal(Entity ent)
+public Point3d RegionCentroid(Entity ent)
+public double[] SurfaceDomain(Entity ent)
+public Frame3d SurfaceFrameAt(Entity ent, double u, double v)
+public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)
+public int[] PolygonMeshData(Entity e)
+public Point3dCollection MeshVertices(ObjectId id)
+public Entity SurfaceFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level)
+public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)
+public void DeleteAll()
+public void DeleteAllInLayer(ObjectId layerId)
+public void Delete(ObjectId id)
+public void DeleteMany(ObjectId[] ids)
+public Entity SpotLight(Point3d position, double hotspot, double falloff, Point3d target)
+public Entity IESLight(String webFile, Point3d position, Point3d target, Vector3d rotation)
+public Point3d[] GetPosition(string prompt)
+public ObjectId[] GetPoint(string prompt)
+public ObjectId[] GetPoints(string prompt)
+public ObjectId[] GetCurve(string prompt)
+public ObjectId[] GetCurves(string prompt)
+public ObjectId[] GetSurface(string prompt)
+public ObjectId[] GetSurfaces(string prompt)
+public ObjectId[] GetSolid(string prompt)
+public ObjectId[] GetSolids(string prompt)
+public ObjectId[] GetShape(string prompt)
+public ObjectId[] GetShapes(string prompt)
+public long GetHandleFromShape(Entity e)
+public ObjectId GetShapeFromHandle(long h)
+public void RegisterForChanges(ObjectId id)
+public void UnregisterForChanges(ObjectId id)
+public ObjectId[] ChangedShape()
+public void DetectCancel()
+public void UndetectCancel()
+public bool WasCanceled()
+public ObjectId[] GetAllShapes()
+public ObjectId[] GetAllShapesInLayer(ObjectId layerId)
+public void SelectShapes(ObjectId[] ids)
+public void Render(int width, int height, string path, int levels, double exposure)
 """
 
 abstract type ACADKey end
@@ -365,8 +410,7 @@ realize(b::ACAD, s::Polygon) =
 realize(b::ACAD, s::RegularPolygon) =
   @remote b ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::Rectangle) =
-  ACADClosedPolyLine(
-    connection(b),
+  @remote b ClosedPolyLine(
     [s.corner,
      add_x(s.corner, s.dx),
      add_xy(s.corner, s.dx, s.dy),
@@ -410,8 +454,7 @@ realize(b::ACAD, s::SurfacePolygon) =
 realize(b::ACAD, s::SurfaceRegularPolygon) =
   @remote b SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 realize(b::ACAD, s::SurfaceRectangle) =
-  ACADSurfaceClosedPolyLine(
-    connection(b),
+  @remote b SurfaceClosedPolyLine(
     [s.corner,
      add_x(s.corner, s.dx),
      add_xy(s.corner, s.dx, s.dy),
@@ -427,34 +470,25 @@ backend_surface_boundary(b::ACAD, s::Shape2D) =
 
 # Iterating over curves and surfaces
 
-acad"public double[] CurveDomain(Entity ent)"
-acad"public double CurveLength(Entity ent)"
-acad"public Frame3d CurveFrameAt(Entity ent, double t)"
-acad"public Frame3d CurveFrameAtLength(Entity ent, double l)"
 
 old_backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
-  let conn = connection(b),
-        r = ref(s).value,
-        (t1, t2) = ACADCurveDomain(conn, r)
+  let r = ref(s).value,
+      (t1, t2) = @remote b CurveDomain(r)
     map_division(t1, t2, n) do t
-      f(ACADCurveFrameAt(conn, r, t))
+      f(@remote b CurveFrameAt(r, t))
     end
   end
 
 # For low level access:
-acad"public Point3d[] CurvePointsAt(Entity ent, double[] ts)"
-acad"public Vector3d[] CurveTangentsAt(Entity ent, double[] ts)"
-acad"public Vector3d[] CurveNormalsAt(Entity ent, double[] ts)"
 
 backend_map_division(b::ACAD, f::Function, s::Shape1D, n::Int) =
-  let conn = connection(b),
-      r = ref(s).value,
-      (t1, t2) = ACADCurveDomain(conn, r),
+  let r = ref(s).value,
+      (t1, t2) = @remote b CurveDomain(r),
       ti = division(t1, t2, n),
-      ps = ACADCurvePointsAt(conn, r, ti),
-      ts = ACADCurveTangentsAt(conn, r, ti),
-      #ns = ACADCurveNormalsAt(conn, r, ti),
-      frames = rotation_minimizing_frames(ACADCurveFrameAt(conn, r, t1), ps, ts)
+      ps = @remote b CurvePointsAt(r, ti),
+      ts = @remote b CurveTangentsAt(r, ti),
+      #ns = @remote b CurveNormalsAt(r, ti),
+      frames = rotation_minimizing_frames(@remote b CurveFrameAt(r, t1), ps, ts)
     map(f, frames)
   end
 
@@ -486,10 +520,6 @@ rotation_minimizing_frames(u0, xs, ts) =
 
 #
 
-acad"public Vector3d RegionNormal(Entity ent)"
-acad"public Point3d RegionCentroid(Entity ent)"
-acad"public double[] SurfaceDomain(Entity ent)"
-acad"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
 
 backend_surface_domain(b::ACAD, s::Shape2D) =
     tuple(@remote b SurfaceDomain(ref(s).value)...)
@@ -497,37 +527,30 @@ backend_surface_domain(b::ACAD, s::Shape2D) =
 backend_map_division(b::ACAD, f::Function, s::Shape2D, nu::Int, nv::Int) =
     let conn = connection(b)
         r = ref(s).value
-        (u1, u2, v1, v2) = ACADSurfaceDomain(conn, r)
+        (u1, u2, v1, v2) = @remote b SurfaceDomain(r)
         map_division(u1, u2, nu) do u
             map_division(v1, v2, nv) do v
-                f(ACADSurfaceFrameAt(conn, r, u, v))
+                f(@remote b SurfaceFrameAt(r, u, v))
             end
         end
     end
 
 # The previous method cannot be applied to meshes in AutoCAD, which are created by surface_grid
 
-acad"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
-acad"public int[] PolygonMeshData(Entity e)"
-acad"public Point3dCollection MeshVertices(ObjectId id)"
-
-acad"public Entity SurfaceFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level)"
-acad"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
 
 backend_map_division(b::ACAD, f::Function, s::SurfaceGrid, nu::Int, nv::Int) =
 let conn = connection(b)
     r = ref(s).value
-    (u1, u2, v1, v2) = ACADSurfaceDomain(conn, r)
+    (u1, u2, v1, v2) = @remote b SurfaceDomain(r)
     map_division(u1, u2, nu) do u
         map_division(v1, v2, nv) do v
-            f(ACADSurfaceFrameAt(conn, r, u, v))
+            f(@remote b SurfaceFrameAt(r, u, v))
         end
     end
 end
 
 realize(b::ACAD, s::Text) =
-  ACADText(
-    connection(b),
+  @remote b Text(
     s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), s.height)
 
 realize(b::ACAD, s::Sphere) =
@@ -701,8 +724,7 @@ realize(b::ACAD, s::UnionMirror) =
   end
 
 realize(b::ACAD, s::SurfaceGrid) =
-    ACADSurfaceFromGrid(
-        connection(b),
+    @remote b SurfaceFromGrid(
         size(s.points,2),
         size(s.points,1),
         reshape(s.points,:),
@@ -753,7 +775,7 @@ backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
   let c = connection(b)
-      slab(profile) = map_ref(b, r->ACADExtrude(c, r, vz(thickness)),
+      slab(profile) = map_ref(b, r -> @remote b Extrude(c, r, vz(thickness)),
                               ensure_ref(b, backend_fill(b, profile)))
       main_body = slab(profile)
       holes_bodies = map(slab, holes)
@@ -792,57 +814,7 @@ realize(b::ACAD, s::Column) =
     end
 
 backend_wall(b::ACAD, path, height, thickness, family) =
-    let conn = connection(b)
-        ACADThicken(conn,
-                    ACADExtrude(conn,
-                                backend_stroke(b, path),
-                                vz(height)),
-                    thickness)
-    end
-#=
-backend_wall(b::ACAD, path, height, thickness) =
-    let conn = connection(b)
-        ACADSweep(conn,
-                  backend_stroke(b, path),
-                  ACADPolyLine(conn, [xy(thickness/-2,0), xy(thickness/+2,0)]),
-                  0,
-                  1)
-    end
-=#
-###
-#=
-sweep_fractions(conn, b, verts, thickness) =
-    begin
-        ACADSweep(conn,
-                  ACADPolyLine(conn, verts[1:2]),
-                  ACADPolyLine(conn, [xy(thickness/-2,0), xy(thickness/+2,0)]),
-                  0,
-                  1)
-        if verts.length >= 2
-            sweep_fractions(conn, b, verts[1:end], thickness)
-        end
-    end
-
-#
-sweep_fractions(b, verts, thickness) =
-    let p = verts[1]
-        q = verts[2]
-        o = loc_from_o_phi(p, pol_phi(q-p))
-        if length(verts) == 2
-            stroke(rectangular_path(add_y(o, thickness/-2), distance(p, q), thickness), b)
-        else
-            sweep_fractions(b, verts[2:end], thickness)
-        end
-    end
-
-backend_wall(b::ACAD, path, height, thickness) =
-    backend_wall_path(b, path, height, thickness)
-
-backend_wall_path(b::ACAD, path::RectangularPath, height, thickness) =
-    stroke(path, b)
-backend_wall_path(b::ACAD, path::OpenPolygonalPath, height, thickness) =
-    sweep_fractions(b, path.vertices, thickness)
-=#
+  @remote b Thicken(@remote b Extrude(backend_stroke(b, path), vz(height)), thickness)
 
 ############################################
 
@@ -853,25 +825,19 @@ set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
   @remote b View(camera, target, lens)
 
 get_view(b::ACAD) =
-  let c = connection(b)
-    ACADViewCamera(c), ACADViewTarget(c), ACADViewLens(c)
-  end
+  @remote b ViewCamera(c), @remote b ViewTarget(c), @remote b ViewLens(c)
 
-zoom_extents(b::ACAD) = ACADZoomExtents(connection(b))
+zoom_extents(b::ACAD) = @remote b ZoomExtents()
 
-view_top(b::ACAD) = ACADViewTop(connection(b))
+view_top(b::ACAD) = @remote b ViewTop()
 
 
-acad"public void DeleteAll()"
-acad"public void DeleteAllInLayer(ObjectId layerId)"
-acad"public void Delete(ObjectId id)"
-acad"public void DeleteMany(ObjectId[] ids)"
 
 backend_delete_shapes(b::ACAD, shapes::Shapes) =
   @remote b DeleteMany(collect_ref(shapes))
 
 delete_all_shapes(b::ACAD) =
-  ACADDeleteAll(connection(b))
+  @remote b DeleteAll()
 
 set_length_unit(unit::String, b::ACAD) = @remote b SetLengthUnit(unit)
 
@@ -894,7 +860,7 @@ dimension(p0::Loc, p1::Loc, sep::Real, scale::Real, style::Symbol, b::ACAD=curre
 ACADLayer = Int
 
 current_layer(b::ACAD)::ACADLayer =
-  ACADCurrentLayer(connection(b))
+  @remote b CurrentLayer()
 
 current_layer(layer::ACADLayer, b::ACAD) =
   @remote b SetCurrentLayer(layer)
@@ -922,7 +888,7 @@ switch_to_layer(to, b::ACAD) =
 ACADMaterial = Int
 
 current_material(b::ACAD)::ACADMaterial =
-  -1 #ACADCurrentMaterial(connection(b))
+  -1 #@remote b CurrentMaterial()
 
 current_material(material::ACADMaterial, b::ACAD) =
   -1 #@remote b SetCurrentMaterial(material)
@@ -936,8 +902,7 @@ realize(b::ACAD, s::Block) =
     @remote b CreateBlockFromShapes(s.name, collect_ref(s.shapes))
 
 realize(b::ACAD, s::BlockInstance) =
-    ACADCreateBlockInstance(
-        connection(b),
+    @remote b CreateBlockInstance(
         collect_ref(s.block)[1],
         center_scaled_cs(s.loc, s.scale, s.scale, s.scale))
 
@@ -955,8 +920,6 @@ Khepri.create_block("Foo", [circle(radius=r) for r in 1:10])
 =#
 
 # Lights
-acad"public Entity SpotLight(Point3d position, double hotspot, double falloff, Point3d target)"
-acad"public Entity IESLight(String webFile, Point3d position, Point3d target, Vector3d rotation)"
 
 backend_spotlight(b::ACAD, loc::Loc, dir::Vec, hotspot::Real, falloff::Real) =
     @remote b SpotLight(loc, hotspot, falloff, loc + dir)
@@ -968,65 +931,65 @@ backend_ieslight(b::ACAD, file::String, loc::Loc, dir::Vec, alpha::Real, beta::R
 
 shape_from_ref(r, b::ACAD) =
     let c = connection(b),
-        code = ACADShapeCode(c, r),
+        code = @remote b ShapeCode(r),
         ref = LazyRef(b, ACADNativeRef(r))
         if code == 1 # Point
-            point(ACADPointPosition(c, r),
+            point(@remote b PointPosition(r),
                   backend=b, ref=ref)
         elseif code == 2
-            circle(maybe_loc_from_o_vz(ACADCircleCenter(c, r), ACADCircleNormal(c, r)),
-                   ACADCircleRadius(c, r),
+            circle(maybe_loc_from_o_vz(@remote b CircleCenter(r), @remote b CircleNormal(r)),
+                   @remote b CircleRadius(r),
                    backend=b, ref=ref)
         elseif 3 <= code <= 6
-            line(ACADLineVertices(c, r),
+            line(@remote b LineVertices(r),
                  backend=b, ref=ref)
         elseif code == 7
-            let tans = ACADSplineTangents(c, r)
+            let tans = @remote b SplineTangents(r)
                 if length(tans[1]) < 1e-20 && length(tans[2]) < 1e-20
-                    closed_spline(ACADSplineInterpPoints(c, r)[1:end-1],
+                    closed_spline(@remote b SplineInterpPoints(r)[1:end-1],
                                   backend=b, ref=ref)
                 else
-                    spline(ACADSplineInterpPoints(c, r), tans[1], tans[2],
+                    spline(@remote b SplineInterpPoints(r), tans[1], tans[2],
                            backend=b, ref=ref)
                 end
             end
         elseif code == 9
-            let start_angle = mod(ACADArcStartAngle(c, r), 2pi),
-                end_angle = mod(ACADArcEndAngle(c, r), 2pi)
+            let start_angle = mod(@remote b ArcStartAngle(r), 2pi),
+                end_angle = mod(@remote b ArcEndAngle(r), 2pi)
                 if end_angle > start_angle
-                    arc(maybe_loc_from_o_vz(ACADArcCenter(c, r), ACADArcNormal(c, r)),
-                        ACADArcRadius(c, r), start_angle, end_angle - start_angle,
+                    arc(maybe_loc_from_o_vz(@remote b ArcCenter(r), @remote b ArcNormal(r)),
+                        @remote b ArcRadius(r), start_angle, end_angle - start_angle,
                         backend=b, ref=ref)
                 else
-                    arc(maybe_loc_from_o_vz(ACADArcCenter(c, r), ACADArcNormal(c, r)),
-                        ACADArcRadius(c, r), end_angle, start_angle - end_angle,
+                    arc(maybe_loc_from_o_vz(@remote b ArcCenter(r), @remote b ArcNormal(r)),
+                        @remote b ArcRadius(r), end_angle, start_angle - end_angle,
                         backend=b, ref=ref)
                 end
             end
         elseif code == 10
-            let str = ACADTextString(c, r),
-                height = ACADTextHeight(c, r),
-                loc = ACADTextPosition(c, r)
+            let str = @remote b TextString(r),
+                height = @remote b TextHeight(r),
+                loc = @remote b TextPosition(r)
                 text(str, loc, height, backend=b, ref=ref)
             end
         elseif code == 11
-            let str = ACADMTextString(c, r),
-                height = ACADMTextHeight(c, r),
-                loc = ACADMTextPosition(c, r)
+            let str = @remote b MTextString(r),
+                height = @remote b MTextHeight(r),
+                loc = @remote b MTextPosition(r)
                 text(str, loc, height, backend=b, ref=ref)
             end
         elseif code == 16
-            let pts = ACADMeshVertices(c, r),
-                (type, n, m, n_closed, m_closed) = ACADPolygonMeshData(c, r)
+            let pts = @remote b MeshVertices(r),
+                (type, n, m, n_closed, m_closed) = @remote b PolygonMeshData(r)
                 surface_grid(reshape(pts, (n, m)), n_closed == 1, m_closed == 1, ref=ref)
             end
         elseif 12 <= code <= 14
             surface(Shapes1D[], backend=b, ref=ref)
         elseif 103 <= code <= 106
-            polygon(ACADLineVertices(c, r),
+            polygon(@remote b LineVertices(r),
                     backend=b, ref=ref)
         elseif code == 107
-            closed_spline(ACADSplineInterpPoints(c, r)[1:end-1],
+            closed_spline(@remote b SplineInterpPoints(r)[1:end-1],
                           backend=b, ref=ref)
         else
             #unknown(backend=b, ref=ref)
@@ -1044,7 +1007,6 @@ realize(b::ACAD, s::Unknown) =
     @remote b Copy(s.baseref)
 
 
-acad"public Point3d[] GetPosition(string prompt)"
 
 select_position(prompt::String, b::ACAD) =
   begin
@@ -1066,65 +1028,49 @@ select_positions(prompt::String, b::ACAD) =
     sel()
   end
 
-acad"public ObjectId[] GetPoint(string prompt)"
-acad"public ObjectId[] GetPoints(string prompt)"
 
 # HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
 
 select_point(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, ACADGetPoint)
+  select_one_with_prompt(prompt, b, @get_remote GetPoint)
 
 select_points(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, ACADGetPoints)
-
-acad"public ObjectId[] GetCurve(string prompt)"
-acad"public ObjectId[] GetCurves(string prompt)"
+  select_many_with_prompt(prompt, b, @get_remote GetPoints)
 
 select_curve(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, ACADGetCurve)
+  select_one_with_prompt(prompt, b, @get_remote GetCurve)
 
 select_curves(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, ACADGetCurves)
+  select_many_with_prompt(prompt, b, @get_remote GetCurves)
 
-acad"public ObjectId[] GetSurface(string prompt)"
-acad"public ObjectId[] GetSurfaces(string prompt)"
 
 select_surface(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, ACADGetSurface)
+  select_one_with_prompt(prompt, b, @get_remote GetSurface)
 
 select_surfaces(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, ACADGetSurfaces)
+  select_many_with_prompt(prompt, b, @get_remote GetSurfaces)
 
-acad"public ObjectId[] GetSolid(string prompt)"
-acad"public ObjectId[] GetSolids(string prompt)"
 
 select_solid(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, ACADGetSolid)
+  select_one_with_prompt(prompt, b, @get_remote GetSolid)
 
 select_solids(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, ACADGetSolids)
+  select_many_with_prompt(prompt, b, @get_remote GetSolids)
 
-acad"public ObjectId[] GetShape(string prompt)"
-acad"public ObjectId[] GetShapes(string prompt)"
 
 select_shape(prompt::String, b::ACAD) =
-  select_one_with_prompt(prompt, b, ACADGetShape)
+  select_one_with_prompt(prompt, b, @get_remote GetShape)
 
 select_shapes(prompt::String, b::ACAD) =
-  select_many_with_prompt(prompt, b, ACADGetShapes)
+  select_many_with_prompt(prompt, b, @get_remote GetShapes)
 
-
-acad"public long GetHandleFromShape(Entity e)"
-acad"public ObjectId GetShapeFromHandle(long h)"
 
 captured_shape(b::ACAD, handle) =
-  shape_from_ref(@remote b GetShapeFromHandle(handle),
-                 b)
+  shape_from_ref(@remote b GetShapeFromHandle(handle), b)
 #
 captured_shapes(b::ACAD, handles) =
   map(handles) do handle
-      shape_from_ref(@remote b GetShapeFromHandle(handle),
-                     b)
+      shape_from_ref(@remote b GetShapeFromHandle(handle), b)
   end
 
 generate_captured_shape(s::Shape, b::ACAD) =
@@ -1142,35 +1088,29 @@ generate_captured_shapes(ss::Shapes, b::ACAD) =
 
 # Register for notification
 
-acad"public void RegisterForChanges(ObjectId id)"
-acad"public void UnregisterForChanges(ObjectId id)"
-acad"public ObjectId[] ChangedShape()"
-acad"public void DetectCancel()"
-acad"public void UndetectCancel()"
-acad"public bool WasCanceled()"
 
 register_for_changes(s::Shape, b::ACAD) =
     let conn = connection(b)
-        ACADRegisterForChanges(conn, ref(s).value)
-        ACADDetectCancel(conn)
+        @remote b RegisterForChanges(ref(s).value)
+        @remote b DetectCancel()
         s
     end
 
 unregister_for_changes(s::Shape, b::ACAD) =
     let conn = connection(b)
-        ACADUnregisterForChanges(conn, ref(s).value)
-        ACADUndetectCancel(conn)
+        @remote b UnregisterForChanges(ref(s).value)
+        @remote b UndetectCancel()
         s
     end
 
 waiting_for_changes(s::Shape, b::ACAD) =
-    ! ACADWasCanceled(connection(b))
+    ! @remote b WasCanceled()
 
 changed_shape(ss::Shapes, b::ACAD) =
     let conn = connection(b)
         changed = []
-        while length(changed) == 0 && ! ACADWasCanceled(conn)
-            changed =  ACADChangedShape(conn)
+        while length(changed) == 0 && ! @remote b WasCanceled()
+            changed =  @remote b ChangedShape()
             sleep(0.1)
         end
         if length(changed) > 0
@@ -1180,22 +1120,19 @@ changed_shape(ss::Shapes, b::ACAD) =
         end
     end
 
-acad"public ObjectId[] GetAllShapes()"
-acad"public ObjectId[] GetAllShapesInLayer(ObjectId layerId)"
 
 # HACK: This should be filtered on the plugin, not here.
 all_shapes(b::ACAD) =
     let c = connection(b)
         Shape[shape_from_ref(r, b)
-              for r in filter(r -> ACADShapeCode(c, r) != 0, ACADGetAllShapes(c))]
+              for r in filter(r -> @remote b ShapeCode(r) != 0, @remote b GetAllShapes())]
     end
 
 all_shapes_in_layer(layer, b::ACAD) =
     let c = connection(b)
-        Shape[shape_from_ref(r, b) for r in ACADGetAllShapesInLayer(c, layer)]
+        Shape[shape_from_ref(r, b) for r in @remote b GetAllShapesInLayer(layer)]
     end
 
-acad"public void SelectShapes(ObjectId[] ids)"
 highlight_shape(s::Shape, b::ACAD) =
     @remote b SelectShapes(collect_ref(s))
 
@@ -1206,13 +1143,13 @@ highlight_shapes(ss::Shapes, b::ACAD) =
 
 
 disable_update(b::ACAD) =
-    ACADDisableUpdate(connection(b))
+    @remote b DisableUpdate()
 
 enable_update(b::ACAD) =
-    ACADEnableUpdate(connection(b))
+    @remote b EnableUpdate()
+
 # Render
 
-acad"public void Render(int width, int height, string path, int levels, double exposure)"
 #render exposure: [-3, +3] -> [-6, 21]
 convert_render_exposure(b::ACAD, v::Real) = -4.05*v + 8.8
 #render quality: [-1, +1] -> [+1, +50]
@@ -1228,8 +1165,8 @@ render_view(path::String, b::ACAD) =
 export mentalray_render_view
 mentalray_render_view(name::String) =
     let conn = connection(current_backend())
-        ACADSetSystemVariableInt(conn,"SKYSTATUS", 2) # skystatus:background-and-illumination
-        ACADCommand(conn, "._-render P _R $(render_width()) $(render_height()) _yes $(prepare_for_saving_file(render_pathname(name)))\n")
+        @remote b SetSystemVariableInt("SKYSTATUS", 2) # skystatus:background-and-illumination
+        @remote b Command("._-render P _R $(render_width()) $(render_height()) _yes $(prepare_for_saving_file(render_pathname(name)))\n")
     end
 
 save_as(pathname::String, format::String, b::ACAD) =
