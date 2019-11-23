@@ -1670,6 +1670,7 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
 #We start with socket-based communication
 struct SocketBackend{K,T} <: Backend{K,T}
   connection::LazyParameter{TCPSocket}
+  remote::NamedTuple
 end
 
 connection(b::SocketBackend{K,T}) where {K,T} = b.connection()
