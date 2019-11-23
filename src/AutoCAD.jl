@@ -553,7 +553,7 @@ realize(b::ACAD, s::Text) =
     s.str, s.corner, vx(1, s.corner.cs), vy(1, s.corner.cs), s.height))
 
 realize(b::ACAD, s::Sphere) =
-  @remote(b, Sphere(s.center, s.radius)))
+  @remote(b, Sphere(s.center, s.radius))
 
 realize(b::ACAD, s::Torus) =
   @remote(b, Torus(s.center, vz(1, s.center.cs), s.re, s.ri))
