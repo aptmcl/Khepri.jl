@@ -864,6 +864,15 @@ delete_all_shapes_in_layer(layer::UnityLayer, b::Unity) =
 switch_to_layer(layer::UnityLayer, b::Unity) =
   UnitySwitchToParent(connection(b), layer)
 
+# To preserve interactiveness during background
+unity"public void SetMaxNonInteractiveRequests(int n)"
+
+preserving_interactiveness(f, b::Unity=current_backend()) =
+  let prev = UnitySetMaxNonInteractiveRequests(connection(b), 1)
+    f()
+    UnitySetMaxNonInteractiveRequests(connection(b), prev)
+  end
+
 # Experiment to speed up things
 
 canonicalize_layer(layer::UnityLayer, b::Unity) =
