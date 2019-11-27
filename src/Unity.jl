@@ -865,10 +865,10 @@ switch_to_layer(layer::UnityLayer, b::Unity) =
   UnitySwitchToParent(connection(b), layer)
 
 # To preserve interactiveness during background
-unity"public void SetMaxNonInteractiveRequests(int n)"
+unity"public int SetMaxNonInteractiveRequests(int n)"
 
 preserving_interactiveness(f, b::Unity=current_backend()) =
-  let prev = UnitySetMaxNonInteractiveRequests(connection(b), 1)
+  let prev = UnitySetMaxNonInteractiveRequests(connection(b), 0)
     f()
     UnitySetMaxNonInteractiveRequests(connection(b), prev)
   end
