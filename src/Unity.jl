@@ -736,10 +736,10 @@ backend_wall(b::Unity, path, height, thickness, family) =
           thickness)
     end
 
-backend_wall_path(b::Unity, path::PolygonalPath, height, thickness) =
+backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
     UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
 
-backend_wall_path(b::Unity, path::RectangularPath, height, thickness) =
+backend_wall_path(b::Unity, path::Path, height, thickness) =
     backend_wall_path(b, convert(OpenPolygonalPath, path), height, thickness)
 
 
