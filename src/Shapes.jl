@@ -1445,7 +1445,7 @@ realize(b::Backend, s::CurtainWall) =
     let n = s.family.n_curtain_panels
       for i in 1:n-1
         l = path_length/n*i
-        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bfw, height-2*bfw, mfd, :mullion_frame))
+        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
       end
     end
     [ensure_ref(b,r) for r in refs]
