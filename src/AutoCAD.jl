@@ -80,18 +80,6 @@ check_plugin() =
     end
   end
 
-
-#app = AutoCAD()
-#doc = app.ActiveDocument
-#doc.SendCommand("(command "._NETLOAD" "{0}") ".format(join(dirname(dirname(abspath(__file__))),
-#                                                      "Khepri", "KhepriAutoCAD", "KhepriAutoCAD", "bin", "x64", "Debug", "KhepriAutoCAD.dll")).replace("\\","/"))
-#db = doc.ModelSpace
-#util = doc.Utility
-
-macro acad_str(str)
-    rpc("ACAD", str)
-end
-
 # We need some additional Encoders
 encode_Entity = encode_int
 decode_Entity = decode_int_or_error
@@ -100,7 +88,7 @@ decode_ObjectId = decode_int_or_error
 encode_ObjectId_array = encode_int_array
 decode_ObjectId_array = decode_int_array
 
-acad_functions = @remote_functions :CS """
+acad_api = @remote_functions :CS """
 public void SetLengthUnit(String unit)
 public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)
 public void View(Point3d position, Point3d target, double lens)
@@ -284,7 +272,7 @@ create_ACAD_connection() =
         create_backend_connection("AutoCAD", 11000)
     end
 
-const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection), acad_functions)
+const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection), acad_api)
 
 backend_name(b::ACAD) = "AutoCAD"
 
