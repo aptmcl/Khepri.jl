@@ -225,11 +225,12 @@ location_at_length(path::ClosedPolygonalPath, d::Real) =
 subpath(path::CircularPath, a::Real, b::Real) =
     arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
 subpath(path::ArcPath, a::Real, b::Real) =
-  let Δα = (b - a)/path.radius
-    a/path.radius + Δα <= path.start_angle + path.amplitude + path_tolerance() ?
-      arc_path(path.center, path.radius, a/path.radius + path.start_angle, Δα) :
-      error("Exceeded path length by ", path.start_angle + path.amplitude - a/path.radius - Δα)
-  end
+  b <= path_length(path) + path_tolerance() ?
+      arc_path(path.center,
+               path.radius,
+               path.start_angle + a/path.radius*sign(path.amplitude),
+               (b - a)/path.radius*sign(path.amplitude)) :
+    error("Exceeded path length by ", path.amplitude - b/path.radius)
 subpath(path::RectangularPath, a::Real, b::Real) =
     subpath(convert(ClosedPolygonalPath, path), a, b)
 subpath(path::ClosedPolygonalPath, a::Real, b::Real) =
@@ -561,7 +562,9 @@ convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
 convert(::Type{OpenPolygonalPath}, path::ArcPath) =
   let c = path.center,
       r = path.radius
-    open_polygonal_path([c + vpol(r, phi) for phi in division(path.start_angle, path.amplitude, 32, true)])
+    open_polygonal_path(
+      [c + vpol(r, phi)
+       for phi in division(path.start_angle, path.start_angle + path.amplitude, 32, true)])
   end
 convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
   open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
