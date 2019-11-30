@@ -209,6 +209,9 @@ backend_stroke(b::RH, path::RectangularPath) =
         dy = path.dy
         RHClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
+backend_stroke(b::RH, path::ArcPath) =
+  backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
+
 backend_stroke(b::RH, path::OpenPolygonalPath) =
   	RHPolyLine(connection(b), path.vertices)
 backend_stroke(b::RH, path::ClosedPolygonalPath) =
