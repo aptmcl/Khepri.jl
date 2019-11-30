@@ -798,8 +798,9 @@ realize(b::ACAD, s::Column) =
       @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, height))
     end
 
-backend_wall(b::ACAD, path, height, thickness, family) =
-  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), thickness))
+backend_wall(b::ACAD, path, height, r_thickness, l_thickness, family) =
+  #HACK: The thickness is wrong!!!!
+  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness + l_thickness))
 
 ############################################
 

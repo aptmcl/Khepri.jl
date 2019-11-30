@@ -1310,50 +1310,42 @@ realize_wall_no_openings(b::Backend, w::Wall) =
   let w_base_height = w.bottom_level.height,
       w_height = w.top_level.height - w_base_height,
       w_path = translate(w.path, vz(w_base_height)),
-      w_thickness = w.family.thickness
-    ensure_ref(b, backend_wall(b, w_path, w_height, w_thickness, w.family))
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w)
+    ensure_ref(b, backend_wall(b, w_path, w_height, r_thickness, l_thickness, w.family))
   end
 
 realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
   let w_base_height = w.bottom_level.height,
       w_height = w.top_level.height - w_base_height,
       w_path = translate(w.path, vz(w_base_height)),
-      w_thickness = w.family.thickness
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w)
     for opening in openings
-      w_ref = realize_wall_opening(b, w_ref, w_path, w_thickness, opening, w.family)
+      w_ref = realize_wall_opening(b, w_ref, w_path, r_thickness, l_thickness, opening, w.family)
       ref(opening)
     end
     w_ref
   end
 
-realize_wall_opening(b::Backend, w_ref, w_path, w_thickness, op, family) =
+realize_wall_opening(b::Backend, w_ref, w_path, r_thickness, l_thickness, op, family) =
   let op_base_height = op.loc.y,
       op_height = op.family.height,
-      op_thickness = op.family.thickness,
       op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, w_thickness*1.1, family))
+      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, r_thickness, l_thickness, family))
     ensure_ref(b, subtract_ref(b, w_ref, op_ref))
   end
 
-realize(b::Backend, s::Door) =
+realize(b::Backend, s::Union{Door, Window}) =
   let base_height = s.wall.bottom_level.height + s.loc.y,
       height = s.family.height,
       subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
-      backend_door(b, subpath, height, s.family.thickness, s.family)
+      backend_wall_element(b, s, subpath, height, s.family.thickness, s.family)
   end
 
-backend_door(b::Backend, path, height, thickness, family) =
-  # we emulate a door using a small wall
-  backend_wall(b::Backend, path, height, thickness, family)
-
-
-realize(b::Backend, s::Window) =
-  let base_height = s.wall.bottom_level.height + s.loc.y,
-      height = s.family.height,
-      subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
-      # we emulate a window using a small wall
-      backend_wall(b, subpath, height, s.family.thickness, s.family)
-  end
+backend_wall_element(b::Backend, s::Union{Door, Window}, path, height, thickness, family) =
+  # we emulate doors and windows using a small wall
+  backend_wall(b::Backend, path, height, thickness/2, thickness/2, family)
 
 ##
 
@@ -1452,7 +1444,7 @@ realize(b::Backend, s::CurtainWall) =
   end
 
 backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
-  backend_wall(b, translate(path, vz(bottom)), height, thickness, getproperty(s.family, kind))
+  backend_wall(b, translate(path, vz(bottom)), height, thickness/2, thickness/2, getproperty(s.family, kind))
 
 #
 # We need to redefine the default method (maybe add an option to the macro to avoid defining the meta_program)

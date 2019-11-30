@@ -152,7 +152,7 @@ rhino"public Entity SurfaceLightweightPolyLine(Point2d[] pts, double[] angles, d
 rhino"public ObjectId CreatePathFloor(Point2d[] pts, double[] angles, BIMLevel level, FloorFamily family)"
 =#
 rhino"public Guid ClosedPathCurveArray(Point3d[] pts, double[] angles)"
-rhino"public Brep[] PathWall(RhinoObject obj, double thickness, double height)"
+rhino"public Brep[] PathWall(RhinoObject obj, double rThickness, double lThickness, double height)"
 rhino"public Brep RectangularTable(Point3d c, double angle, double length, double width, double height, double top_thickness, double leg_thickness)"
 
 
@@ -654,8 +654,8 @@ realize(b::RH, s::Column) =
     RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height)
   end
 
-backend_wall(b::RH, path, height, thickness, family) =
-    RHPathWall(connection(b), backend_stroke(b, path), thickness, height)
+backend_wall(b::RH, path, height, r_thickness, l_thickness, family) =
+    RHPathWall(connection(b), backend_stroke(b, path), r_thickness, l_thickness, height)
 
 ############################################
 

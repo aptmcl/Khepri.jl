@@ -712,19 +712,20 @@ realize(b::Unity, s::Panel) =
       realize(b, s.family)))
   end
 
-sweep_fractions(b, verts, height, thickness) =
+sweep_fractions(b, verts, height, r_thickness, l_thickness) =
   let p = add_z(verts[1], height/2),
       q = add_z(verts[2], height/2),
       (c, h) = position_and_height(p, q),
+      thickness = r_thickness + l_thickness, # HACK THIS IS WRONG!
       s = UnityNativeRef(@remote(b, RightCuboid(c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0)))
     if length(verts) > 2
-      (s, sweep_fractions(b, verts[2:end], height, thickness)...)
+      (s, sweep_fractions(b, verts[2:end], height, r_thickness, l_thickness)...)
     else
       (s, )
     end
   end
 
-backend_wall(b::Unity, path, height, thickness, family) =
+backend_wall(b::Unity, path, height, r_thickness, l_thickness, family) =
   path_length(path) < path_tolerance() ?
     UnityEmptyRef() :
     begin
@@ -733,14 +734,14 @@ backend_wall(b::Unity, path, height, thickness, family) =
           b,
           path,
           height*0.999, #We reduce height just a bit to avoid Z-fighting
-          thickness)
+          r_thickness, l_thickness)
     end
 
-backend_wall_path(b::Unity, path::OpenPolygonalPath, height, thickness) =
-    UnityUnionRef(sweep_fractions(b, path.vertices, height, thickness))
+backend_wall_path(b::Unity, path::OpenPolygonalPath, height, r_thickness, l_thickness) =
+    UnityUnionRef(sweep_fractions(b, path.vertices, height, r_thickness, l_thickness))
 
-backend_wall_path(b::Unity, path::Path, height, thickness) =
-    backend_wall_path(b, convert(OpenPolygonalPath, path), height, thickness)
+backend_wall_path(b::Unity, path::Path, height, r_thickness, l_thickness) =
+    backend_wall_path(b, convert(OpenPolygonalPath, path), height, r_thickness, l_thickness)
 
 
 #=
@@ -815,9 +816,6 @@ set_backend_family(default_curtain_wall_family().transom_frame,
 set_backend_family(default_curtain_wall_family().mullion_frame,
   unity,
   unity_material_family("Materials/Metal/Steel"))
-
-backend_curtain_wall(b::Unity, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
-  backend_wall(b, translate(path, vz(bottom)), height, thickness, getproperty(s.family, kind))
 
 ############################################
 #=
