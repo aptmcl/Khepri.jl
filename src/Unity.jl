@@ -645,6 +645,12 @@ set_backend_family(default_table_family(), unity, unity_resource_family("Prefabs
 set_backend_family(default_chair_family(), unity, unity_resource_family("Prefabs/Chairs/ModernChair/ModernChair"))
 set_backend_family(default_table_chair_family(), unity, unity_resource_family("Prefabs/TablesChairs/ModernTableChair/ModernTableChair"))
 
+set_backend_family(default_curtain_wall_family().panel, unity, unity_material_family("Materials/Glass/GlassBlue"))
+set_backend_family(default_curtain_wall_family().boundary_frame, unity, unity_material_family("Materials/Metal/Steel"))
+set_backend_family(default_curtain_wall_family().transom_frame, unity, unity_material_family("Materials/Metal/Steel"))
+set_backend_family(default_curtain_wall_family().mullion_frame, unity, unity_material_family("Materials/Metal/Steel"))
+
+
 backend_rectangular_table(b::Unity, c, angle, family) =
     @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
 
@@ -655,13 +661,10 @@ backend_rectangular_table_and_chairs(b::Khepri.Unity, c, angle, family) =
     @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
 
 
-
 backend_slab(b::Unity, profile, holes, thickness, family) =
   let bot_vs = path_vertices(profile)
     @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, realize(b, family)))
   end
-
-
 
 
 realize(b::Unity, s::Beam) =
@@ -696,8 +699,6 @@ realize(b::Unity, s::Column) =
         c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, height, -s.angle,
         realize(b, s.family)))
     end
-
-
 
 realize(b::Unity, s::Panel) =
   let #p1 = s.vertices[1],
@@ -742,80 +743,6 @@ backend_wall_path(b::Unity, path::OpenPolygonalPath, height, l_thickness, r_thic
 
 backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
     backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
-
-
-#=
-realize(b::Radiance, w::Wall) =
-  let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w),
-      w_path = translate(w.path, vz(w_base_height)),
-      w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      openings = [w.doors..., w.windows...],
-      prevlength = 0
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let currlength = prevlength + path_length(w_seg_path),
-          c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, w, "wall", c_l_w_path, c_r_w_path, false)
-        openings = filter(openings) do op
-          if prevlength <= op.loc.x < currlength ||
-             prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
-            let op_height = op.family.height,
-                op_at_start = op.loc.x <= prevlength,
-                op_at_end = op.loc.x + op.family.width >= currlength,
-                op_path = subpath(w_path,
-                                  max(prevlength, op.loc.x),
-                                  min(currlength, op.loc.x + op.family.width)),
-                r_op_path = offset(op_path, r_thickness),
-                l_op_path = offset(op_path, l_thickness),
-                fixed_r_op_path =
-                  open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
-                                       path_end(op_at_end ? r_w_path : r_op_path)]),
-                fixed_l_op_path =
-                  open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
-                                       path_end(op_at_end ? l_w_path : l_op_path)]),
-                c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
-                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
-                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              realize_pyramid_fustrum(b, w, "wall", c_r_op_path, c_l_op_path, false)
-              c_r_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
-              c_l_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
-              # preserve if not totally contained
-              ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
-            end
-          else
-            true
-          end
-        end
-        prevlength = currlength
-        realize_polygon(b, w, "wall", c_l_w_path, false)
-        realize_polygon(b, w, "wall", c_r_w_path, true)
-      end
-    end
-    void_ref(b)
-  end
-=#
-
-set_backend_family(default_curtain_wall_family().panel,
-  unity,
-  unity_material_family("Materials/Glass/GlassBlue"))
-set_backend_family(default_curtain_wall_family().boundary_frame,
-  unity,
-  unity_material_family("Materials/Metal/Steel"))
-set_backend_family(default_curtain_wall_family().transom_frame,
-  unity,
-  unity_material_family("Materials/Metal/Steel"))
-set_backend_family(default_curtain_wall_family().mullion_frame,
-  unity,
-  unity_material_family("Materials/Metal/Steel"))
 
 ############################################
 #=
