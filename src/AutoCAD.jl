@@ -276,6 +276,35 @@ const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection), acad_api)
 
 backend_name(b::ACAD) = "AutoCAD"
 
+#=
+
+Default families
+
+=#
+
+
+abstract type ACADFamily <: Family end
+
+struct ACADLayerFamily <: ACADFamily
+  name::String
+  ref::Parameter{Any}
+end
+
+acad_layer_family(name, pairs...) = ACADLayerFamily(name, Parameter{Any}(nothing))
+backend_get_family_ref(b::ACAD, f::Family, af::ACADLayerFamily) = @remote(b, CreateLayer(af.name))
+
+set_backend_family(default_wall_family(), autocad, acad_layer_family("Walls"))
+set_backend_family(default_slab_family(), autocad, acad_layer_family("Slabs"))
+set_backend_family(default_roof_family(), autocad, acad_layer_family("Roofs"))
+set_backend_family(default_beam_family(), autocad, acad_layer_family("Beams"))
+set_backend_family(default_column_family(), autocad, acad_layer_family("Columns"))
+set_backend_family(default_door_family(), autocad, acad_layer_family("Doors"))
+set_backend_family(default_panel_family(), autocad, acad_layer_family("Panels"))
+
+set_backend_family(default_table_family(), autocad, acad_layer_family("Tables"))
+set_backend_family(default_chair_family(), autocad, acad_layer_family("Chairs"))
+set_backend_family(default_table_chair_family(), autocad, acad_layer_family("TablesChairs"))
+
 #current_backend(autocad)
 
 
@@ -800,7 +829,9 @@ realize(b::ACAD, s::Column) =
 
 backend_wall(b::ACAD, path, height, r_thickness, l_thickness, family) =
   #HACK: The thickness is wrong!!!!
-  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness + l_thickness))
+  with(current_layer, realize(b, family)) do
+      @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness + l_thickness))
+  end
 
 ############################################
 
