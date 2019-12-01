@@ -10,6 +10,7 @@ export robot,
        nodes,
        added_nodes,
        added_bars,
+       robot_truss_bar_family,
        show_truss_deformation
 
 
