@@ -706,10 +706,7 @@ realize(b::Backend, s::Ieslight) =
     support::Any=false) #(Option node_support)
 
 @deffamily(truss_bar_family, Family,
-    radius::Real=0.03,
-    section::Any=false,
-    material::Any=false,
-    created::Parameter{Bool}=Parameter(false)) # HACK: This should be merged with the lazy creation of families
+    radius::Real=0.03)
 
 @defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
