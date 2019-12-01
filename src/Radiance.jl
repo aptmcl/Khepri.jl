@@ -6,8 +6,6 @@ To visualize RAD files, check
 https://www.ladybug.tools/spider-rad-viewer/rad-viewer/r7/rad-viewer.html
 
 =#
-
-
 export radiance,
        save_rad,
        @save_rad,
@@ -15,7 +13,6 @@ export radiance,
        radiance_plastic_material,
        radiance_metal_material,
        radiance_glass_material
-
 
 write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
   begin
@@ -42,7 +39,7 @@ write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
 write_rad_polygon(io::IO, modifier, id, vertices) =
   begin
     with(current_backend, autocad) do
-      polygon(vertices)
+      surface_polygon(vertices)
     end
     println(io, modifier, " ", "polygon", " ", id)
     println(io, 0) #0 strings
@@ -142,7 +139,6 @@ const Radiance = RadianceBackend{RadianceKey, RadianceId}
 The Radiance backend cannot realize shapes immediately, only when requested.
 =#
 
-
 void_ref(b::Radiance) = RadianceNativeRef(-1)
 
 create_radiance_buffer() = IOBuffer()
@@ -150,13 +146,13 @@ create_radiance_buffer() = IOBuffer()
 const radiance = Radiance(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
 
 buffer(b::Radiance) = b.buffer()
-next_id(b::Radiance, s::Shape) =
+next_id(b::Radiance) =
     begin
         b.count += 1
         b.count -1
     end
-next_modifier(b::Radiance, s::Shape) =
-    get!(b.materials, isdefined(s, :family) ? s.family : missing, length(b.materials))
+next_modifier(b::Radiance, key) =
+    get!(b.materials, key, length(b.materials))
 
 save_rad(path::String, b::RadianceBackend=radiance) =
   let buf = b.buffer()
@@ -228,10 +224,10 @@ realize(b::ACAD, s::ConeFrustum) =
   ACADConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
 =#
 realize(b::Radiance, s::Cylinder) =
-  let bot_id = next_id(b, s),
-      top_id = next_id(b, s),
-      side_id = next_id(b, s),
-      mod = next_modifier(b, s),
+  let bot_id = next_id(b),
+      top_id = next_id(b),
+      side_id = next_id(b),
+      mod = next_modifier(b, missing),
       kind = "cylinder",
       buf = buffer(b),
       bot = in_world(s.cb),
@@ -280,29 +276,29 @@ realize(b::Radiance, s::Rotate) =
 
 # BIM
 
-realize_pyramid_fustrum(b::Radiance, s::Shape, kind::String, bot_path::Path, top_path::Path, closed=true) =
-  realize_pyramid_fustrum(b, s, kind, path_vertices(bot_path), path_vertices(top_path), closed)
+realize_pyramid_fustrum(b::Radiance, key, kind::String, bot_path::Path, top_path::Path, closed=true) =
+  realize_pyramid_fustrum(b, key, kind, path_vertices(bot_path), path_vertices(top_path), closed)
 
-realize_pyramid_fustrum(b::Radiance, s::Shape, kind::String, bot_vs, top_vs, closed=true) =
-  let mod = next_modifier(b, s),
+realize_pyramid_fustrum(b::Radiance, key, kind::String, bot_vs, top_vs, closed=true) =
+  let mod = next_modifier(b, key),
       buf = buffer(b)
     if closed
-      write_rad_polygon(buf, "mat$(kind)top$(mod)", next_id(b, s), reverse(bot_vs))
-      write_rad_polygon(buf, "mat$(kind)bot$(mod)", next_id(b, s), top_vs)
+      write_rad_polygon(buf, "mat$(kind)top$(mod)", next_id(b), reverse(bot_vs))
+      write_rad_polygon(buf, "mat$(kind)bot$(mod)", next_id(b), top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-      write_rad_polygon(buffer(b), "mat$(kind)side$(mod)", next_id(b, s), vs)
+      write_rad_polygon(buffer(b), "mat$(kind)side$(mod)", next_id(b), vs)
     end
   end
 
-realize_polygon(b::Radiance, s::Shape, kind::String, path::Path, acw=true) =
-  realize_polygon(b, s, kind, path_vertices(path), acw)
+realize_polygon(b::Radiance, key, kind::String, path::Path, acw=true) =
+  realize_polygon(b, key, kind, path_vertices(path), acw)
 
-realize_polygon(b::Radiance, s::Shape, kind::String, vs, acw=true) =
-  let mod = next_modifier(b, s),
+realize_polygon(b::Radiance, key, kind::String, vs, acw=true) =
+  let mod = next_modifier(b, key),
       buf = buffer(b),
       side = acw ? "top" : "bot"
-    write_rad_polygon(buf, "mat$(kind)$(side)$(mod)", next_id(b, s), acw ? vs : reverse(vs))
+    write_rad_polygon(buf, "mat$(kind)$(side)$(mod)", next_id(b), acw ? vs : reverse(vs))
   end
 
 realize(b::Radiance, s::Slab) =
@@ -313,7 +309,7 @@ realize(b::Radiance, s::Slab) =
       path = subtract_paths(path, op)
     end
     realize_pyramid_fustrum(
-      b, s, "slab",
+      b, s.family, "slab",
       path_vertices(translate(path, base)),
       path_vertices(translate(path, base + thickness)))
   end
@@ -330,7 +326,7 @@ realize(b::Radiance, s::Panel) =
       p3 = s.vertices[3],
       n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
     realize_pyramid_fustrum(
-        b, s, "panel",
+        b, s.family, "panel",
         map(p -> in_world(p - n), s.vertices),
         map(p -> in_world(p + n), s.vertices))
   end
@@ -359,7 +355,7 @@ realize(b::Radiance, w::Wall) =
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, w, "wall", c_l_w_path, c_r_w_path, false)
+        realize_pyramid_fustrum(b, w.family, "wall", c_l_w_path, c_r_w_path, false)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -380,7 +376,7 @@ realize(b::Radiance, w::Wall) =
                 c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
                 c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
                 idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              realize_pyramid_fustrum(b, w, "wall", c_r_op_path, c_l_op_path, false)
+              realize_pyramid_fustrum(b, w.family, "wall", c_r_op_path, c_l_op_path, false)
               c_r_w_path =
                 closed_polygonal_path(
                   inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
@@ -395,8 +391,8 @@ realize(b::Radiance, w::Wall) =
           end
         end
         prevlength = currlength
-        realize_polygon(b, w, "wall", c_l_w_path, false)
-        realize_polygon(b, w, "wall", c_r_w_path, true)
+        realize_polygon(b, w.family, "wall", c_l_w_path, false)
+        realize_polygon(b, w.family, "wall", c_r_w_path, true)
       end
     end
     void_ref(b)
@@ -404,6 +400,22 @@ realize(b::Radiance, w::Wall) =
 
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
+
+backend_wall(b::Radiance, w_path, w_height, r_thickness, l_thickness, family) =
+  let w_paths = subpaths(w_path),
+      r_w_paths = subpaths(offset(w_path, r_thickness)),
+      l_w_paths = subpaths(offset(w_path, l_thickness))
+    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
+      let c_r_w_path = closed_path_for_height(r_w_path, w_height),
+          c_l_w_path = closed_path_for_height(l_w_path, w_height)
+        realize_pyramid_fustrum(b, family, "wall", c_l_w_path, c_r_w_path, false)
+        realize_polygon(b, family, "wall", c_l_w_path, false)
+        realize_polygon(b, family, "wall", c_r_w_path, true)
+      end
+    end
+    void_ref(b)
+  end
+
 
 #=
 
@@ -632,3 +644,45 @@ set_backend_family(default_door_family(), radiance,
   radiance_material_family(radiance_generic_furniture_50))
 set_backend_family(default_panel_family(), radiance,
   radiance_material_family(radiance_glass_material("GenericGlass", gray=0.3)))
+
+# Radiance-specific operations
+
+material_ground = Parameter(radiance_generic_floor_20)
+
+#=
+create_ground_plane(shapes, material=material_ground()) =
+  if shapes == []
+    error("No shapes selected for analysis. Use add-radiance-shape!.")
+  else
+    let (p0, p1) = bounding_box(union(shapes)),
+        (center, ratio) = (quad_center(p0, p1, p2, p3),
+                  distance(p0, p4)/distance(p0, p2));
+     ratio == 0 ?
+      error("Couldn't compute height. Use add-radiance-shape!.") :
+      let pts = map(p -> intermediate_loc(center, p, ratio*10), [p0, p1, p2, p3]);
+         create_surface_layer(pts, 0, ground_layer(), material)
+        end
+       end
+  end
+        w = max(floor_extra_factor()*distance(p0, p1), floor_extra_width())
+        with(current_layer,floor_layer()) do
+          box(xyz(min(p0.x, p1.x)-w, min(p0.y, p1.y)-w, p0.z-1-floor_distance()),
+              xyz(max(p0.x, p1.x)+w, max(p0.y, p1.y)+w, p0.z-0-floor_distance()))
+        end
+      end
+    end
+
+=#
+
+
+
+#=
+Simulations need to be done on a temporary folder, so that we can have multiple
+simulations running at the same time.
+=#
+
+simulation_path() =
+  let (path, io) = mktemp(mktempdir(tempdir(), prefix="Radiance_"))
+    close(io)
+    path
+  end
