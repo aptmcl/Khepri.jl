@@ -712,20 +712,20 @@ realize(b::Unity, s::Panel) =
       realize(b, s.family)))
   end
 
-sweep_fractions(b, verts, height, r_thickness, l_thickness) =
+sweep_fractions(b, verts, height, l_thickness, r_thickness) =
   let p = add_z(verts[1], height/2),
       q = add_z(verts[2], height/2),
       (c, h) = position_and_height(p, q),
       thickness = r_thickness + l_thickness, # HACK THIS IS WRONG!
       s = UnityNativeRef(@remote(b, RightCuboid(c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0)))
     if length(verts) > 2
-      (s, sweep_fractions(b, verts[2:end], height, r_thickness, l_thickness)...)
+      (s, sweep_fractions(b, verts[2:end], height, l_thickness, r_thickness)...)
     else
       (s, )
     end
   end
 
-backend_wall(b::Unity, path, height, r_thickness, l_thickness, family) =
+backend_wall(b::Unity, path, height, l_thickness, r_thickness, family) =
   path_length(path) < path_tolerance() ?
     UnityEmptyRef() :
     begin
@@ -734,14 +734,14 @@ backend_wall(b::Unity, path, height, r_thickness, l_thickness, family) =
           b,
           path,
           height*0.999, #We reduce height just a bit to avoid Z-fighting
-          r_thickness, l_thickness)
+          l_thickness, r_thickness)
     end
 
-backend_wall_path(b::Unity, path::OpenPolygonalPath, height, r_thickness, l_thickness) =
-    UnityUnionRef(sweep_fractions(b, path.vertices, height, r_thickness, l_thickness))
+backend_wall_path(b::Unity, path::OpenPolygonalPath, height, l_thickness, r_thickness) =
+    UnityUnionRef(sweep_fractions(b, path.vertices, height, l_thickness, r_thickness))
 
-backend_wall_path(b::Unity, path::Path, height, r_thickness, l_thickness) =
-    backend_wall_path(b, convert(OpenPolygonalPath, path), height, r_thickness, l_thickness)
+backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
+    backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
 
 
 #=

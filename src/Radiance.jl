@@ -401,7 +401,7 @@ realize(b::Radiance, w::Wall) =
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
 
-backend_wall(b::Radiance, w_path, w_height, r_thickness, l_thickness, family) =
+backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
   let w_paths = subpaths(w_path),
       r_w_paths = subpaths(offset(w_path, r_thickness)),
       l_w_paths = subpaths(offset(w_path, l_thickness))

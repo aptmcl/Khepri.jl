@@ -657,8 +657,8 @@ realize(b::RH, s::Column) =
     RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height)
   end
 
-backend_wall(b::RH, path, height, r_thickness, l_thickness, family) =
-    RHPathWall(connection(b), backend_stroke(b, path), r_thickness, l_thickness, height)
+backend_wall(b::RH, path, height, l_thickness, r_thickness, family) =
+    RHPathWall(connection(b), backend_stroke(b, path), l_thickness, r_thickness, height)
 
 ############################################
 

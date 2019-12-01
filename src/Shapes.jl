@@ -1312,7 +1312,7 @@ realize_wall_no_openings(b::Backend, w::Wall) =
       w_path = translate(w.path, vz(w_base_height)),
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w)
-    ensure_ref(b, backend_wall(b, w_path, w_height, r_thickness, l_thickness, w.family))
+    ensure_ref(b, backend_wall(b, w_path, w_height, l_thickness, r_thickness, w.family))
   end
 
 realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
@@ -1322,17 +1322,17 @@ realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w)
     for opening in openings
-      w_ref = realize_wall_opening(b, w_ref, w_path, r_thickness, l_thickness, opening, w.family)
+      w_ref = realize_wall_opening(b, w_ref, w_path, l_thickness, r_thickness, opening, w.family)
       ref(opening)
     end
     w_ref
   end
 
-realize_wall_opening(b::Backend, w_ref, w_path, r_thickness, l_thickness, op, family) =
+realize_wall_opening(b::Backend, w_ref, w_path, l_thickness, r_thickness, op, family) =
   let op_base_height = op.loc.y,
       op_height = op.family.height,
       op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, r_thickness, l_thickness, family))
+      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, l_thickness, r_thickness, family))
     ensure_ref(b, subtract_ref(b, w_ref, op_ref))
   end
 
