@@ -38,19 +38,6 @@ realize(b::Backend, s::Level) = s.height
 
 export all_levels, default_level, default_level_to_level_height, upper_level
 
-# LOD
-abstract type LOD <: BIMElement end
-struct LOD100 <: LOD end
-#@defproxy(lod100, BIMElement, value::Integer=500)
-#lod_cache = Dict{Integer,Level}()
-#maybe_replace(lod::Lod) = get!(lod_cache, lod.value, lod)
-
-#current_lods() = values(lod_cache)
-#default_lod = Parameter{Lod}(lod())
-#Base.:(==)(l1::Lod, l2::Lod) = l1.value == l2.value
-
-
-
 #=
 @defproxy(polygonal_mass, Shape3D, points::Locs, height::Real)
 @defproxy(rectangular_mass, Shape3D, center::Loc, width::Real, len::Real, height::Real)

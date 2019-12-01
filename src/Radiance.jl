@@ -126,14 +126,14 @@ const RadianceNativeRef = NativeRef{RadianceKey, RadianceId}
 const RadianceUnionRef = UnionRef{RadianceKey, RadianceId}
 const RadianceSubtractionRef = SubtractionRef{RadianceKey, RadianceId}
 
-mutable struct RadianceBackend{K,T} <: LazyBackend{K,T}
+mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   shapes::Shapes
   buffer::LazyParameter{IOBuffer}
   count::Integer
   materials::Dict
 end
 
-const Radiance = RadianceBackend{RadianceKey, RadianceId}
+const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
 
 #=
 The Radiance backend cannot realize shapes immediately, only when requested.
@@ -143,7 +143,8 @@ void_ref(b::Radiance) = RadianceNativeRef(-1)
 
 create_radiance_buffer() = IOBuffer()
 
-const radiance = Radiance(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
+const radiance = Radiance{500}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
+const radiance_lod100 = Radiance{100}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
 
 buffer(b::Radiance) = b.buffer()
 next_id(b::Radiance) =
