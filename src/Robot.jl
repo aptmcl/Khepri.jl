@@ -1212,7 +1212,7 @@ struct RobotTrussBarFamily <: RobotFamily
     ref::Parameter{Any}
 end
 
-robot_truss_bar_family(name, section, material) = RobotTrussBarFamily(section, material, Parameter{Any}(nothing))
+robot_truss_bar_family(;section, material) = RobotTrussBarFamily(section, material, Parameter{Any}(nothing))
 backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
   begin
     create_bar_material_label(rf.material...)
