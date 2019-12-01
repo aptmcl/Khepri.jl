@@ -1444,7 +1444,7 @@ realize(b::Backend, s::CurtainWall) =
   end
 
 backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
-  backend_wall(b, translate(path, vz(bottom)), height, thickness/2, thickness/2, getproperty(s.family, kind))
+  backend_wall(b, translate(path, vz(bottom)), height, -thickness/2, thickness/2, getproperty(s.family, kind))
 
 #
 # We need to redefine the default method (maybe add an option to the macro to avoid defining the meta_program)
