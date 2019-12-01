@@ -258,7 +258,10 @@ copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 # Backends will install their own families on top of the default families, e.g.,
 # set_backend_family(default_beam_family(), revit, revit_beam_family)
 set_backend_family(family::Family, backend::Backend, backend_family::Family) =
+  begin
     family.implemented_as[backend]=backend_family
+    family.ref(nothing) #force recreation
+  end
 
 # Finally, we can implement a generic backend caching mechanism for families
 
