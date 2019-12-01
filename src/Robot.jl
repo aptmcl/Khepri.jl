@@ -1206,14 +1206,14 @@ const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
 # Robot Families
 abstract type RobotFamily <: Family end
 
-struct RobotBarFamily <: RobotFamily
+struct RobotTrussBarFamily <: RobotFamily
     section::Any
     material::Any
     ref::Parameter{Any}
 end
 
-robot_bar_family(name, section, material) = RobotBarFamily(section, material, Parameter{Any}(nothing))
-backend_get_family_ref(b::ROBOT, f::Family, rf::RobotBarFamily) =
+robot_truss_bar_family(name, section, material) = RobotTrussBarFamily(section, material, Parameter{Any}(nothing))
+backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
   begin
     create_bar_material_label(rf.material...)
     create_bar_tube_section_label(rf.section...)
