@@ -407,6 +407,9 @@ realize(b::RH, s::RegularPyramid) =
     RHIrregularPyramid(connection(b),
                        regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                        add_z(s.cb, s.h))
+realize(b::RH, s::IrregularPyramidFrustum) =
+  RHIrregularPyramidFrustum(connection(b), s.bs, s.ts)
+
 realize(b::RH, s::IrregularPyramid) =
     RHIrregularPyramid(connection(b), s.bs, s.t)
 realize(b::RH, s::RegularPrism) =
