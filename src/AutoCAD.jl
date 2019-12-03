@@ -238,6 +238,7 @@ public ObjectId[] GetSolid(string prompt)
 public ObjectId[] GetSolids(string prompt)
 public ObjectId[] GetShape(string prompt)
 public ObjectId[] GetShapes(string prompt)
+public ObjectId[] GetPreSelectedShapes()
 public long GetHandleFromShape(Entity e)
 public ObjectId GetShapeFromHandle(long h)
 public void RegisterForChanges(ObjectId id)
@@ -1025,7 +1026,7 @@ shape_from_ref(r, b::ACAD) =
                           backend=b, ref=ref)
         else
             #unknown(backend=b, ref=ref)
-            unknown(r, backend=b, ref=LazyRef(b, ACADNativeRef(r), 0, 0))# To force copy
+            unknown(r, backend=b, ref=LazyRef(b, ACADNativeRef(r), 0, 0)) # To force copy
             #error("Unknown shape with code $(code)")
         end
     end
@@ -1171,8 +1172,10 @@ highlight_shape(s::Shape, b::ACAD) =
 highlight_shapes(ss::Shapes, b::ACAD) =
     @remote(b, SelectShapes(collect_ref(ss)))
 
-
-
+pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
+  let ss = @remote(b, GetPreSelectedShapes)
+      ss
+  end
 
 disable_update(b::ACAD) =
     @remote(b, DisableUpdate())
