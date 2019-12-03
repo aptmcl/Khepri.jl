@@ -1173,8 +1173,8 @@ highlight_shapes(ss::Shapes, b::ACAD) =
     @remote(b, SelectShapes(collect_ref(ss)))
 
 pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
-  let ss = @remote(b, GetPreSelectedShapes())
-      ss
+  let refs = map(id -> @remote(b, GetHandleFromShape(id)), @remote(b, GetPreSelectedShapes()))
+    filter(s -> @remote(b, GetHandleFromShape(ref(s).value)) in refs, ss)
   end
 
 disable_update(b::ACAD) =
