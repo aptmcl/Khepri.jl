@@ -152,7 +152,7 @@ rhino"public Entity SurfaceLightweightPolyLine(Point2d[] pts, double[] angles, d
 rhino"public ObjectId CreatePathFloor(Point2d[] pts, double[] angles, BIMLevel level, FloorFamily family)"
 =#
 rhino"public Guid ClosedPathCurveArray(Point3d[] pts, double[] angles)"
-rhino"public Brep[] PathWall(RhinoObject obj, double thickness, double height)"
+rhino"public Brep[] PathWall(RhinoObject obj, double rThickness, double lThickness, double height)"
 rhino"public Brep RectangularTable(Point3d c, double angle, double length, double width, double height, double top_thickness, double leg_thickness)"
 
 
@@ -209,6 +209,9 @@ backend_stroke(b::RH, path::RectangularPath) =
         dy = path.dy
         RHClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
     end
+backend_stroke(b::RH, path::ArcPath) =
+  backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
+
 backend_stroke(b::RH, path::OpenPolygonalPath) =
   	RHPolyLine(connection(b), path.vertices)
 backend_stroke(b::RH, path::ClosedPolygonalPath) =
@@ -404,6 +407,9 @@ realize(b::RH, s::RegularPyramid) =
     RHIrregularPyramid(connection(b),
                        regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                        add_z(s.cb, s.h))
+realize(b::RH, s::IrregularPyramidFrustum) =
+  RHIrregularPyramidFrustum(connection(b), s.bs, s.ts)
+
 realize(b::RH, s::IrregularPyramid) =
     RHIrregularPyramid(connection(b), s.bs, s.t)
 realize(b::RH, s::RegularPrism) =
@@ -654,8 +660,8 @@ realize(b::RH, s::Column) =
     RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height)
   end
 
-backend_wall(b::RH, path, height, thickness, family) =
-    RHPathWall(connection(b), backend_stroke(b, path), thickness, height)
+backend_wall(b::RH, path, height, l_thickness, r_thickness, family) =
+    RHPathWall(connection(b), backend_stroke(b, path), l_thickness, r_thickness, height)
 
 ############################################
 

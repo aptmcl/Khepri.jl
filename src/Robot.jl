@@ -10,6 +10,7 @@ export robot,
        nodes,
        added_nodes,
        added_bars,
+       robot_truss_bar_family,
        show_truss_deformation
 
 
@@ -996,21 +997,17 @@ new_robot_analysis(process_results, create_truss, v=nothing) =
                 end
             end
             for (bar_family, bars_ids) in family_bars
-                if ! bar_family.created()
-                    create_bar_material_label(bar_family.material...)
-                    create_bar_tube_section_label(bar_family.section...)
-                    bar_family.created(true)
-                end
-                let selection = get_selection(selections(struc), I_OT_BAR)
+                let robot_bar_family = realize(current_backend(), bar_family),
+                    selection = get_selection(selections(struc), I_OT_BAR),
                     ids = IOBuffer()
-                    for bar_id in bars_ids
-                        print(ids, bar_id, " ")
-                    end
-                    str = String(take!(ids))
-                    from_text(selection, str)
-                    let (name, material_name, wood, specs) = bar_family.section
-                        set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
-                    end
+                  for bar_id in bars_ids
+                      print(ids, bar_id, " ")
+                  end
+                  str = String(take!(ids))
+                  from_text(selection, str)
+                  let (name, material_name, wood, specs) = robot_bar_family.section
+                      set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+                  end
                 end
             end
             case_counter(case_counter()+1)
@@ -1206,6 +1203,48 @@ project_kind = Parameter(I_PT_SHELL)
 create_ROBOT_connection() = new_project!(project_kind())
 
 const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
+
+# Robot Families
+abstract type RobotFamily <: Family end
+
+struct RobotTrussBarFamily <: RobotFamily
+    section::Any
+    material::Any
+    ref::Parameter{Any}
+end
+
+robot_truss_bar_family(;section, material) = RobotTrussBarFamily(section, material, Parameter{Any}(nothing))
+backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
+  begin
+    create_bar_material_label(rf.material...)
+    create_bar_tube_section_label(rf.section...)
+    rf
+  end
+
+set_backend_family(
+  default_truss_bar_family(),
+  robot,
+  robot_truss_bar_family(
+  material=[
+    "ElasticIsotropic",   # name
+    Khepri.I_MT_STEEL,    # Type
+    "Steel",              # Name
+    "I'm really steel",   # Nuance
+    210000000000.0,       # E
+    0.3,                  # NU
+    81000000000.0,        # Kirchoff
+    77010.0,              # RO
+    1.2e-05,              # LX
+    0.04,                 # DumpCoef
+    235000000.0,          # RE
+    360000000.0],         # RT
+  section=[
+    "Tube",               #name
+    "ElasticIsotropic",   #material_name
+    false,                #iswood
+    [(true,               #solid?
+      0.0213,             #diameter
+      0.0026)]]))         #thickness
 
 delete_all_shapes(b::ROBOT) = new_project!(project_kind())
 

@@ -238,6 +238,7 @@ public ObjectId[] GetSolid(string prompt)
 public ObjectId[] GetSolids(string prompt)
 public ObjectId[] GetShape(string prompt)
 public ObjectId[] GetShapes(string prompt)
+public ObjectId[] GetPreSelectedShapes()
 public long GetHandleFromShape(Entity e)
 public ObjectId GetShapeFromHandle(long h)
 public void RegisterForChanges(ObjectId id)
@@ -276,6 +277,39 @@ const autocad = ACAD(LazyParameter(TCPSocket, create_ACAD_connection), acad_api)
 
 backend_name(b::ACAD) = "AutoCAD"
 
+#=
+
+Default families
+
+=#
+
+
+abstract type ACADFamily <: Family end
+
+struct ACADLayerFamily <: ACADFamily
+  name::String
+  ref::Parameter{Any}
+end
+
+acad_layer_family(name, pairs...) = ACADLayerFamily(name, Parameter{Any}(nothing))
+backend_get_family_ref(b::ACAD, f::Family, af::ACADLayerFamily) = @remote(b, CreateLayer(af.name))
+
+set_backend_family(default_wall_family(), autocad, acad_layer_family("Wall"))
+set_backend_family(default_slab_family(), autocad, acad_layer_family("Slab"))
+set_backend_family(default_roof_family(), autocad, acad_layer_family("Roof"))
+set_backend_family(default_beam_family(), autocad, acad_layer_family("Beam"))
+set_backend_family(default_column_family(), autocad, acad_layer_family("Column"))
+set_backend_family(default_door_family(), autocad, acad_layer_family("Door"))
+set_backend_family(default_panel_family(), autocad, acad_layer_family("Panel"))
+
+set_backend_family(default_table_family(), autocad, acad_layer_family("Table"))
+set_backend_family(default_chair_family(), autocad, acad_layer_family("Chair"))
+set_backend_family(default_table_chair_family(), autocad, acad_layer_family("TableChairs"))
+
+set_backend_family(default_curtain_wall_family().panel, autocad, acad_layer_family("CurtainWall-Panel"))
+set_backend_family(default_curtain_wall_family().boundary_frame, autocad, acad_layer_family("CurtainWall-Boundary"))
+set_backend_family(default_curtain_wall_family().transom_frame, autocad, acad_layer_family("CurtainWall-Transom"))
+set_backend_family(default_curtain_wall_family().mullion_frame, autocad, acad_layer_family("CurtainWall-Mullion"))
 #current_backend(autocad)
 
 
@@ -760,34 +794,41 @@ backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
     @remote(b, TableAndChairs(c, angle, realize(b, family)))
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
-  let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
-                              ensure_ref(b, backend_fill(b, profile))),
-      main_body = slab(profile),
-      holes_bodies = map(slab, holes)
-    foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
+  with(current_layer, realize(b, family)) do
+    let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
+                                ensure_ref(b, backend_fill(b, profile))),
+        main_body = slab(profile),
+        holes_bodies = map(slab, holes)
+      foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
+    end
   end
 
 realize(b::ACAD, s::Beam) =
-  let profile = s.family.profile
-      profile_u0 = profile.corner
-      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-      # need to test whether it is rotation on center or on axis
-      o = loc_from_o_phi(s.cb, s.angle)
-    @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h))
+  with(current_layer, realize(b, s.family)) do
+    let profile = s.family.profile
+          profile_u0 = profile.corner
+          c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+          # need to test whether it is rotation on center or on axis
+          o = loc_from_o_phi(s.cb, s.angle)
+        @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h))
+    end
   end
 #    @remote(b, CenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h))
 
 #Columns are aligned along the center axis.
 realize(b::ACAD, s::FreeColumn) =
-  let profile = s.family.profile
-      profile_u0 = profile.corner
-      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-      # need to test whether it is rotation on center or on axis
-      o = loc_from_o_phi(c, s.angle)
-    @remote(b, CenteredBox(o, profile.dx, profile.dy, s.h))
+  with(current_layer, realize(b, s.family)) do
+    let profile = s.family.profile
+        profile_u0 = profile.corner
+        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+        # need to test whether it is rotation on center or on axis
+        o = loc_from_o_phi(c, s.angle)
+      @remote(b, CenteredBox(o, profile.dx, profile.dy, s.h))
+    end
   end
 
 realize(b::ACAD, s::Column) =
+  with(current_layer, realize(b, s.family)) do
     let profile = s.family.profile,
         profile_u0 = profile.corner,
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
@@ -797,9 +838,13 @@ realize(b::ACAD, s::Column) =
         o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
       @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, height))
     end
+  end
 
-backend_wall(b::ACAD, path, height, thickness, family) =
-  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), thickness))
+backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
+  #HACK: The thickness is wrong!!!!
+  with(current_layer, realize(b, family)) do
+      @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness - l_thickness))
+  end
 
 ############################################
 
@@ -810,7 +855,7 @@ set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
   @remote(b, View(camera, target, lens))
 
 get_view(b::ACAD) =
-  @remote(b, ViewCamera(c)), @remote(b, ViewTarget(c)), @remote(b, ViewLens(c))
+  @remote(b, ViewCamera()), @remote(b, ViewTarget()), @remote(b, ViewLens())
 
 zoom_extents(b::ACAD) = @remote(b, ZoomExtents())
 
@@ -981,7 +1026,7 @@ shape_from_ref(r, b::ACAD) =
                           backend=b, ref=ref)
         else
             #unknown(backend=b, ref=ref)
-            unknown(r, backend=b, ref=LazyRef(b, ACADNativeRef(r), 0, 0))# To force copy
+            unknown(r, backend=b, ref=LazyRef(b, ACADNativeRef(r), 0, 0)) # To force copy
             #error("Unknown shape with code $(code)")
         end
     end
@@ -1127,8 +1172,10 @@ highlight_shape(s::Shape, b::ACAD) =
 highlight_shapes(ss::Shapes, b::ACAD) =
     @remote(b, SelectShapes(collect_ref(ss)))
 
-
-
+pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
+  let refs = map(id -> @remote(b, GetHandleFromShape(id)), @remote(b, GetPreSelectedShapes()))
+    filter(s -> @remote(b, GetHandleFromShape(ref(s).value)) in refs, ss)
+  end
 
 disable_update(b::ACAD) =
     @remote(b, DisableUpdate())
