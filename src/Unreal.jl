@@ -1,10 +1,6 @@
 export unreal, fast_unreal,
        unreal_material_family
 
-macro unreal_str(str)
-    cpp_rpc(str)
-end
-
 # We need some additional Encoders
 encode_Actor = encode_int
 decode_Actor = decode_int_or_error
@@ -31,7 +27,12 @@ create_Unreal_connection() =
         create_backend_connection("Unreal", 11002)
     end
 
-const unreal = Unreal(LazyParameter(TCPSocket, create_Unreal_connection))
+unreal_functions = @remote_functions :CPP """
+  public Actor Sphere(Vector3 center, float radius)
+"""
+
+const unreal = Unreal(LazyParameter(TCPSocket, create_Unreal_connection),
+                      unreal_functions)
 
 backend_name(b::Unreal) = "Unreal"
 
@@ -217,15 +218,10 @@ realize(b::Unreal, s::Text) =
     connection(b),
     s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Fonts/Inconsolata-Regular", s.height)
 
-unreal_functions() =
-  @remote_functions begin
-    unreal"public Actor Sphere(Vector3 center, float radius)"
-  end
+=#
 
 realize(b::Unreal, s::Sphere) =
-  b.Sphere(s.center, s.radius)
-  =#
-
+  @remote(b, Sphere(s.center, s.radius))
 
 #=
 #=
