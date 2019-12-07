@@ -665,20 +665,18 @@ name_method(name) =
 
 macro def_rw_property(name, InType, OutType)
     name, method = name_method(name)
-    quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) $(esc(OutType))(in[$(QuoteNode(method))]) end
-        function $(esc(name))(in::$(esc(InType)), val::$(esc(OutType)))::Nothing
-            in[$(QuoteNode(method))] = $(Core.eval(__module__, OutType) <: Enum ? :(Int(val)) : :(val))
+    esc(quote
+          $(name)(in :: $(InType)) :: $(OutType) = $(OutType)(getproperty(in, $(QuoteNode(method))))
+          $(name)(in :: $(InType), val :: $(OutType)) :: Nothing = begin
+            setproperty(in, $(QuoteNode(method)), $(Core.eval(__module__, OutType) <: Enum ? :(Int(val)) : :(val)))
             nothing
-        end
-    end
+          end
+      end)
 end
 
 macro def_ro_property(name, InType, OutType)
     name, method = name_method(name)
-    quote
-        function $(esc(name))(in::$(esc(InType)))::$(esc(OutType)) $(esc(OutType))(in[$(QuoteNode(method))]) end
-    end
+    esc(:($(name)(in :: $(InType)) :: $(OutType) = $(OutType)(getproperty(in, $(QuoteNode(method))))))
 end
 
 #=
