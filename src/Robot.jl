@@ -611,6 +611,14 @@ end
   I_NFRV_GAMMA
 end
 
+@enums IRobotDeadRecordValues begin
+  I_DRV_X = 0
+  I_DRV_Y = 1
+  I_DRV_Z = 2
+  I_DRV_ENTIRE_STRUCTURE = 15
+  I_DRV_COEFF = 3
+end
+
 #=
 using PyCall
 @pyimport array
@@ -827,6 +835,7 @@ end
 @def_com set_value IRobotBarSectionData attr::IRobotBarSectionDataValue value::Double Void
 @def_com set_value IRobotBarSectionNonstdData attr::IRobotBarSectionNonstdDataValue value::Double Void
 @def_com set_value IRobotLoadRecord value_id::IRobotNodeForceRecordValues value::Double Void
+@def_com set_value IRobotLoadRecord value_id::IRobotDeadRecordValues value::Double Void
 #@def_com set_value IRobotBarSectionSpecialData attr::IRobotBarSectionSpecialDataValue value::Double Void
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double IRobotBarSectionNonstdData
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
@@ -958,7 +967,9 @@ add_bar!(p0, p1, rotation, family) =
 
 current_bars_ids() = 0:bar_counter()
 
-new_robot_analysis(process_results, create_truss, v=nothing) =
+
+
+new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) =
     with(node_counter, 0,
          added_nodes, Dict(),
          added_bars, Dict(),
@@ -981,7 +992,7 @@ new_robot_analysis(process_results, create_truss, v=nothing) =
                     end
                     set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
                 end
-                if node_load != 0
+                if node_load != false
                     node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
                 end
             end
@@ -1015,7 +1026,7 @@ new_robot_analysis(process_results, create_truss, v=nothing) =
                      "Test-$(case_counter())",
                      I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
                      I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
-                     records -> new_node_loads(records, node_loads),
+                     records -> new_node_loads(records, node_loads, self_weight),
                      process_results)
       end
 end
@@ -1154,17 +1165,27 @@ new_case(number, name, nature, analize_type, setup, process_results) =
     process_results(results(structure(project(application()))))
   end
 
-new_node_loads(records, loads) =
-  for (vec, ids) in loads
-    let idx = new(records, I_LRT_NODE_FORCE)
-        record = get_record(records, idx)
-        objs = objects(record)
-      for node_id in ids
-        add_one(objs, node_id)
+new_node_loads(records, loads, self_weight) =
+  begin
+    for (vec, ids) in loads
+      let idx = new(records, I_LRT_NODE_FORCE),
+          record = get_record(records, idx),
+          objs = objects(record)
+        for node_id in ids
+          add_one(objs, node_id)
+        end
+        set_value(record, I_NFRV_FX, float(vec.x))
+        set_value(record, I_NFRV_FY, float(vec.y))
+        set_value(record, I_NFRV_FZ, float(vec.z))
       end
-      set_value(record, I_NFRV_FX, vec.x)
-      set_value(record, I_NFRV_FY, vec.y)
-      set_value(record, I_NFRV_FZ, vec.z)
+    end
+    if self_weight != false
+      let idx = new(records, I_LRT_DEAD),
+          record = get_record(records, idx)
+        set_value(record, I_DRV_COEFF, 1.0)
+        set_value(record, I_DRV_ENTIRE_STRUCTURE, 1.0)
+        set_value(record, I_DRV_Z, -1.0)
+      end
     end
   end
 
