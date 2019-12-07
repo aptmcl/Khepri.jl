@@ -866,8 +866,8 @@ function application()
     global robot_app
     if robot_app == nothing
         copy!(com, pyimport("win32com.client"))
-        robot_app = let r = com[:Dispatch]("Robot.Application")
-                        r[:Visible] = 1
+        robot_app = let r = com.Dispatch("Robot.Application")
+                        r.Visible = 1
                         r
                     end
     else
