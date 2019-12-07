@@ -806,12 +806,23 @@ macro def_com(name, Type, params...)
   name, method = name_method(name)
   param_names = map(param -> param.args[1], params)
   param_types = map(param -> param.args[2], params)
-  args = map((name, typ) -> Core.eval(__module__, typ) <: Enum ? :(Int($name)) : name, param_names, param_types)
-  quote
-    function $(esc(name))(receiver :: $(Type), $(params...)) :: $(esc(out))
-        receiver[$(QuoteNode(method))]($(args...))
-    end
-  end
+  args = map(param_names, param_types) do name, typ
+           Core.eval(__module__, typ) <: Enum ?
+             :(Int($name)) :
+             typ == :Double ? :(float($name)) : name
+         end
+  types = map(param_types) do t
+            t == :Double ? :Real : t
+          end
+  params = map(param_names, types) do name, type
+             :($(name) :: $(type))
+           end
+  esc(
+    quote
+      function $name(receiver :: $(Type), $(params...)) :: $(out)
+          get_property(receiver, $(QuoteNode(method)))($(args...))
+      end
+  end)
 end
 
 @def_com calculate IRobotCalcEngine Int
@@ -981,7 +992,7 @@ new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) 
             node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
-                create_node(nds, node_id, float(p.x), float(p.y), float(p.z))
+                create_node(nds, node_id, p.x, p.y, p.z)
                 support = node_family.support
                 if support != false
                     if ! support.created
@@ -1174,9 +1185,9 @@ new_node_loads(records, loads, self_weight) =
         for node_id in ids
           add_one(objs, node_id)
         end
-        set_value(record, I_NFRV_FX, float(vec.x))
-        set_value(record, I_NFRV_FY, float(vec.y))
-        set_value(record, I_NFRV_FZ, float(vec.z))
+        set_value(record, I_NFRV_FX, vec.x)
+        set_value(record, I_NFRV_FY, vec.y)
+        set_value(record, I_NFRV_FZ, vec.z)
       end
     end
     if self_weight != false
