@@ -898,7 +898,7 @@ current_layer(layer::ACADLayer, b::ACAD) =
 create_layer(name::String, b::ACAD) =
   @remote(b, CreateLayer(name))
 
-create_layer(name::String, color::RGB, b::ACAD=current_backend()) =
+create_layer(name::String, color::RGB, b::ACAD) =
   let layer = @remote(b, CreateLayer(name))
     @remote(b, SetLayerColor(layer, color.r, color.g, color.b))
     layer

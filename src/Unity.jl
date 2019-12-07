@@ -810,6 +810,14 @@ current_layer(layer::UnityLayer, b::Unity) =
 create_layer(name::String, b::Unity) =
   @remote(b, CreateParent(name))
 
+create_layer(name::String, color::RGB, b::Unity) =
+  let layer = @remote(b, CreateParent(name))
+    @warn "Ignoring color in create_layer for Unity"
+    #@remote(b, SetLayerColor(layer, color.r, color.g, color.b))
+    layer
+  end
+
+
 set_layer_active(layer::UnityLayer, status, b::Unity) =
   let c = connection(b)
     @remote(b, SetActive(layer, status))

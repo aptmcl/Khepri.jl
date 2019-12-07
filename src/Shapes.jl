@@ -1063,6 +1063,7 @@ end
 @defop view_top()
 @defop get_layer(name::String)
 @defop create_layer(name::String)
+@defop create_layer(name::String, color::RGB)
 @defop current_layer()
 @defop current_layer(layer)
 @defop set_layer_active(layer, status)
