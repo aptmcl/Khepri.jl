@@ -1,10 +1,6 @@
 export unreal, fast_unreal,
        unreal_material_family
 
-macro unreal_str(str)
-    cpp_rpc(str)
-end
-
 # We need some additional Encoders
 encode_Actor = encode_int
 decode_Actor = decode_int_or_error
@@ -31,7 +27,12 @@ create_Unreal_connection() =
         create_backend_connection("Unreal", 11002)
     end
 
-const unreal = Unreal(LazyParameter(TCPSocket, create_Unreal_connection))
+unreal_functions = @remote_functions :CPP """
+  public Actor Sphere(Vector3 center, float radius)
+"""
+
+const unreal = Unreal(LazyParameter(TCPSocket, create_Unreal_connection),
+                      unreal_functions)
 
 backend_name(b::Unreal) = "Unreal"
 
@@ -217,15 +218,10 @@ realize(b::Unreal, s::Text) =
     connection(b),
     s.str, s.corner, vz(-1, s.corner.cs), vy(1, s.corner.cs), "Fonts/Inconsolata-Regular", s.height)
 
-unreal_functions() =
-  @remote_functions begin
-    unreal"public Actor Sphere(Vector3 center, float radius)"
-  end
+=#
 
 realize(b::Unreal, s::Sphere) =
-  b.Sphere(s.center, s.radius)
-  =#
-
+  @remote(b, Sphere(s.center, s.radius))
 
 #=
 #=
@@ -622,7 +618,7 @@ sweep_fractions(b, verts, height, thickness) =
     end
   end
 
-backend_wall(b::Unreal, path, height, thickness, family) =
+backend_wall(b::Unreal, path, height, l_thickness, r_thickness, family) =
   path_length(path) < path_tolerance() ?
     UnrealEmptyRef() :
     let c = connection(b)
@@ -631,14 +627,14 @@ backend_wall(b::Unreal, path, height, thickness, family) =
           b,
           path,
           height*0.999, #We reduce height just a bit to avoid Z-fighting
-          thickness)
+          l_thickness, r_thickness)
     end
 
-backend_wall_path(b::Unreal, path::PolygonalPath, height, thickness) =
-    UnrealUnionRef(sweep_fractions(b, path.vertices, height, thickness))
+backend_wall_path(b::Unreal, path::PolygonalPath, height, l_thickness, r_thickness) =
+    UnrealUnionRef(sweep_fractions(b, path.vertices, height, l_thickness, r_thickness))
 
-backend_wall_path(b::Unreal, path::RectangularPath, height, thickness) =
-    backend_wall_path(b, convert(OpenPolygonalPath, path), height, thickness)
+backend_wall_path(b::Unreal, path::RectangularPath, height, l_thickness, r_thickness) =
+    backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
 
 
 #=
@@ -714,8 +710,8 @@ set_backend_family(default_curtain_wall_family().mullion_frame,
   unreal,
   unreal_material_family("Materials/Metal/Steel"))
 
-backend_curtain_wall(b::Unreal, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
-  backend_wall(b, translate(path, vz(bottom)), height, thickness, getproperty(s.family, kind))
+backend_curtain_wall(b::Unreal, s, path::Path, bottom::Real, height::Real, r_thickness::Real, l_thickness::Real, kind::Symbol) =
+  backend_wall(b, translate(path, vz(bottom)), height, l_thickness, r_thickness, getproperty(s.family, kind))
 
 ############################################
 #=
