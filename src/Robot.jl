@@ -668,7 +668,7 @@ macro def_rw_property(name, InType, OutType)
     esc(quote
           $(name)(in :: $(InType)) :: $(OutType) = $(OutType)(getproperty(in, $(QuoteNode(method))))
           $(name)(in :: $(InType), val :: $(OutType)) :: Nothing = begin
-            setproperty(in, $(QuoteNode(method)), $(Core.eval(__module__, OutType) <: Enum ? :(Int(val)) : :(val)))
+            setproperty!(in, $(QuoteNode(method)), $(Core.eval(__module__, OutType) <: Enum ? :(Int(val)) : :(val)))
             nothing
           end
       end)
