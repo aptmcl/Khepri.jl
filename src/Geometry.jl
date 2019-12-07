@@ -150,3 +150,33 @@ for (i,p) in enumerate(pts1)
   sleep(1)
 end
 =#
+
+# Intersection
+
+segments_intersection(p0, p1, p2, p3) =
+  let denom = (p3.y - p2.y)*(p1.x - p0.x) - (p3.x - p2.x)*(p1.y - p0.y)
+    if denom == 0
+      nothing
+    else
+      let u = ((p3.x - p2.x)*(p0.y - p2.y) - (p3.y - p2.y)*(p0.x - p2.x))/denom,
+          v = ((p1.x - p0.x)*(p0.y - p2.y) - (p1.y - p0.y)*(p0.x - p2.x))/denom
+        if 0 <= u <= 1 && 0 <= v <= 1
+          xy(p0.x + u*(p1.x - p0.x), p0.y + u*(p1.y - p0.y))
+        else
+          nothing
+        end
+      end
+    end
+  end
+
+lines_intersection(p0, p1, p2, p3) =
+  let denom = (p3.y - p2.y)*(p1.x - p0.x) - (p3.x - p2.x)*(p1.y - p0.y)
+    if denom == 0
+      nothing
+    else
+      let u = ((p3.x - p2.x)*(p0.y - p2.y) - (p3.y - p2.y)*(p0.x - p2.x))/denom,
+          v = ((p1.x - p0.x)*(p0.y - p2.y) - (p1.y - p0.y)*(p0.x - p2.x))/denom
+        xy(p0.x + u*(p1.x - p0.x), p0.y + u*(p1.y - p0.y))
+      end
+    end
+  end
