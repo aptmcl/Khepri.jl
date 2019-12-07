@@ -820,7 +820,7 @@ macro def_com(name, Type, params...)
   esc(
     quote
       function $name(receiver :: $(Type), $(params...)) :: $(out)
-          get_property(receiver, $(QuoteNode(method)))($(args...))
+          getproperty(receiver, $(QuoteNode(method)))($(args...))
       end
   end)
 end
