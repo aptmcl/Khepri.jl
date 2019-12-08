@@ -137,7 +137,6 @@ public void ScreenShot(String path)
 public void SelectGameObjects(GameObject[] objs)
 public void StartSelectingGameObject()
 public int SelectedGameObjectId(bool existing)
-public void MakeStaticGameObjects(bool val)
 """
 
 abstract type UnityKey end
@@ -1064,9 +1063,3 @@ select_shape(prompt::String, b::Unity) =
       end
       [s]
     end)
-
-
-# For performance
-
-static_game_objects(v) =
-  @remote(unity, MakeStaticGameObjects(v))
