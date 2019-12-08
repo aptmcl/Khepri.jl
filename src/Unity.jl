@@ -1,10 +1,6 @@
 export unity, fast_unity,
        unity_material_family
 
-macro unity_str(str)
-    rpc("Unity", str)
-end
-
 # We need some additional Encoders
 encode_GameObject = encode_int
 decode_GameObject = decode_int_or_error
@@ -141,6 +137,7 @@ public void ScreenShot(String path)
 public void SelectGameObjects(GameObject[] objs)
 public void StartSelectingGameObject()
 public int SelectedGameObjectId(bool existing)
+public void MakeStaticGameObjects(bool val)
 """
 
 abstract type UnityKey end
@@ -569,7 +566,6 @@ realize(b::Unity, s::UnionMirror) =
   end
 =#
 
-
 realize(b::Unity, s::SurfaceGrid) =
     @remote(b, SurfaceFromGrid(
         size(s.points,1),
@@ -684,7 +680,9 @@ realize(b::Unity, s::FreeColumn) =
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
     @remote(b, BeamRectSection(
       c, vz(1, c.cs), vx(1, c.cs),
-      profile.dy, profile.dx, s.h, -s.angle,
+      profile.dy, profile.dx,
+      s.h*0.999, #We reduce height just a bit to avoid Z-fighting,
+      -s.angle,
       realize(b, s.family)))
   end
 
@@ -696,7 +694,9 @@ realize(b::Unity, s::Column) =
         height = s.top_level.height - base_height
         # need to test whether it is rotation on center or on axis
       @remote(b, BeamRectSection(
-        c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx, height, -s.angle,
+        c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx,
+        height*0.999, #We reduce height just a bit to avoid Z-fighting
+        -s.angle,
         realize(b, s.family)))
     end
 
@@ -1064,3 +1064,9 @@ select_shape(prompt::String, b::Unity) =
       end
       [s]
     end)
+
+
+# For performance
+
+static_game_objects(v) =
+  @remote(unity, MakeStaticGameObjects(v))
