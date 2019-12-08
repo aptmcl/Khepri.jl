@@ -717,7 +717,7 @@ sweep_fractions(b, verts, height, l_thickness, r_thickness) =
   let p = add_z(verts[1], height/2),
       q = add_z(verts[2], height/2),
       (c, h) = position_and_height(p, q),
-      thickness = r_thickness + l_thickness, # HACK THIS IS WRONG!
+      thickness = r_thickness - l_thickness, # HACK THIS IS WRONG!
       s = UnityNativeRef(@remote(b, RightCuboid(c, vz(1, c.cs), vx(1, c.cs), height, thickness, h, 0)))
     if length(verts) > 2
       (s, sweep_fractions(b, verts[2:end], height, l_thickness, r_thickness)...)
