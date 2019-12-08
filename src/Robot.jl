@@ -791,8 +791,8 @@ end
 @def_com_type IRobotObjObject
 @def_com_type IRobotObjPartMain
 @def_com_type IRobotObjAttributes
+@def_com_type IRobotGeoObject
 @def_com_type IRobotGeoContour
-
 #Generic types that does not actually exists in the Robot API
 @def_com_type IRobotComponent
 
@@ -871,6 +871,7 @@ Boolean = Bool
 @def_ro_property displacements IRobotNodeResultServer IRobotNodeDisplacementServer
 @def_ro_property Stresses IRobotBarResultServer IRobotBarStressServer
 @def_ro_property Main IRobotObjObject IRobotObjPartMain
+@def_rw_property Geometry IRobotObjPartMain IRobotGeoObject
 @def_ro_property Attribs IRobotObjPartMain IRobotObjAttributes
 @def_rw_property Meshed IRobotObjAttributes Boolean
 #@def_rw_property P1 IRobotGeoSegmentLine
@@ -949,6 +950,7 @@ end
 #@def_com create_circle IRobotObjObjectServer number::Long pts::IRobotPointsArray Void
 #@def_com CreateCone
 @def_com create_contour IRobotObjObjectServer number::Long pts::IRobotPointsArray Void
+@def_com (create_object, Create) IRobotObjObjectServer number::Long IRobotObjObject
 #@def_com CreateCube
 #@def_com CreateCylinder
 #@def_comCreateOnFiniteElems
@@ -1085,6 +1087,7 @@ end
 
 add_cladding!(pts, family) =
   let pts = map(in_world, pts)
+      println("Adding cladding!")
     get!(added_claddings(), pts) do
         cladding_counter(cladding_counter()+1)
         cladding_data(cladding_counter(), pts, family)
@@ -1103,7 +1106,6 @@ new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) 
         let struc = structure(project(application()))
             nds = nodes(struc)
             brs = bars(struc)
-            clads =
             node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
@@ -1148,7 +1150,7 @@ new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) 
                 end
             end
             for cladding_data in values(added_claddings())
-                create_cladding(cladding_data.pts)
+                create_cladding(cladding_data.id, cladding_data.pts)
             end
             case_counter(case_counter()+1)
             new_case(case_counter(),
@@ -1283,27 +1285,46 @@ set_bar_section!(bar, label) =
             I_LT_BAR_SECTION,
             label)
 
-create_cladding(pts) =
+create_cladding(id, pts) =
   let pts = in_world.(pts),
       rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY),
-      objserver = objects(structure(project(application()))),
-      id = cladding_counter()
-    cladding_counter(cladding_counter()+1)
+      objserver = objects(structure(project(application())))
+    println("Creating cladding for $(pts)")
     set_size(rpts, length(pts))
     for i in 1:length(pts)
         set_position(rpts, i, pts[i].x, pts[i].y, pts[i].z)
     end
-    create_contour(objserver, id, pts)
-    let contour = get_contour(objserver, id)
-      Meshed(Attribs(Main(contour)), false)
+    create_contour(objserver, id, rpts)
+    let contour = get_contour(objserver, id) #,
+#        m = Main(contour)
+#      Geometry(m, contour)
+#      Meshed(Attribs(m), false)
+      Main(contour)
+      Attribs(Main(contour))
+      Meshed(Attribs(Main(contour)))
       initialize(contour)
       set_label(contour, I_LT_CLADDING, "Two-way")
       update(contour)
       contour
     end
   end
-
-
+#=
+mypts = [xyz(-4.0,2.0,0.0), xyz(1.0,-3.0,0.0), xyz(1.0,2.0,4.0)]
+rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY)
+objserver = objects(structure(project(application())))
+set_size(rpts, length(mypts))
+for i in 1:length(mypts)
+    set_position(rpts, i, mypts[i].x, mypts[i].y, mypts[i].z)
+end
+create_contour(objserver, 1234, rpts)
+contour = get_contour(objserver, 1234)
+Main(contour)
+Attribs(Main(contour))
+Meshed(Attribs(Main(contour)))
+initialize(contour)
+set_label(contour, I_LT_CLADDING, "Two-way")
+update(contour)
+=#
 
 new_case(number, name, nature, analize_type, setup, process_results) =
   let case = create_simple(cases(structure(project(application()))),
@@ -1427,7 +1448,7 @@ realize(b::ROBOT, s::TrussBar) =
     add_bar!(s.p0, s.p1, s.angle, s.family)
 
 realize(b::ROBOT, s::Panel) =
-  true #add_cladding!(s.vertices, s.family)
+  add_cladding!(s.vertices, s.family)
 
 show_truss_deformation(results;
     node_radius=0.08, bar_radius=0.02, factor=100,
