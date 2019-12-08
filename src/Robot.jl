@@ -619,6 +619,65 @@ end
   I_DRV_COEFF = 3
 end
 
+@enums IRobotComponentType begin
+  I_CT_VALUES_ARRAY = 1
+  I_CT_NUMBERS_ARRAY = 2
+  I_CT_NAMES_ARRAY = 3
+  I_CT_OBJECTS_ARRAY = 4
+  I_CT_GEO_POINT_2D = 5
+  I_CT_GEO_POINT_3D = 6
+  I_CT_GEO_CURVE_DIV = 7
+  I_CT_GEO_SEGMENT = 8
+  I_CT_GEO_SEGMENT_LINE = 9
+  I_CT_GEO_SEGMENT_ARC = 10
+  I_CT_GEO_OBJECT = 11
+  I_CT_GEO_POLYLINE = 12
+  I_CT_GEO_CONTOUR = 13
+  I_CT_GEO_ARC = 14
+  I_CT_GEO_CIRCLE = 15
+  I_CT_GEO_SEGMENT_COLLECTION = 16
+  I_CT_GEO_POINT_3D_COLLECTION = 17
+  I_CT_GEO_LAYER = 18
+  I_CT_EMITTER = 19
+  I_CT_JOINT_LOAD = 20
+  I_CT_JOINT_KNEE_LOAD = 20
+  I_CT_JOINT_ANGLE_LOAD = 20
+  I_CT_JOINT_TUBE_LOAD = 20
+  I_CT_JOINT_PINNED_LOAD = 20
+  I_CT_JOINT_FIXED_LOAD = 20
+  I_CT_JOINT_GUSSET_SIMPLE_LOAD = 20
+  I_CT_JOINT_GUSSET_CROSS_LOAD = 20
+  I_CT_JOINT_GUSSET_FLANGE_LOAD = 20
+  I_CT_MODIF_EXTRUSION = 29
+  I_CT_MODIF_LATHE = 30
+  I_CT_MODIF_PYRAMID = 31
+  I_CT_OPER_TRANSLATION = 32
+  I_CT_OPER_SCALING = 33
+  I_CT_OPER_ROTATION = 34
+  I_CT_OPER_MESHING = 35
+  I_CT_SPECTRAL_ANALYSIS_POINTS_COLLECTION = 36
+  I_CT_SPECTRAL_ANALYSIS_SPECTRUM = 37
+  I_CT_CASE_ANALYSIS_MODES_FILTER = 38
+  I_CT_FE_RESULT_PARAMS = 39
+  I_CT_RTF_VIEW = 40
+  I_CT_POINTS_ARRAY = 41
+  I_CT_EXTREME_PARAMS = 42
+  I_CT_STRUCTURE_GEO_ANALYSER = 43
+  I_CT_FE_EXTREME_PARAMS = 44
+  I_CT_FE_MULTI_RESULT_TYPE = 45
+  I_CT_SW_STRUCT3D_GEN_PARAMS = 46
+  I_CT_SW_STRUCT3D_PURLIN_GEN_PARAMS = 47
+  I_CT_SW_STRUCT3D = 48
+  I_CT_SW_STRUCT3D_FRAME = 49
+  I_CT_SW_STRUCT3D_ELEMENT = 50
+  I_CT_HTML_VIEW = 52
+  I_CT_STRUCTURE_MERGE_DATA = 53
+  I_CT_NUMBERS_DICTIONARY = 54
+  I_CT_TABLE_SCREEN_CAPTURE_PARAMS = 55
+  I_CT_PARAM_DEF = 56
+  I_CT_RESULT_QUERY_PARAMS = 57
+end
+
 #=
 using PyCall
 @pyimport array
@@ -722,8 +781,21 @@ end
 @def_com_type IRobotBarStressServer
 @def_com_type IRobotBarStressData
 @def_com_type IRobotSelectionFactory
+@def_com_type IRobotComponentFactory
 @def_com_type IRobotSelection
 @def_com_type IRobotDisplacementData
+@def_com_type IRobotGeoSegmentLine
+@def_com_type RobotGeoSegmentLine
+@def_com_type IRobotPointsArray
+@def_com_type IRobotObjObjectServer
+@def_com_type IRobotObjObject
+@def_com_type IRobotObjPartMain
+@def_com_type IRobotObjAttributes
+@def_com_type IRobotGeoContour
+
+#Generic types that does not actually exists in the Robot API
+@def_com_type IRobotComponent
+
 
 Double = Float64
 Long = Int64
@@ -731,6 +803,7 @@ Void = Nothing
 Boolean = Bool
 
 @def_ro_property project IRobotApplication IRobotProject
+@def_ro_property CmpntFactory IRobotApplication IRobotComponentFactory
 @def_ro_property nodes IRobotStructure IRobotNodeServer
 @def_ro_property bars IRobotStructure IRobotBarServer
 
@@ -797,6 +870,11 @@ Boolean = Bool
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
 @def_ro_property displacements IRobotNodeResultServer IRobotNodeDisplacementServer
 @def_ro_property Stresses IRobotBarResultServer IRobotBarStressServer
+@def_ro_property Main IRobotObjObject IRobotObjPartMain
+@def_ro_property Attribs IRobotObjPartMain IRobotObjAttributes
+@def_rw_property Meshed IRobotObjAttributes Boolean
+#@def_rw_property P1 IRobotGeoSegmentLine
+
 
 macro def_com(name, Type, params...)
   out = last(params)
@@ -830,12 +908,14 @@ end
 @def_com (create_node, Create) IRobotNodeServer node_number::Long x::Double y::Double z::Double Void
 @def_com (create_bar, Create) IRobotBarServer bar_number::Long start_node::Long end_node::Long Void
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
+@def_com (create_component, Create) IRobotComponentFactory typ::IRobotComponentType IRobotComponent
 @def_com is_available IRobotLabelServer typ::IRobotLabelType name::String Boolean
 @def_com delete IRobotLabelServer typ::IRobotLabelType name::String Void
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
 @def_com (get_record, Get) IRobotLoadRecordMngr idx::Int IRobotLoadRecord
+@def_com (get_contour, Get) IRobotObjObjectServer idx::Int IRobotGeoContour
 @def_com set_label IRobotNode typ::IRobotLabelType name::String Void
 #@def_com set_label IRobotBar typ::IRobotLabelType name::String Void
 @def_com (get_selection, Get) IRobotSelectionFactory typ::IRobotObjectType IRobotSelection
@@ -846,6 +926,10 @@ end
 @def_com set_value IRobotLoadRecord value_id::IRobotNodeForceRecordValues value::Double Void
 @def_com set_value IRobotLoadRecord value_id::IRobotDeadRecordValues value::Double Void
 #@def_com set_value IRobotBarSectionSpecialData attr::IRobotBarSectionSpecialDataValue value::Double Void
+@def_com set_size IRobotPointsArray size::Long Void
+#@def_com (get_position, Get) IRobotPointsArray idx::Long x::Double y::Double z::Double Void
+@def_com (set_position, Set) IRobotPointsArray idx::Long x::Double y::Double z::Double Void
+
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double IRobotBarSectionNonstdData
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
 @def_com create_simple IRobotCaseServer number::Int name::String nature::IRobotCaseNature analize_type::IRobotCaseAnalizeType IRobotSimpleCase
@@ -856,6 +940,22 @@ end
 @def_com (bar_displacement, Value) IRobotBarDisplacementServer bar::Int pos::Double case::Int IRobotDisplacementData
 @def_com (bar_stress, Value) IRobotBarStressServer bar::Int case::Int pos::Double IRobotBarStressData
 @def_com from_text IRobotSelection ids::String Void
+
+#Again, these operate on generic types
+@def_com initialize IRobotComponent Void
+@def_com update IRobotComponent Void
+
+#@def_com create_arc IRobotObjObjectServer number::Long pts::IRobotPointsArray creation_type::IRobotGeoArcDefinitionMethod=I_GADM_CENTER_BEGIN_END Void
+#@def_com create_circle IRobotObjObjectServer number::Long pts::IRobotPointsArray Void
+#@def_com CreateCone
+@def_com create_contour IRobotObjObjectServer number::Long pts::IRobotPointsArray Void
+#@def_com CreateCube
+#@def_com CreateCylinder
+#@def_comCreateOnFiniteElems
+#@def_com CreatePolyline
+#@def_com CreateSolid
+
+
 #;Stress
 @def_rw_property Smin IRobotBarStressData Double
 @def_rw_property Smax IRobotBarStressData Double
@@ -868,6 +968,7 @@ function application()
         copy!(com, pyimport("win32com.client"))
         robot_app = let r = com.Dispatch("Robot.Application")
                         r.Visible = 1
+                        r.Interactive = 1
                         r
                     end
     else
@@ -938,6 +1039,8 @@ added_nodes = Parameter(Dict())
 case_counter = Parameter(0)
 bar_counter = Parameter(0)
 added_bars = Parameter(Dict())
+cladding_counter = Parameter(0)
+added_claddings = Parameter(Dict())
 
 add_node!(p, family, load=false, reuse=false) =
   let p = in_world(p)
@@ -946,8 +1049,6 @@ add_node!(p, family, load=false, reuse=false) =
       truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
     end
   end
-
-current_nodes_ids() = 0:node_counter()
 
 # Bars
 
@@ -974,19 +1075,35 @@ add_bar!(p0, p1, rotation, family) =
     end
   end
 
-current_bars_ids() = 0:bar_counter()
+# Cladding
 
+struct cladding_data
+    id::Int
+    pts::Locs
+    family::Any
+end
 
+add_cladding!(pts, family) =
+  let pts = map(in_world, pts)
+    get!(added_claddings(), pts) do
+        cladding_counter(cladding_counter()+1)
+        cladding_data(cladding_counter(), pts, family)
+    end
+  end
 
 new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) =
     with(node_counter, 0,
+         bar_counter, 0,
+         cladding_counter, 0,
          added_nodes, Dict(),
          added_bars, Dict(),
+         added_claddings, Dict(),
          case_counter, 0) do
         create_truss()
         let struc = structure(project(application()))
             nds = nodes(struc)
             brs = bars(struc)
+            clads =
             node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
           for node_data in values(added_nodes())
             let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
@@ -1029,6 +1146,9 @@ new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) 
                       set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
                   end
                 end
+            end
+            for cladding_data in values(added_claddings())
+                create_cladding(cladding_data.pts)
             end
             case_counter(case_counter()+1)
             new_case(case_counter(),
@@ -1163,6 +1283,28 @@ set_bar_section!(bar, label) =
             I_LT_BAR_SECTION,
             label)
 
+create_cladding(pts) =
+  let pts = in_world.(pts),
+      rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY),
+      objserver = objects(structure(project(application()))),
+      id = cladding_counter()
+    cladding_counter(cladding_counter()+1)
+    set_size(rpts, length(pts))
+    for i in 1:length(pts)
+        set_position(rpts, i, pts[i].x, pts[i].y, pts[i].z)
+    end
+    create_contour(objserver, id, pts)
+    let contour = get_contour(objserver, id)
+      Meshed(Attribs(Main(contour)), false)
+      initialize(contour)
+      set_label(contour, I_LT_CLADDING, "Two-way")
+      update(contour)
+      contour
+    end
+  end
+
+
+
 new_case(number, name, nature, analize_type, setup, process_results) =
   let case = create_simple(cases(structure(project(application()))),
                           number,
@@ -1283,6 +1425,9 @@ realize(b::ROBOT, s::TrussNode) =
 
 realize(b::ROBOT, s::TrussBar) =
     add_bar!(s.p0, s.p1, s.angle, s.family)
+
+realize(b::ROBOT, s::Panel) =
+  true #add_cladding!(s.vertices, s.family)
 
 show_truss_deformation(results;
     node_radius=0.08, bar_radius=0.02, factor=100,
