@@ -893,7 +893,7 @@ export_geometry(b::Radiance, path::AbstractString) =
 
 used_materials(b::Radiance) =
   let materials = unique(map(f -> realize(s.family, b), b.shapes))
-      ????
+      materials
     end
 
 
@@ -902,9 +902,10 @@ export_materials(b::Radiance, path::AbstractString) =
     open(matpath, "w") do out
       write(out, String(take!(buf)))
     end
-      (for ([mat (in-list materials)])
-        (displayln (radiance-string mat) port))))
-  matpath))
+#=      (for ([mat (in-list materials)])
+        (displayln (radiance-string mat) port))))=#
+    matpath
+  end
 
 export_sky(b::Radiance, path::AbstractString;
            date::Date=date(0, 0, 9, 21, 9, 0, 0, 0, false, 0),
@@ -917,8 +918,8 @@ export_sky(b::Radiance, path::AbstractString;
       write(out, "!gensky ~A ~A ~A:~A ~A -a ~A -o ~A -m ~A~%",
        _2digits(date_month(date)), _2digits(date_day(date)),
         _2digits(date_hour(date)), _2digits(date_minute(date)),
-         issun ? "+s" : "-s", latitude, longitude, meridian),
-         println(port, extra_sky_rad_contents))
+         issun ? "+s" : "-s", latitude, longitude, meridian)
+         println(out, extra_sky_rad_contents)
     end
     skypath
   end
