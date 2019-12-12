@@ -893,7 +893,7 @@ export_geometry(b::Radiance, path::AbstractString) =
 
 used_materials(b::Radiance) =
   let materials = unique(map(f -> realize(s.family, b), b.shapes))
-      ????
+      materials
     end
 
 
