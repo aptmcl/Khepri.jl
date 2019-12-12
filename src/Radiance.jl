@@ -902,9 +902,10 @@ export_materials(b::Radiance, path::AbstractString) =
     open(matpath, "w") do out
       write(out, String(take!(buf)))
     end
-      (for ([mat (in-list materials)])
-        (displayln (radiance-string mat) port))))
-  matpath))
+#=      (for ([mat (in-list materials)])
+        (displayln (radiance-string mat) port))))=#
+    matpath
+  end
 
 export_sky(b::Radiance, path::AbstractString;
            date::Date=date(0, 0, 9, 21, 9, 0, 0, 0, false, 0),
