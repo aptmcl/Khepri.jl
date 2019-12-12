@@ -370,7 +370,7 @@ delete_all_shapes(b::Radiance) =
     (empty!(b.shapes); nothing)
   end
 
-realize(b::ACAD, s::Sphere) =
+realize(b::Radiance, s::Sphere) =
   let id = next_id(b),
       mod = next_modifier(b, missing),
       kind = "sphere",
@@ -844,9 +844,8 @@ abstract type LightingAnalysis <: Analysis end
 struct DaysimAnalysis <: LightingAnalysis
 end
 
-using Dates
 struct RadianceMapAnalysis <: LightingAnalysis
-  sensors::Sensors
+  sensors::Locs
   path::AbstractString
   location::AbstractString
   datetime::DateTime
