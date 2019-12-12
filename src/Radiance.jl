@@ -39,7 +39,7 @@ write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
 write_rad_polygon(io::IO, modifier, id, vertices) =
   begin
     with(current_backend, autocad) do
-      surface_polygon(vertices)
+      polygon(vertices)
     end
     println(io, modifier, " ", "polygon", " ", id)
     println(io, 0) #0 strings
@@ -47,6 +47,10 @@ write_rad_polygon(io::IO, modifier, id, vertices) =
     println(io, 3*length(vertices))
     for v in vertices println(io, " ", v.x, " ", v.y, " ", v.z) end
   end
+
+write_rad_sphere(io::IO, modifier, id, center, radius) =
+  write_rad_primitive(io, modifier, "sphere", id, [], [],
+    [center.x, center.y, center.z, radius])
 
 write_rad_cone(io::IO, modifier, id, bot, bot_radius, top, top_radius) =
   write_rad_primitive(io, modifier, "cone", id, [], [],
@@ -110,7 +114,177 @@ write_rad_box(io::IO, modifier, id, p0, l, w, h) =
     write_rad_quad(io, modifier, id, "face5", p2, p5, p6, p7)
   end
 
-#
+#=
+Materials
+=#
+
+struct RadianceMaterial
+  name::String
+  type::String
+  red::Real
+  green::Real
+  blue::Real
+  specularity::Union{Real, Nothing}
+  roughness::Union{Real, Nothing}
+  transmissivity::Union{Real, Nothing}
+  transmitted_specular::Union{Real, Nothing}
+end
+
+radiance_string(m::RadianceMaterial) =
+  isnothing(m.transmissivity) && isnothing(m.transmitted_specular) ?
+    isnothing(m.specularity) && isnothing(m.roughness) ?
+      "void $(m.type) $(m.name)\n0\n0\n3 $(m.red) $(m.green) $(m.blue)\n" :
+      "void $(m.type) $(m.name)\n0\n0\n5 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness)\n" :
+    "void $(m.type) $(m.name)\n0\n0\n7 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness) $(m.transmissivity) $(m.transmitted_specular)\n"
+
+write_rad_material(io::IO, material::RadianceMaterial) =
+  write(io, radiance_string(material))
+
+#Base.show(io::IO, mat::RadianceMaterial) =
+#  write_rad_material(io, mat)
+
+radiance_material(name::String, type::String;
+                  gray::Real=0.3,
+                  red::Real=gray, green::Real=gray, blue::Real=gray,
+                  specularity=nothing, roughness=nothing,
+                  transmissivity=nothing, transmitted_specular=nothing) =
+  RadianceMaterial(name, type,
+                   red, green, blue,
+                   specularity, roughness,
+                   transmissivity, transmitted_specular)
+
+radiance_light_material(name::String; args...) =
+  radiance_material(name, "light"; args...)
+
+radiance_plastic_material(name::String; args...) =
+  radiance_material(name, "plastic"; specularity=0, roughness=0, args...)
+
+radiance_metal_material(name::String; args...) =
+  radiance_material(name, "metal"; specularity=0, roughness=0, args...)
+
+radiance_glass_material(name::String; args...) =
+  radiance_material(name, "glass"; args...)
+
+#Some pre-defined materials
+radiance_material_white = radiance_plastic_material("white", gray=1.0) #
+radiance_generic_ceiling_70 = radiance_plastic_material("GenericCeiling_70", gray=0.7)
+radiance_generic_ceiling_80 = radiance_plastic_material("GenericCeiling_80", gray=0.8)
+radiance_generic_ceiling_90 = radiance_plastic_material("HighReflectanceCeiling_90", gray=0.9)
+radiance_generic_floor_20 = radiance_plastic_material("GenericFloor_20", gray=0.2)
+radiance_generic_interior_wall_50 = radiance_plastic_material("GenericInteriorWall_50", gray=0.5)
+radiance_generic_interior_wall_70 = radiance_plastic_material("GenericInteriorWall_70", gray=0.7)
+radiance_generic_furniture_50 = radiance_plastic_material("GenericFurniture_50", gray=0.5)
+radiance_outside_facade_30 = radiance_plastic_material("OutsideFacade_30", gray=0.3)
+radiance_outside_facade_35 = radiance_plastic_material("OutsideFacade_35", gray=0.35)
+radiance_generic_glass_80 = radiance_glass_material("Glass_80", gray=0.8)
+radiance_generic_metal = radiance_metal_material("SheetMetal_80", gray=0.8)
+
+export radiance_material_white,
+       radiance_generic_ceiling_70,
+       radiance_generic_ceiling_80,
+       radiance_generic_ceiling_90,
+       radiance_generic_floor_20,
+       radiance_generic_interior_wall_50,
+       radiance_generic_interior_wall_70,
+       radiance_generic_furniture_50,
+       radiance_outside_facade_30,
+       radiance_outside_facade_35,
+       radiance_generic_glass_80,
+       radiance_generic_metal
+
+#=
+Simulations need to be done on a temporary folder, so that we can have multiple
+simulations running at the same time.
+=#
+
+radiance_simulation_path() =
+ let (path, io) = mktemp(mktempdir(tempdir(), prefix="Radiance_"))
+   close(io)
+   path
+ end
+
+radiance_cmd(cmd::AbstractString) =
+  # By default Radiance in Windows is installed in C:\Program Files\Radiance\bin
+  let radiance_folder = "C:/Program Files/Radiance/bin/"
+    radiance_folder * cmd
+  end
+
+path_replace_suffix(path::String, suffix::String) =
+  let (base, old_suffix) = splitext(path)
+    base * suffix
+  end
+
+radiance_oconv(path_rad) =
+  let path_oct = path_replace_suffix(path_rad, ".oct")
+    run(pipeline(`$(radiance_cmd("oconv")) $path_rad`, stdout=path_oct))
+    path_oct
+  end
+
+radiance_rview(path_oct, camera, target, light=(1,1,1)) =
+  let p = camera,
+      v = target-camera
+    run(`$(radiance_cmd("rvu")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $path_oct`)
+  end
+
+
+#=
+# Test1
+room_rad = radiance_simulation_path()
+
+open(room_rad, "w") do out
+  write_rad_material(out, radiance_light_material("bright", gray=100))
+  write_rad_material(out, radiance_plastic_material("red_plastic", red=.7, green=.05, blue=.05, specularity=.5, roughness=.5))
+  write_rad_sphere(out, "bright", "fixture", xyz(2, 1, 1.5), .125)
+  write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
+end
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125))
+
+# Test2
+
+open(room_rad, "w") do out
+  write_rad_material(out, radiance_light_material("bright", gray=100))
+  write_rad_material(out, radiance_plastic_material("red_plastic", red=.7, green=.05, blue=.05, specularity=.5, roughness=.5))
+  write_rad_material(out, radiance_plastic_material("gray_paint", gray=.5))
+  write_rad_sphere(out, "bright", "fixture", xyz(2, 1, 1.5), .125)
+  write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
+  write_rad_quad(out, "gray_paint", "room", "1", xyz(0,0,0), xyz(0,0,1.75), xyz(3,0,1.75), xyz(3,0,0))
+  write_rad_quad(out, "gray_paint", "room", "2", xyz(0,0,0), xyz(0,2,0), xyz(0,2,1.75), xyz(0,0,1.75))
+  write_rad_quad(out, "gray_paint", "room", "3", xyz(0,0,0), xyz(3,0,0), xyz(3,2,0), xyz(0,2,0))
+  write_rad_quad(out, "gray_paint", "room", "4", xyz(3,2,1.75), xyz(0,2,1.75), xyz(0,2,0), xyz(3,2,0))
+  write_rad_quad(out, "gray_paint", "room", "5", xyz(3,2,1.75), xyz(3,2,0), xyz(3,0,0), xyz(3,0,1.75))
+  write_rad_quad(out, "gray_paint", "room", "6", xyz(3,2,1.75), xyz(3,0,1.75), xyz(0,0,1.75), xyz(0,2,1.75))
+end
+
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+
+# Test2
+
+open(room_rad, "w") do out
+  write_rad_material(out, radiance_light_material("bright", gray=100))
+  write_rad_material(out, radiance_plastic_material("red_plastic", red=.7, green=.05, blue=.05, specularity=.5, roughness=.5))
+  write_rad_material(out, radiance_plastic_material("gray_paint", gray=.5))
+  write_rad_sphere(out, "bright", "fixture", xyz(2, 1, 1.5), .125)
+  write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
+  write_rad_quad(out, "gray_paint", "room", "1", xyz(0,0,0), xyz(0,0,1.75), xyz(3,0,1.75), xyz(3,0,0))
+  write_rad_quad(out, "gray_paint", "room", "2", xyz(0,0,0), xyz(0,2,0), xyz(0,2,1.75), xyz(0,0,1.75))
+  write_rad_quad(out, "gray_paint", "room", "3", xyz(0,0,0), xyz(3,0,0), xyz(3,2,0), xyz(0,2,0))
+  write_rad_quad(out, "gray_paint", "room", "4", xyz(3,2,1.75), xyz(0,2,1.75), xyz(0,2,0), xyz(3,2,0))
+  write_rad_quad(out, "gray_paint", "room", "5", xyz(3,2,1.75), xyz(3,2,0), xyz(3,0,0), xyz(3,0,1.75))
+  write_rad_quad(out, "gray_paint", "room", "6", xyz(3,2,1.75), xyz(3,0,1.75), xyz(0,0,1.75), xyz(0,2,1.75))
+  println(out, radiance_plastic_material("blue_plastic", red=.1, green=.1, blue=.6, specularity=.05, roughness=.1))
+  write_rad_quad(out, "blue_plastic", "box", "1540", xyz(0.98,0.88,0), xyz(0.98,0.88,0.5), xyz(0.5,0.75,0.5), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "4620", xyz(0.5,0.75,0.5), xyz(0.37,1.23,0.5), xyz(0.37,1.23,0), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "2310", xyz(0.37,1.23,0), xyz(0.85,1.36,0), xyz(0.98,0.88,0), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "3267", xyz(0.85,1.36,0), xyz(0.37,1.23,0), xyz(0.37,1.23,0.5), xyz(0.85,1.36,0.5))
+  write_rad_quad(out, "blue_plastic", "box", "5137", xyz(0.98,0.88,0.5), xyz(0.98,0.88,0), xyz(0.85,1.36,0), xyz(0.85,1.36,0.5))
+  write_rad_quad(out, "blue_plastic", "box", "6457", xyz(0.37,1.23,0.5), xyz(0.5,0.75,0.5), xyz(0.98,0.88,0.5), xyz(0.85,1.36,0.5))
+  println(out, radiance_metal_material("chrome", gray=.8, specularity=.9, roughness=0))
+  write_rad_cylinder(out, "chrome", "fixture_support", xyz(2,1,1.5), .05, xyz(2,1,1.75))
+end
+
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+
+=#
 
 #=
 
@@ -131,6 +305,9 @@ mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   buffer::LazyParameter{IOBuffer}
   count::Integer
   materials::Dict
+  camera::Loc
+  target::Loc
+  lens::Real
 end
 
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
@@ -143,8 +320,10 @@ void_ref(b::Radiance) = RadianceNativeRef(-1)
 
 create_radiance_buffer() = IOBuffer()
 
-const radiance = Radiance{500}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
-const radiance_lod100 = Radiance{100}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer), 0, Dict())
+const radiance = Radiance{500}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer),
+  0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
+const radiance_lod100 = Radiance{100}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer),
+  0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
 
 buffer(b::Radiance) = b.buffer()
 next_id(b::Radiance) =
@@ -155,7 +334,7 @@ next_id(b::Radiance) =
 next_modifier(b::Radiance, key) =
     get!(b.materials, key, length(b.materials))
 
-save_rad(path::String, b::RadianceBackend=radiance) =
+save_rad(path::String, b::Radiance=current_backend()) =
   let buf = b.buffer()
     take!(buf)
     for s in b.shapes
@@ -172,21 +351,42 @@ end
 
 #
 
+set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
+  begin
+    set_view(camera, target, lens, autocad)
+    b.camera = camera
+    b.target = target
+    b.lens = lens
+  end
+
+get_view(b::Radiance) =
+  b.camera, b.target, b.lens
+
 #current_backend(radiance)
 
 delete_all_shapes(b::Radiance) =
   begin
-    with(current_backend, autocad) do
-      delete_all_shapes()
+    delete_all_shapes(autocad)
+    (empty!(b.shapes); nothing)
   end
-  (empty!(b.shapes); nothing)
-end
 
-
+realize(b::ACAD, s::Sphere) =
+  let id = next_id(b),
+      mod = next_modifier(b, missing),
+      kind = "sphere",
+      buf = buffer(b)
+    write_rad_sphere(buf, "mat$(kind)$(mod)", id, in_world(s.center), s.radius)
+    id
+  end
 
 #=
-realize(b::ACAD, s::Sphere) =
-  ACADSphere(connection(b), s.center, s.radius)
+backend(radiance)
+delete_all_shapes()
+sphere()
+@save_rad()
+=#
+
+  #=
 realize(b::ACAD, s::Torus) =
   ACADTorus(connection(b), s.center, vz(1, s.center.cs), s.re, s.ri)
 realize(b::ACAD, s::Cuboid) =
@@ -288,7 +488,7 @@ realize_pyramid_fustrum(b::Radiance, key, kind::String, bot_vs, top_vs, closed=t
       write_rad_polygon(buf, "mat$(kind)bot$(mod)", next_id(b), top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-      write_rad_polygon(buffer(b), "mat$(kind)side$(mod)", next_id(b), vs)
+      write_rad_polygon(buf, "mat$(kind)side$(mod)", next_id(b), vs)
     end
   end
 
@@ -417,7 +617,6 @@ backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
     void_ref(b)
   end
 
-
 #=
 
 Upon daysim processing, we need to compute the useful daylight illumination, which is the fraction of time that a sensor is within a given range of illumination
@@ -510,11 +709,6 @@ ground_glow source ground
 4 0 0 -1 180
 """
 
-path_replace_suffix(path::String, suffix::String) =
-  let (base, old_suffix) = splitext(path)
-    base * suffix
-  end
-
 export_CIE_Overcast_Sky(path::String) =
   let skypath = path_replace_suffix(path, "_sky.rad")
     open(skypath, "w") do out
@@ -522,82 +716,6 @@ export_CIE_Overcast_Sky(path::String) =
     end
     skypath
   end
-
-
-#=
-Materials
-=#
-
-struct RadianceMaterial
-  name::String
-  type::String
-  red::Real
-  green::Real
-  blue::Real
-  specularity::Union{Real, Nothing}
-  roughness::Union{Real, Nothing}
-  transmissivity::Union{Real, Nothing}
-  transmitted_specular::Union{Real, Nothing}
-end
-
-radiance_string(m::RadianceMaterial) =
-  isnothing(m.transmissivity) && isnothing(m.transmitted_specular) ?
-    isnothing(m.specularity) && isnothing(m.roughness) ?
-      "void $(m.type) $(m.name)\n0\n0\n3 $(m.red) $(m.green) $(m.blue)\n" :
-      "void $(m.type) $(m.name)\n0\n0\n5 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness)\n" :
-    "void $(m.type) $(m.name)\n0\n0\n7 $(m.red) $(m.green) $(m.blue) $(m.specularity) $(m.roughness) $(m.transmissivity) $(m.transmitted_specular)\n"
-
-Base.show(io::IO, mat::RadianceMaterial) =
-    print(io, radiance_string(mat))
-
-radiance_material(name::String, type::String;
-                  gray::Real=0.3,
-                  red::Real=gray, green::Real=gray, blue::Real=gray,
-                  specularity=nothing, roughness=nothing,
-                  transmissivity=nothing, transmitted_specular=nothing) =
-  RadianceMaterial(name, type,
-                   red, green, blue,
-                   specularity, roughness,
-                   transmissivity, transmitted_specular)
-
-radiance_plastic_material(name::String; args...) =
-  radiance_material(name, "plastic"; specularity=0, roughness=0, args...)
-
-radiance_metal_material(name::String; args...) =
-  radiance_material(name, "metal"; specularity=0, roughness=0, args...)
-
-radiance_glass_material(name::String; args...) =
-  radiance_material(name, "glass"; args...)
-
-#Some pre-defined materials
-radiance_material_white = radiance_plastic_material("white", gray=1.0)
-radiance_generic_ceiling_70 = radiance_plastic_material("GenericCeiling_70", gray=0.7)
-radiance_generic_ceiling_80 = radiance_plastic_material("GenericCeiling_80", gray=0.8)
-radiance_generic_ceiling_90 = radiance_plastic_material("HighReflectanceCeiling_90", gray=0.9)
-radiance_generic_floor_20 = radiance_plastic_material("GenericFloor_20", gray=0.2)
-radiance_generic_interior_wall_50 = radiance_plastic_material("GenericInteriorWall_50", gray=0.5)
-radiance_generic_interior_wall_70 = radiance_plastic_material("GenericInteriorWall_70", gray=0.7)
-radiance_generic_furniture_50 = radiance_plastic_material("GenericFurniture_50", gray=0.5)
-radiance_outside_facade_30 = radiance_plastic_material("OutsideFacade_30", gray=0.3)
-radiance_outside_facade_35 = radiance_plastic_material("OutsideFacade_35", gray=0.35)
-radiance_generic_glass_80 = radiance_glass_material("Glass_80", gray=0.8)
-radiance_generic_metal = radiance_metal_material("SheetMetal_80", gray=0.8)
-
-export radiance_material_white,
-       radiance_generic_ceiling_70,
-       radiance_generic_ceiling_80,
-       radiance_generic_ceiling_90,
-       radiance_generic_floor_20,
-       radiance_generic_interior_wall_50,
-       radiance_generic_interior_wall_70,
-       radiance_generic_furniture_50,
-       radiance_outside_facade_30,
-       radiance_outside_facade_35,
-       radiance_generic_glass_80,
-       radiance_generic_metal,
-       radiance_material_family,
-       radiance_slab_family,
-       radiance_outside_wall_family
 
 #=
 Radiance families need to know the different kinds of materials
@@ -632,6 +750,11 @@ radiance_outside_wall_family(out::RadianceMaterial, in::RadianceMaterial=out) =
   RadianceOutsideWallFamily(out, in)
 
 backend_get_family_ref(b::Radiance, f::Family, rf::RadianceMaterialFamily) = rf
+
+export radiance_material_family,
+       radiance_slab_family,
+       radiance_outside_wall_family
+
 
 set_backend_family(default_wall_family(), radiance,
   radiance_material_family(radiance_generic_interior_wall_70))
@@ -676,14 +799,161 @@ create_ground_plane(shapes, material=material_ground()) =
 =#
 
 
-
 #=
-Simulations need to be done on a temporary folder, so that we can have multiple
-simulations running at the same time.
+
+Sensors are need on the surfaces that are intended for analysis.
+They can be placed in many different ways but that are a few standard ones,
+namely those that follow an regular distribution.
 =#
 
-simulation_path() =
-  let (path, io) = mktemp(mktempdir(tempdir(), prefix="Radiance_"))
-    close(io)
-    path
+analysis_nodes_height = Parameter(0.5)
+analysis_nodes_separation_u = Parameter{Union{Missing, Real}}(missing)
+analysis_nodes_separation_v = Parameter{Union{Missing, Real}}(missing)
+analysis_nodes_separation = Parameter(4.0)
+
+analysis_nodes_u_separation()::Real =
+  ismissing(analysis_nodes_separation_u()) ?
+    analysis_nodes_separation() :
+    analysis_nodes_separation_u()
+
+analysis_nodes_v_separation()::Real =
+  ismissing(analysis_nodes_separation_v()) ?
+    analysis_nodes_separation() :
+    analysis_nodes_separation_v()
+
+#=
+sensors_from_surfaces(surfaces=radiance_surfaces(),
+ height::Real=analysis_nodes_height(),
+ sep_u::Real=analysis_nodes_u_separation(),
+ sep_v::Real=analysis_nodes_v_separation()) =
+  (map(surface_from -> let_values(nu(nv)(surface_nu_nv(surface_from, sep_u, sep_v))(), let nodes = map_inner_surface_division(pt -> pt && pt+vz(height), surface_from, nu, nv); filter(identity, append*(nodes)) end),
+                surfaces))
+
+=#
+
+sensors_locations(s::Slab, b::Radiance) =
+  let out_pts = path_vertices(s.countour),
+      in_ptss = map(path_vertices, s.openings),
+      p_ns = Main.plane_surface_sensor_locations(out_pts, in_ptss)
+  end
+
+abstract type Analysis end
+abstract type StructuralAnalysis <: Analysis end
+abstract type LightingAnalysis <: Analysis end
+
+struct DaysimAnalysis <: LightingAnalysis
+end
+
+using Dates
+struct RadianceMapAnalysis <: LightingAnalysis
+  sensors::Sensors
+  path::AbstractString
+  location::AbstractString
+  datetime::DateTime
+  sky::AbstractString
+  simulation_parameters::AbstractString
+  results::Parameter{Any} # HACK: FIX THIS
+end
+
+export radiance_map_analysis
+radiance_map_analysis(sensors;
+                      location="Lisbon",
+                      datetime=Dates.now(UTC),
+                      sky=sky_for(location, datetime),
+                      simulation_parameters="-ab 2 -ad 1000 -as 20 -ar 300 -aa 0.1",
+                      path=radiance_simulation_path()) =
+  RadianceMapAnalysis(sensors, path, location, datetime, sky, simulation_parameters, Parameter{Any}(nothing))
+
+@defop analyze(a::Analysis)
+
+analyze(a::RadianceMapAnalysis, b::Radiance) =
+  let radpath = export_geometry(b, a.path),
+      matpath = export_materials(b, a.path),
+      skypath = export_sky(b, a.path),
+      octpath = path_replace_suffix(a.path, ".oct"),
+      ptspath = export_sensors(b, a.path, a.sensors),
+      datpath = path_replace_suffix(a.path, ".dat")
+    radiance_cmd("""oconv "$(matpath)" "$(skypath)" "$(radpath)" > "$(octpath)" """)
+    radiance_cmd("""rtrace -I -h -dp 2048 -ms 0.063 -ds .2 -dt .05 -dc .75 -dr 3 -st .01 -lr 12 -lw .0005 $(a.simulation_parameters) "$(octpath)" < "$(ptspath)" > "$(datpath)" """)
+    a.results(read_rtrace_results(a.path))
+  end
+
+export_geometry(b::Radiance, path::AbstractString) =
+  let radpath = path_replace_suffix(path, ".rad"),
+      buf = b.buffer()
+    take!(buf)
+    for s in b.shapes
+      realize(b, s)
+    end
+    add_ground_plane(b.shapes, buf)
+    open(radpath, "w") do out
+      write(out, String(take!(buf)))
+    end
+    radpath
+  end
+
+used_materials(b::Radiance) =
+  let materials = unique(map(f -> realize(s.family, b), b.shapes))
+      ????
+    end
+
+
+export_materials(b::Radiance, path::AbstractString) =
+  let matpath = path_replace_suffix(path, "_materials.rad")
+    open(matpath, "w") do out
+      write(out, String(take!(buf)))
+    end
+      (for ([mat (in-list materials)])
+        (displayln (radiance-string mat) port))))
+  matpath))
+
+export_sky(b::Radiance, path::AbstractString;
+           date::Date=date(0, 0, 9, 21, 9, 0, 0, 0, false, 0),
+           latitude::Real=61,
+           longitude::Real=150,
+           meridian::Real=135,
+           issun::Bool=true) =
+  let skypath = path_replace_suffix(path, "_sky.rad")
+    open(skypath, "w") do out
+      write(out, "!gensky ~A ~A ~A:~A ~A -a ~A -o ~A -m ~A~%",
+       _2digits(date_month(date)), _2digits(date_day(date)),
+        _2digits(date_hour(date)), _2digits(date_minute(date)),
+         issun ? "+s" : "-s", latitude, longitude, meridian),
+         println(port, extra_sky_rad_contents))
+    end
+    skypath
+  end
+
+export_sky_for_date_location(b::Radiance, path::AbstractString, date::Date, location::String) =
+  let (place, latitude, longitude, time_zone, site_elevation, weapath) = get_weather_for_location(path, location)
+    export_sky(path,
+               date,
+               date,
+               latitude,
+               latitude,
+               longitude,
+               longitude,
+               meridian,
+               time_zone)
+  end
+
+
+
+radiance_sensors = Parameter(Loc[])
+
+export_sensors(path::Path, sensors=radiance_sensors()) =
+  let ptspath = path_replace_suffix(path, ".pts")
+    open(ptspath, "w") do out
+      with(current_layer, sensor_layer()) do
+        for p in sensors
+          let (wp, wv) = (in_world(p), in_world(vz(1, p)))
+            #;Just to see the sensor location
+            point(p)
+            #    (line p (+z p 3))
+            write(out, "$(wp.x),$(wp.y),$(wp.z),$(wv.x),$(wv.y),$(wv.z)\n")
+          end
+        end
+      end
+    end
+    ptspath
   end
