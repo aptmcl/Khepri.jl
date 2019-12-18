@@ -664,7 +664,7 @@ struct RadianceWallFamily <: RadianceFamily
 end
 
 radiance_wall_family(right::RadianceMaterial, left::RadianceMaterial=right) =
-  RadianceOutsideWallFamily(right, left)
+  RadianceWallFamily(right, left)
 
 export_material(out::IO, mat::RadianceOutsideWallFamily) =
   begin
