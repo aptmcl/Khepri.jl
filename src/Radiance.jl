@@ -367,7 +367,7 @@ get_view(b::Radiance) =
 delete_all_shapes(b::Radiance) =
   begin
     delete_all_shapes(autocad)
-    (empty!(b.shapes); nothing)
+    (empty!(b.shapes); empty!(b.materials); nothing)
   end
 
 realize(b::Radiance, s::Sphere) =
@@ -480,6 +480,7 @@ realize(b::Radiance, s::Rotate) =
 realize_pyramid_fustrum(b::Radiance, key, kind::String, bot_path::Path, top_path::Path, closed=true) =
   realize_pyramid_fustrum(b, key, kind, path_vertices(bot_path), path_vertices(top_path), closed)
 
+# This requires three different keys, so that gets into the materials dict.
 realize_pyramid_fustrum(b::Radiance, key, kind::String, bot_vs, top_vs, closed=true) =
   let mod = next_modifier(b, key),
       buf = buffer(b)
@@ -736,10 +737,11 @@ radiance_material_family(mat::RadianceMaterial) =
 struct RadianceSlabFamily <: RadianceFamily
   top_material::RadianceMaterial
   bottom_material::RadianceMaterial
+  side_material::RadianceMaterial
 end
 
-radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top) =
-  RadianceSlabFamily(top, bot)
+radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top, side::RadianceMaterial=bot) =
+  RadianceSlabFamily(top, bot, side)
 
 struct RadianceOutsideWallFamily <: RadianceFamily
   out_material::RadianceMaterial
@@ -841,6 +843,19 @@ abstract type Analysis end
 abstract type StructuralAnalysis <: Analysis end
 abstract type LightingAnalysis <: Analysis end
 
+struct RadianceVisualization <: LightingAnalysis
+end
+
+export radiance_visualization
+radiance_visualization(b::Radiance=radiance) =
+  let path=radiance_simulation_path(),
+      radpath = export_geometry(b, path),
+      matpath = export_materials(b, path),
+      skypath = export_sky(b, path),
+      octpath = radiance_oconv(radpath)
+    radiance_rview(octpath, b.camera, b.target- b.camera) #Ignoring lens for now
+  end
+
 struct DaysimAnalysis <: LightingAnalysis
 end
 
@@ -891,6 +906,9 @@ export_geometry(b::Radiance, path::AbstractString) =
     radpath
   end
 
+add_ground_plane(shapes, buf) =
+  @warn "Not generating ground plane"
+
 used_materials(b::Radiance) =
   let materials = unique(map(f -> realize(s.family, b), b.shapes))
       materials
@@ -900,10 +918,10 @@ used_materials(b::Radiance) =
 export_materials(b::Radiance, path::AbstractString) =
   let matpath = path_replace_suffix(path, "_materials.rad")
     open(matpath, "w") do out
-      write(out, String(take!(buf)))
+      for (k,v) in b.materials
+        write_rad_material(b.buf, realize(k, b))
+      end
     end
-#=      (for ([mat (in-list materials)])
-        (displayln (radiance-string mat) port))))=#
     matpath
   end
 
