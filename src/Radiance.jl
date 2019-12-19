@@ -332,7 +332,7 @@ next_id(b::Radiance) =
         b.count -1
     end
 next_modifier(b::Radiance, key) =
-    get!(b.materials, key, "mat$(length(b.materials))")
+    get!(b.materials, key, key.name)
 
 save_rad(path::String, b::Radiance=current_backend()) =
   let buf = b.buffer()
@@ -639,9 +639,6 @@ end
 radiance_material_family(mat::RadianceMaterial) =
   RadianceMaterialFamily(mat)
 
-export_material(out::IO, mat::RadianceMaterialFamily) =
-  write_rad_material(out, mat.material)
-
 struct RadianceSlabFamily <: RadianceFamily
   top_material::RadianceMaterial
   bottom_material::RadianceMaterial
@@ -651,13 +648,6 @@ end
 radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top, side::RadianceMaterial=bot) =
   RadianceSlabFamily(top, bot, side)
 
-export_material(out::IO, mat::RadianceSlabFamily) =
-  begin
-    write_rad_material(out, mat.top_material)
-    write_rad_material(out, mat.bottom_material)
-    write_rad_material(out, mat.side_material)
-  end
-
 struct RadianceWallFamily <: RadianceFamily
   right_material::RadianceMaterial
   left_material::RadianceMaterial
@@ -665,12 +655,6 @@ end
 
 radiance_wall_family(right::RadianceMaterial, left::RadianceMaterial=right) =
   RadianceWallFamily(right, left)
-
-export_material(out::IO, mat::RadianceWallFamily) =
-  begin
-    write_rad_material(out, mat.out_material)
-    write_rad_material(out, mat.in_material)
-  end
 
 backend_get_family_ref(b::Radiance, f::Family, rf::RadianceFamily) = rf
 
@@ -775,8 +759,8 @@ realize(b::Radiance, w::Wall) =
       l_w_paths = subpaths(offset(w_path, l_thickness)),
       openings = [w.doors..., w.windows...],
       prevlength = 0,
-      modright = next_modifier(b, realize(b, s.family).material_right),
-      modleft = next_modifier(b, realize(b, s.family).material_left)
+      modright = next_modifier(b, realize(b, w.family).right_material),
+      modleft = next_modifier(b, realize(b, w.family).left_material)
     for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
@@ -817,8 +801,8 @@ realize(b::Radiance, w::Wall) =
           end
         end
         prevlength = currlength
-        realize_polygon(b, modleft, modright, modright, c_l_w_path, false)
-        realize_polygon(b, modleft, modright, modright, c_r_w_path, true)
+        #realize_polygon(b, modleft, modright, modright, c_l_w_path, false)
+        #realize_polygon(b, modleft, modright, modright, c_r_w_path, true)
       end
     end
     void_ref(b)
@@ -838,8 +822,8 @@ backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
         realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
         # This is surely wrong!
-        realize_polygon(b, family, "wall", c_l_w_path, false)
-        realize_polygon(b, family, "wall", c_r_w_path, true)
+        #realize_polygon(b, family, "wall", c_l_w_path, false)
+        #realize_polygon(b, family, "wall", c_r_w_path, true)
       end
     end
     void_ref(b)
@@ -899,6 +883,7 @@ radiance_visualization(b::Radiance=radiance) =
       matpath = export_materials(b, path),
       skypath = export_sky(b, path),
       octpath = radiance_oconv(radpath)
+    radiance_cmd("""oconv "$(matpath)" "$(skypath)" "$(radpath)" > "$(octpath)" """)
     radiance_rview(octpath, b.camera, b.target- b.camera) #Ignoring lens for now
   end
 
@@ -964,7 +949,7 @@ export_materials(b::Radiance, path::AbstractString) =
   let matpath = path_replace_suffix(path, "_materials.rad")
     open(matpath, "w") do out
       for (k,v) in b.materials
-        export_material(out, realize(b, k))
+        write_rad_material(out, k)
       end
     end
     matpath
