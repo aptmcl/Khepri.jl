@@ -530,7 +530,8 @@ A curtain wall is a special kind of wall that is made of a frame with windows.
   depth_offset::Real=0.25)
 
 @deffamily(curtain_wall_family, Family,
-  n_curtain_panels::Int=3,
+  max_panel_dx::Real=1
+  max_panel_dy::Real=2,
   panel::PanelFamily=panel_family(thickness=0.05),
   boundary_frame::CurtainWallFrameFamily=
     curtain_wall_frame_family(width=0.1,depth=0.1,depth_offset=0.25),
@@ -571,18 +572,22 @@ realize(b::Backend, s::CurtainWall) =
       bottom = level_height(s.bottom_level),
       top = level_height(s.top_level),
       height = top - bottom,
+      x_panels = ceil(Int, path_length/s.family.max_panel_dx),
+      y_panels = ceil(Int, height/s.family.max_panel_dy),
       refs = []
     push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+bfw, height-2*bfw, th, :panel))
     push!(refs, backend_curtain_wall(b, s, path, bottom, bfw, bfd, :boundary_frame))
     push!(refs, backend_curtain_wall(b, s, path, top-bfw, bfw, bfd, :boundary_frame))
     push!(refs, backend_curtain_wall(b, s, subpath(path, 0, bfw), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
     push!(refs, backend_curtain_wall(b, s, subpath(path, path_length-bfw, path_length), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
-    push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+height/2-tfw/2, tfw, tfd, :transom_frame))
-    let n = s.family.n_curtain_panels
-      for i in 1:n-1
-        l = path_length/n*i
-        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
-      end
+    for i in 1:y_panels-1
+      l = height/y_panels*i
+      sub = subpath(path, bfw, path_length-bfw)
+      push!(refs, backend_curtain_wall(b, s, sub, bottom+l-tfw/2, tfw, tfd, :transom_frame))
+    end
+    for i in 1:x_panels-1
+      l = path_length/x_panels*i
+      push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
     end
     [ensure_ref(b,r) for r in refs]
   end
