@@ -661,19 +661,6 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
     @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, realize(b, family)))
   end
 
-realize(b::Unity, s::Beam) =
-  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
-
-#Columns are aligned along the center axis.
-realize(b::Unity, s::FreeColumn) =
-  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
-
-realize(b::Unity, s::Column) =
-  let base_height = s.bottom_level.height,
-      height = s.top_level.height - base_height
-    realize_beam_profile(b, s, s.family.profile, add_z(s.cb, base_height), height)
-  end
-
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   @remote(b, BeamCircSection(
     cb,
