@@ -530,7 +530,7 @@ A curtain wall is a special kind of wall that is made of a frame with windows.
   depth_offset::Real=0.25)
 
 @deffamily(curtain_wall_family, Family,
-  max_panel_dx::Real=1
+  max_panel_dx::Real=1,
   max_panel_dy::Real=2,
   panel::PanelFamily=panel_family(thickness=0.05),
   boundary_frame::CurtainWallFrameFamily=
