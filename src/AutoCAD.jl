@@ -803,40 +803,29 @@ backend_slab(b::ACAD, profile, holes, thickness, family) =
     end
   end
 
-realize(b::ACAD, s::Beam) =
+realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   with(current_layer, realize(b, s.family)) do
-    let profile = s.family.profile
-          profile_u0 = profile.corner
-          c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-          # need to test whether it is rotation on center or on axis
-          o = loc_from_o_phi(s.cb, s.angle)
-        @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, s.h))
-    end
+    @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
   end
-#    @remote(b, CenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.family.width, s.family.height, s.h))
 
-#Columns are aligned along the center axis.
-realize(b::ACAD, s::FreeColumn) =
+realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   with(current_layer, realize(b, s.family)) do
-    let profile = s.family.profile
-        profile_u0 = profile.corner
+    let profile_u0 = profile.corner
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
         o = loc_from_o_phi(c, s.angle)
-      @remote(b, CenteredBox(o, profile.dx, profile.dy, s.h))
+        @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, length))
     end
   end
 
-realize(b::ACAD, s::Column) =
+#Columns are aligned along the center axis.
+realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, length::Real) =
   with(current_layer, realize(b, s.family)) do
-    let profile = s.family.profile,
-        profile_u0 = profile.corner,
-        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
-        base_height = s.bottom_level.height,
-        height = s.top_level.height - base_height,
+    let profile_u0 = profile.corner
+        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
-        o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
-      @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, height))
+        o = loc_from_o_phi(c, s.angle)
+      @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
     end
   end
 

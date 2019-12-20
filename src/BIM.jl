@@ -649,6 +649,22 @@ free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column
   bottom_level::Level=default_level(), top_level::Level=upper_level(bottom_level),
   family::ColumnFamily=default_column_family())
 
+# Default implementation dispatches to the section profile
+realize(b::Backend, s::Beam) =
+  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
+
+realize(b::Backend, s::FreeColumn) =
+  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
+
+realize(b::Backend, s::Column) =
+  let base_height = s.bottom_level.height,
+      height = s.top_level.height - base_height
+    realize_beam_profile(b, s, s.family.profile, add_z(s.cb, base_height), height)
+  end
+
+
+
+
 # Tables and chairs
 
 @deffamily(table_family, Family,
