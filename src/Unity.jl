@@ -662,31 +662,28 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
   end
 
 realize(b::Unity, s::Beam) =
-  realize_beam_profile(b, s, s.family.profile, s.h)
+  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
 
 #Columns are aligned along the center axis.
 realize(b::Unity, s::FreeColumn) =
-  realize_beam_profile(b, s, s.family.profile, s.h)
+  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
 
 realize(b::Unity, s::Column) =
   let base_height = s.bottom_level.height,
       height = s.top_level.height - base_height
-    realize_beam_profile(b, s, s.family.profile, height)
+    realize_beam_profile(b, s, s.family.profile, add_z(s.cb, base_height), height)
   end
 
-realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, length::Real) =
-  let base_height = s.bottom_level.height,
-      height = s.top_level.height - base_height
-    @remote(b, BeamCircSection(
-      s.cb,
-      profile.radius,
-      s.cb+vz(height*0.999), #We reduce height just a bit to avoid Z-fighting
-      realize(b, s.family)))
-  end
+realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
+  @remote(b, BeamCircSection(
+    cb,
+    profile.radius,
+    add_z(cb, length*0.999), #We reduce height just a bit to avoid Z-fighting
+    realize(b, s.family)))
 
-realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, length::Real) =
+realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   let profile_u0 = profile.corner,
-      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+      c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
     @remote(b, BeamRectSection(
       c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx,
       length*0.999, #to avoid Z-fighting
