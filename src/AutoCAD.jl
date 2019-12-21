@@ -793,8 +793,16 @@ backend_chair(b::ACAD, c, angle, family) =
 backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
     @remote(b, TableAndChairs(c, angle, realize(b, family)))
 
+export family_in_layer
+const family_in_layer = Parameter(false)
+
+with_family_in_layer(f::Function, backend::Backend, family::Family) =
+  family_in_layer() ?
+    with(f, current_layer, realize(backend, family)) :
+    f()
+
 backend_slab(b::ACAD, profile, holes, thickness, family) =
-  with(current_layer, realize(b, family)) do
+  with_family_in_layer(b, family) do
     let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
                                 ensure_ref(b, backend_fill(b, profile))),
         main_body = slab(profile),
@@ -804,12 +812,12 @@ backend_slab(b::ACAD, profile, holes, thickness, family) =
   end
 
 realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
-  with(current_layer, realize(b, s.family)) do
+  with_family_in_layer(b, s.family) do
     @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
   end
 
 realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, cb::Loc, length::Real) =
-  with(current_layer, realize(b, s.family)) do
+  with_family_in_layer(b, s.family) do
     let profile_u0 = profile.corner
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
@@ -820,7 +828,7 @@ realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, c
 
 #Columns are aligned along the center axis.
 realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, length::Real) =
-  with(current_layer, realize(b, s.family)) do
+  with_family_in_layer(b, s.family) do
     let profile_u0 = profile.corner
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
@@ -831,7 +839,7 @@ realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, 
 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
   #HACK: The thickness is wrong!!!!
-  with(current_layer, realize(b, family)) do
+  with_family_in_layer(b, family) do
       @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness - l_thickness))
   end
 
