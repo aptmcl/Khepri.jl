@@ -51,13 +51,18 @@ path_end(p::Path) = location_at_length(p, path_length(p))
 abstract type OpenPath <: Path end
 abstract type ClosedPath <: Path end
 
+is_closed_path(path::Path) = false
+is_closed_path(path::ClosedPath) = true
+
+
 struct ArcPath <: OpenPath
     center::Loc
     radius::Real
     start_angle::Real
     amplitude::Real
 end
-arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=pi) =
+arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=pi*1.0) =
+  # pi*1.0 just to circunvent a Julia bug https://github.com/JuliaLang/julia/issues/31949.
   false ? #amplitude < 0 ?
     ArcPath(center, radius, start_angle + amplitude, - amplitude) :
     ArcPath(center, radius, start_angle, amplitude)
@@ -101,10 +106,11 @@ closed_polygonal_path(vertices=[u0(), x(), xy(), y()]) = ClosedPolygonalPath(ens
 
 PolygonalPath = Union{OpenPolygonalPath, ClosedPolygonalPath}
 
-polygonal_path(vertices) =
+polygonal_path(vertices::Locs) =
   coincident_path_location(vertices[1], vertices[end]) ?
     closed_polygonal_path(vertices[1:end-1]) :
     open_polygonal_path(vertices)
+polygonal_path(vs...) = polygonal_path(vs)
 
 ensure_no_repeated_locations(locs) =
     begin
@@ -208,22 +214,25 @@ location_at_length(path::OpenPolygonalPath, d::Real) =
         error("Exceeded path length by ", d)
     end
 location_at_length(path::ClosedPolygonalPath, d::Real) =
-    let p = path.vertices[1]
-        for i in countfrom(1)
-            pp = path.vertices[i%length(path.vertices)+1]
-            delta = distance(p, pp)
-            if d - delta < path_tolerance()
-                phi = pol_phi(pp - p)
-                return loc_from_o_phi(add_pol(p, d, phi), phi)
-            else
-                p = pp
-                d -= delta
-            end
-        end
+  let p = path.vertices[1]
+    for i in countfrom(1)
+      pp = path.vertices[i%length(path.vertices)+1]
+      delta = distance(p, pp)
+      if d - delta < path_tolerance()
+        phi = pol_phi(pp - p)
+        return loc_from_o_phi(add_pol(p, d, phi), phi)
+      else
+        p = pp
+        d -= delta
+      end
     end
+  end
+
+subpath_starting_at(path::Path, d::Real) = subpath(path, d, path_length(path))
+subpath_ending_at(path::Path, d::Real) = subpath(path, 0, d)
 
 subpath(path::CircularPath, a::Real, b::Real) =
-    arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
+  arc_path(path.center, path.radius, a/path.radius, (b-a)/path.radius)
 subpath(path::ArcPath, a::Real, b::Real) =
   b <= path_length(path) + path_tolerance() ?
       arc_path(path.center,
@@ -232,11 +241,11 @@ subpath(path::ArcPath, a::Real, b::Real) =
                (b - a)/path.radius*sign(path.amplitude)) :
     error("Exceeded path length by ", path.amplitude - b/path.radius)
 subpath(path::RectangularPath, a::Real, b::Real) =
-    subpath(convert(ClosedPolygonalPath, path), a, b)
+  subpath(convert(ClosedPolygonalPath, path), a, b)
 subpath(path::ClosedPolygonalPath, a::Real, b::Real) =
-    subpath(convert(OpenPolygonalPath, path), a, b)
+  subpath(convert(OpenPolygonalPath, path), a, b)
 subpath(path::OpenPolygonalPath, a::Real, b::Real) =
-    subpath_starting_at(subpath_ending_at(path, b), a)
+  subpath_starting_at(subpath_ending_at(path, b), a)
 
 subpath_starting_at(path::OpenPolygonalPath, d::Real) =
     let pts = path.vertices
@@ -443,7 +452,7 @@ subpath_ending_at(pathOp::ArcOp, d::Real) =
     ArcOp(pathOp.radius, pathOp.start_angle, a)
   end
 
-subpath(path::PathOps, a::Real, b::Real) =
+subpath(path::Path, a::Real, b::Real) =
   subpath_starting_at(subpath_ending_at(path, b), a)
 
 # A path sequence is a sequence of paths where the next element of the sequence
@@ -486,8 +495,37 @@ location_at_length(path::PathSequence, d::Real) =
     end
     error("Exceeded path length by ", d)
   end
-
-
+subpath_starting_at(path::PathSequence, d::Real) =
+  let subpaths = path.paths
+    for i in 1:length(subpaths)
+      subpath = subpaths[i]
+      delta = path_length(subpath)
+      if d == delta
+        return OpenPathSequence(ops[i+1:end])
+      elseif d < delta + path_tolerance()
+        subpath = subpath_starting_at(subpath, d)
+        return OpenPathSequence([subpath, subpaths[i+1:end]...])
+      else
+        d -= delta
+      end
+    end
+    error("Exceeded path length by ", d)
+  end
+subpath_ending_at(path::PathSequence, d::Real) =
+  let subpaths = path.paths
+    for i in 1:length(subpaths)
+      subpath = subpaths[i]
+      delta = path_length(subpath)
+      if d == delta
+        return OpenPathSequence(subpaths[1:i])
+      elseif d < delta + path_tolerance()
+        return OpenPathSequence([subpaths[1:i-1]..., subpath_ending_at(subpath, d)])
+      else
+        d -= delta
+      end
+    end
+    error("Exceeded path length by ", d)
+  end
 
 import Base.convert
 convert(::Type{PathOps}, path::PathSequence) =
