@@ -818,7 +818,7 @@ realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::Circula
 
 realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   with_family_in_layer(b, s.family) do
-    let profile_u0 = profile.corner
+    let profile_u0 = profile.corner,
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
         o = loc_from_o_phi(c, s.angle)
@@ -829,7 +829,7 @@ realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, c
 #Columns are aligned along the center axis.
 realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, length::Real) =
   with_family_in_layer(b, s.family) do
-    let profile_u0 = profile.corner
+    let profile_u0 = profile.corner,
         c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
         # need to test whether it is rotation on center or on axis
         o = loc_from_o_phi(c, s.angle)
@@ -840,7 +840,7 @@ realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
   #HACK: The thickness is wrong!!!!
   with_family_in_layer(b, family) do
-      @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, path), vz(height))), r_thickness - l_thickness))
+      @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, -r_thickness)), vz(height))), r_thickness - l_thickness))
   end
 
 ############################################

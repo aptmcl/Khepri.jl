@@ -369,7 +369,7 @@ A wall contains doors and windows
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
-          offset::Real=0.0,
+          offset::Real=is_closed_path(path) ? -1 : 0.0,
           doors::Shapes=Shape[], windows::Shapes=Shape[])
 wall(p0::Loc, p1::Loc;
      bottom_level::Level=default_level(),
@@ -422,8 +422,6 @@ join_walls(wall1, wall2) =
 
 join_walls(walls...) =
   reduce(join_walls, walls)
-
-
 
 # Right and Left considering observer looking along with curve direction
 r_thickness(w::Wall) = (+1+w.offset)/2*w.family.thickness
@@ -637,7 +635,7 @@ beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); 
 @deffamily(column_family, Family,
     #width::Real=1.0,
     #height::Real=2.0,
-  profile::ClosedPath=rectangular_profile(1, 2))
+  profile::ClosedPath=rectangular_profile(0.2, 0.2))
 
 @defproxy(free_column, Shape3D, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
 free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
