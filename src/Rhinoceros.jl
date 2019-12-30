@@ -1,7 +1,6 @@
 export rhino,
        reset_rhino_connection
 
-
 macro rhino_str(str)
     rpc("RH", str)
 end
@@ -123,7 +122,11 @@ rhino"public Point3d[] GetPoint(string prompt)"
 rhino"public Point3d[] BoundingBox(ObjectId[] ids)"
 rhino"public void ZoomExtents()"
 rhino"public void SetSystemVariableInt(string name, int value)"
-rhino"public int Render(int width, int height, string path)"
+=#
+
+rhino"public void Render(int width, int height, string path)"
+
+#=
 rhino"public int Command(string cmd)"
 rhino"public void DisableUpdate()"
 rhino"public void EnableUpdate()"
@@ -338,8 +341,6 @@ backend_map_division(b::RH, f::Function, s::Shape1D, n::Int) =
       frames = rotation_minimizing_frames(RHCurveFrameAt(conn, r, t1), ps, ts)
     map(f, frames)
   end
-
-
 
 
 rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
@@ -887,3 +888,6 @@ all_shapes(b::RH) =
 
 all_shapes_in_layer(layer, b::RH) =
   [shape_from_ref(r) for r in RHGetAllShapesInLayer(connection(b), layer)]
+
+render_view(path::String, b::RH) =
+  RHRender(connection(b), render_width(), render_height(), path)
