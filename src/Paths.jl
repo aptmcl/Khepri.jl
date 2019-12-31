@@ -155,8 +155,8 @@ translate(path::ArcPath, v::Vec) = arc_path(path.center + v, path.radius, path.s
 translate(path::RectangularPath, v::Vec) = rectangular_path(path.corner + v, path.dx, path.dy)
 translate(path::OpenPolygonalPath, v::Vec) = open_polygonal_path(translate(path.vertices, v))
 translate(path::ClosedPolygonalPath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
-translate(path::OpenSplinePath, v::Vec) = open_polygonal_path(translate(path.vertices, v), path.v0, path.v1)
-translate(path::ClosedSplinePath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
+translate(path::OpenSplinePath, v::Vec) = open_spline_path(translate(path.vertices, v), path.v0, path.v1)
+translate(path::ClosedSplinePath, v::Vec) = closed_spline_path(translate(path.vertices, v))
 translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 
@@ -565,6 +565,11 @@ convert(::Type{Path}, vs::Locs) =
   else
     open_polygonal_path(vs)
   end
+convert(::Type{ClosedPath}, p::OpenPolygonalPath) =
+  closed_polygonal_path(coincident_path_location(path_start(p), path_end(p)) ?
+    path_vertices(p)[1:end-1] :
+    path_vertices(p))
+
 convert(::Type{ClosedPath}, p::OpenPath) =
   if isa(p.ops[end], CloseOp) || coincident_path_location(path_start(p), path_end(p))
     closed_path(p.ops)
