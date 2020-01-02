@@ -142,6 +142,23 @@ struct ClosedSplinePath <: ClosedPath
 end
 closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no_repeated_locations(vertices))
 
+map_division(f::Function, path::OpenSplinePath, n::Integer) =
+  let interpolator = curve_interpolator(path.vertices),
+      fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
+    map_division(
+      t-> let p = interpolator(t),
+              vt = Interpolations.gradient(interpolator, t)[1],
+              vn = fixed_normal(Interpolations.hessian(interpolator, t)[1], vt)
+              vy = cross(vt, vn)
+            f(loc_from_o_vx_vy(
+                xyz(p[1], p[2], p[3], world_cs),
+                vxyz(vn[1], vn[2], vn[3], world_cs),
+                vxyz(vy[1], vy[2], vy[3], world_cs)))
+          end,
+     0.0, 1.0, n)
+ end
+
+
 # There is a set of operations over Paths:
 # 1. translate a path a given vector
 # 2. stroke a path
