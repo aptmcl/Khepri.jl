@@ -140,8 +140,9 @@ export default_lens,
        dolly_effect_back,
        dolly_effect_forth,
        set_view_save_frame,
-       set_view_save_frames
-
+       set_view_save_frames,
+       interpolate_view_save_frames,
+       select_camera_target_lens_positions
 
 default_lens = Parameter(50)
 
@@ -170,17 +171,22 @@ track_still_target(camera_path, target, lens=default_lens()) =
 # parameters: camera (initial location) + target path (list of locations)
 # number of locations in the path defines the number of frames
 
-set_view_save_frames(camera_path, target_path, lens) =
-  for (camera, target) in zip(camera_path, target_path)
+set_view_save_frames(cameras::Locs, targets::Locs, lens::Real) =
+  for (camera, target) in zip(cameras, targets)
+    set_view_save_frame(camera, target, lens)
+  end
+
+set_view_save_frames(cameras::Locs, targets::Locs, lenses::Vector{<:Real}) =
+  for (camera, target, lens) in zip(cameras, targets, lenses)
     set_view_save_frame(camera, target, lens)
   end
 
 twin_path(path, v) = map(p -> p+v, path)
 
-track_moving_target(camera, target_path, lens=default_lens()) =
-  let v = camera - target_path[1]
-      camera_path = twin_path(target_path, v)
-    set_view_save_frames(camera_path, target_path, lens)
+track_moving_target(camera, targets, lens=default_lens()) =
+  let v = camera - targets[1]
+      cameras = twin_path(targets, v)
+    set_view_save_frames(cameras, targets, lens)
   end
 
 # Walkthroughs
@@ -202,8 +208,8 @@ walkthrough(path, camera_spread, lens=default_lens()) =
 # parameters: fixed camera + target path
 # number of locations in the path defines the number of frames
 
-panning(camera, target_path, lens=default_lens()) =
-  for target in target_path
+panning(camera, targets, lens=default_lens()) =
+  for target in targets
     set_view_save_frame(camera, target, lens)
   end
 
@@ -293,9 +299,26 @@ dolly_effect_forth(delta, camera, target, lens, frames) =
   end
 
 #=
+To collect the camera/target/lens path
+=#
 
+select_camera_target_lens_positions() =
+  select_position() == nothing ?
+    [] :
+    [get_view(), select_camera_target_lens_path()...]
+
+interpolate_view_save_frames(ctl_positions, nframes) =
+  set_view_save_frames(
+    map_division(
+      in_world,
+      open_spline_path(map(p -> p[1], ctl_positions)), nframes),
+    map_division(
+      in_world,
+      open_spline_path(map(p -> p[2], ctl_positions)), nframes),
+    map(p -> p[3], ctl_positions))
+
+#=
 To generate the actual film from the set of frames, we need ffmpeg.
-
 =#
 
 create_mp4_from_frames(name=film_filename()) =
