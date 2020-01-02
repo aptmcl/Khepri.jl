@@ -1034,8 +1034,18 @@ highlight_shapes(ss::Shapes, b::Unity) =
     @remote(b, SelectGameObjects(collect_ref(ss)))
 
 
-
-
+select_position(prompt::String, b::Unity) =
+  begin
+    @info "$(prompt) on the $(b) backend."
+    @remote(b, StartSelectingPosition())
+    let s = u0() # Means not found
+      while s == u0()
+        sleep(0.1)
+        s = @remote(b, SelectedPosition())
+      end
+      s
+    end
+  end
 
 select_shape(prompt::String, b::Unity) =
   select_one_with_prompt(prompt, b, (c, prompt) ->
