@@ -365,7 +365,7 @@ A wall contains doors and windows
 @deffamily(wall_family, Family,
     thickness::Real=0.2)
 
-@defproxy(wall, Shape3D, path::Path=rectangular_path(),
+@macroexpand @defproxy(wall, Shape3D, path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
