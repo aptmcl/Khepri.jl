@@ -365,22 +365,28 @@ A wall contains doors and windows
 @deffamily(wall_family, Family,
     thickness::Real=0.2)
 
-@defproxy(wall, Shape3D, path::Path=rectangular_path(),
+@macroexpand @defproxy(wall, Shape3D, path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(bottom_level),
           family::WallFamily=default_wall_family(),
-          offset::Real=is_closed_path(path) ? -1 : 0.0,
+          offset::Real=is_closed_path(path) ? 1/2 : 0, # offset is relative to the thickness
           doors::Shapes=Shape[], windows::Shapes=Shape[])
-wall(p0::Loc, p1::Loc;
+wall(pts::Locs;
      bottom_level::Level=default_level(),
      top_level::Level=upper_level(bottom_level),
-     family::WallFamily=default_wall_family(),
-     offset::Real=0.0) =
-  wall([p0, p1],
-       bottom_level=bottom_level,
-       top_level=top_level,
-       family=family,
-       offset=offset)
+     family::WallFamily=default_wall_family()) =
+  wall(polygonal_path(pts),
+     bottom_level=bottom_level,
+     top_level=top_level,
+     family=family)
+wall(p0::Loc, p1::Loc;
+    bottom_level::Level=default_level(),
+    top_level::Level=upper_level(bottom_level),
+    family::WallFamily=default_wall_family()) =
+ wall([p0, p1],
+      bottom_level=bottom_level,
+      top_level=top_level,
+      family=family)
 
 #=
 Walls can be joined. That is very important because the wall needs to have
@@ -424,8 +430,12 @@ join_walls(walls...) =
   reduce(join_walls, walls)
 
 # Right and Left considering observer looking along with curve direction
-r_thickness(w::Wall) = (+1+w.offset)/2*w.family.thickness
-l_thickness(w::Wall) = (-1+w.offset)/2*w.family.thickness
+# a non-closed wall should have a wall offset of zero and a r_thickness and a l_thickness of 1/2*thickness
+# a closed wall should have a wall offset of 1/2 and a r_thickness of zero and a l_thickness of 1*thickness
+# Thus, we have:
+r_thickness(w::Wall) = (1/2 - w.offset)*w.family.thickness
+l_thickness(w::Wall) = (1/2 + w.offset)*w.family.thickness
+
 # Door
 
 @deffamily(door_family, Family,
