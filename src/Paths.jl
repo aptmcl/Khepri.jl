@@ -574,19 +574,18 @@ path_set(paths...) =
 
 # Convertions from/to paths
 import Base.convert
-convert(::Type{OpenPath}, vs::Locs) = open_polygonal_path(vs)
-convert(::Type{ClosedPath}, vs::Locs) = closed_polygonal_path(vs)
+convert(::Type{OpenPath}, vs::Locs) =
+  open_polygonal_path(vs)
+convert(::Type{ClosedPath}, vs::Locs) =
+  closed_polygonal_path(vs)
 convert(::Type{Path}, vs::Locs) =
-  if vs[1] == vs[end]
-    closed_polygonal_path(vs[1:end-1])
-  else
+  coincident_path_location(vs[1], vs[end]) ?
+    closed_polygonal_path(vs[1:end-1]) :
     open_polygonal_path(vs)
-  end
 convert(::Type{ClosedPath}, p::OpenPolygonalPath) =
   closed_polygonal_path(coincident_path_location(path_start(p), path_end(p)) ?
     path_vertices(p)[1:end-1] :
     path_vertices(p))
-
 convert(::Type{ClosedPath}, p::OpenPath) =
   if isa(p.ops[end], CloseOp) || coincident_path_location(path_start(p), path_end(p))
     closed_path(p.ops)
@@ -612,20 +611,24 @@ convert(::Type{ClosedPolygonalPath}, path::RectangularPath) =
       dy = path.dy
     closed_polygonal_path([p, add_x(p, dx), add_xy(p, dx, dy), add_y(p, dy)])
   end
-# The next one is looses precision. It converts from a circular to a polygonal path
-# Note that the level of detail is hardwired. Maybe it will be good to make this a parameter
+
+path_interpolated_vertices(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
+  let p0 = location_at_length(path, t0),
+      p1 = location_at_length(path, t1),
+      tm = (t0 + t1)/2.0,
+      pm = location_at_length(path, tm)
+    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
+      [p0, pm, p1] :
+      [path_interpolated_vertices(path, t0, tm, epsilon, min_recursion - 1)...,
+       path_interpolated_vertices(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
+  end
+
 convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
-  let c = path.center,
-      r = path.radius
-    closed_polygonal_path([c + vpol(r, phi) for phi in division(0, 2pi, 64, false)])
-  end
+  closed_polygonal_path(path_interpolated_vertices(path))
+convert(::Type{OpenPolygonalPath}, path::CircularPath) =
+  open_polygonal_path(path_interpolated_vertices(path))
 convert(::Type{OpenPolygonalPath}, path::ArcPath) =
-  let c = path.center,
-      r = path.radius
-    open_polygonal_path(
-      [c + vpol(r, phi)
-       for phi in division(path.start_angle, path.start_angle + path.amplitude, 32, true)])
-  end
+  open_polygonal_path(path_interpolated_vertices(path))
 convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
   open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
