@@ -46,14 +46,14 @@ centered_rectangle(p0, w, p1) =
 
 offset_vertices(ps::Locs, d::Real, closed) =
   let qs = closed ? [ps[end], ps..., ps[1]] : ps,
-      vs = map((p0, p1) -> rotated_v(unitized(p1 - p0)*d, pi/2), qs[2:end], qs[1:end-1]),
+      vs = map((p0, p1) -> rotated_v(unitized(p1 - p0)*d, pi/2), qs[1:end-1], qs[2:end]),
       ws = map(v_in_v, vs[1:end-1], vs[2:end])
     map(+, ps, closed ? ws : [vs[1], ws..., vs[end]])
   end
 
 offset(path::Union{Path,Shape}, d::Real) = d == 0 ? path : nonzero_offset(path, d)
 nonzero_offset(path::RectangularPath, d::Real) =
-  rectangular_path(add_xy(path.corner, -d, -d), path.dx + 2d, path.dy + 2d)
+  rectangular_path(add_xy(path.corner, d, d), path.dx - 2d, path.dy - 2d)
 nonzero_offset(path::OpenPolygonalPath, d::Real) =
   open_polygonal_path(offset_vertices(path.vertices, d, false))
 nonzero_offset(path::ClosedPolygonalPath, d::Real) =
@@ -61,9 +61,9 @@ nonzero_offset(path::ClosedPolygonalPath, d::Real) =
 nonzero_offset(l::Line, d::Real) =
   line(offset(l.vertices, d, false))
 nonzero_offset(path::CircularPath, d::Real) =
-  circular_path(path.center, path.radius + d)
+  circular_path(path.center, path.radius - d)
 nonzero_offset(path::ArcPath, d::Real) =
-  arc_path(path.center, path.radius + d, path.start_angle, path.amplitude)
+  arc_path(path.center, path.radius - d, path.start_angle, path.amplitude)
 
 export offset
 
@@ -184,4 +184,18 @@ lines_intersection(p0, p1, p2, p3) =
         xy(p0.x + u*(p1.x - p0.x), p0.y + u*(p1.y - p0.y))
       end
     end
+  end
+
+const collinearity_tolerance = Parameter(1e-2)
+# are the three points sufficiently collinear?
+collinear_points(p0, pm, p1, epsilon=collinearity_tolerance()) =
+  let a = distance(p0, pm),
+      b = distance(pm, p1),
+      c = distance(p1, p0)
+    triangle_area(a, b, c) < epsilon
+  end
+
+triangle_area(a, b, c) =
+  let s = (a + b + c)/2.0
+    sqrt(s*(s - a)*(s - b)*(s - c))
   end
