@@ -661,11 +661,15 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
     @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, realize(b, family)))
   end
 
+# A poor's man approach to deal with Z-fighting
+const support_z_fighting_delta = -1e-10
+const wall_z_fighting_delta = -2e-10
+
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   @remote(b, BeamCircSection(
     cb,
     profile.radius,
-    add_z(cb, length*0.999), #We reduce height just a bit to avoid Z-fighting
+    add_z(cb, length + support_z_fighting_delta), #We reduce height just a bit to avoid Z-fighting
     realize(b, s.family)))
 
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
@@ -673,7 +677,7 @@ realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::Rectan
       c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
     @remote(b, BeamRectSection(
       c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx,
-      length*0.999, #to avoid Z-fighting
+      length + support_z_fighting_delta, #to avoid Z-fighting
       -s.angle,
       realize(b, s.family)))
   end
@@ -691,6 +695,7 @@ realize(b::Unity, s::Panel) =
       realize(b, s.family)))
   end
 
+#=
 sweep_fractions(b, verts, height, l_thickness, r_thickness) =
   let p = add_z(verts[1], height/2),
       q = add_z(verts[2], height/2)
@@ -726,11 +731,11 @@ backend_wall_path(b::Unity, path::OpenPolygonalPath, height, l_thickness, r_thic
 
 backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
     backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
-
+=#
 #
 realize(b::Unity, w::Wall) =
   let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
+      w_height = w.top_level.height - w_base_height + wall_z_fighting_delta,
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w),
       w_path = translate(w.path, vz(w_base_height)),
