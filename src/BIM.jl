@@ -573,9 +573,7 @@ realize(b::Backend, s::CurtainWall) =
       tfw = s.family.transom_frame.width,
       tfd = s.family.transom_frame.depth,
       tfdo = s.family.transom_frame.depth_offset,
-      #pts = map(t->in_world(location_at_length(s.path, t)),
-      #          division(0, path_length, s.family.n_curtain_panels)),
-      path = s.path, #open_polygonal_path(pts),
+      path = curtain_wall_path(b, s, s.family.panel),
       path_length = path_length(path),
       bottom = level_height(s.bottom_level),
       top = level_height(s.top_level),
@@ -598,6 +596,17 @@ realize(b::Backend, s::CurtainWall) =
       push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
     end
     [ensure_ref(b,r) for r in refs]
+  end
+
+# By default, curtain wall panels are planar
+curtain_wall_path(b::Backend, s::CurtainWall, panel_family::Family) =
+  s.path
+curtain_wall_path(b::Backend, s::CurtainWall, panel_family::PanelFamily) =
+  let path_length = path_length(s.path),
+      x_panels = ceil(Int, path_length/s.family.max_panel_dx),
+      pts = map(t->in_world(location_at_length(s.path, t)),
+                division(0, path_length, x_panels))
+    polygonal_path(pts)
   end
 
 backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
