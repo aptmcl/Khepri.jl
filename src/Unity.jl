@@ -641,7 +641,7 @@ set_backend_family(default_table_family(), unity, unity_resource_family("Prefabs
 set_backend_family(default_chair_family(), unity, unity_resource_family("Prefabs/Chairs/ModernChair/ModernChair"))
 set_backend_family(default_table_chair_family(), unity, unity_resource_family("Prefabs/TablesChairs/ModernTableChair/ModernTableChair"))
 
-set_backend_family(default_curtain_wall_family().panel, unity, unity_material_family("Materials/Glass/GlassBlue"))
+set_backend_family(default_curtain_wall_family().panel, unity, unity_material_family("Materials/Glass/Glass"))
 set_backend_family(default_curtain_wall_family().boundary_frame, unity, unity_material_family("Materials/Metal/Steel"))
 set_backend_family(default_curtain_wall_family().transom_frame, unity, unity_material_family("Materials/Metal/Steel"))
 set_backend_family(default_curtain_wall_family().mullion_frame, unity, unity_material_family("Materials/Metal/Steel"))
@@ -663,14 +663,14 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
   end
 
 # A poor's man approach to deal with Z-fighting
-const support_z_fighting_delta = -1e-6
-const wall_z_fighting_delta = -2e-6
+const support_z_fighting_factor = 0.999
+const wall_z_fighting_factor = 0.998
 
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   @remote(b, BeamCircSection(
     cb,
     profile.radius,
-    add_z(cb, length + support_z_fighting_delta), #We reduce height just a bit to avoid Z-fighting
+    add_z(cb, length*support_z_fighting_factor), #We reduce height just a bit to avoid Z-fighting
     realize(b, s.family)))
 
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
@@ -678,7 +678,7 @@ realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::Rectan
       c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
     @remote(b, BeamRectSection(
       c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx,
-      length + support_z_fighting_delta, #to avoid Z-fighting
+      length*support_z_fighting_factor,
       -s.angle,
       realize(b, s.family)))
   end
@@ -734,20 +734,21 @@ backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
     backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
 =#
 
-backend_wall(b::Unity, path, height, l_thickness, r_thickness, family) =
-  path_length(path) < path_tolerance() ?
+backend_wall(b::Unity, w_path, w_height, l_thickness, r_thickness, family) =
+  path_length(w_path) < path_tolerance() ?
     UnityEmptyRef() :
-    let w_paths = subpaths(path),
+    let w_paths = subpaths(w_path),
         r_w_paths = subpaths(offset(w_path, -r_thickness)),
         l_w_paths = subpaths(offset(w_path, l_thickness)),
+        w_height = w_height*wall_z_fighting_factor,
         prevlength = 0,
+        material = realize(b, family),
         refs = UnityNativeRef[]
-      @remote(b, SetCurrentMaterial(realize(b, family)))
       for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
         let currlength = prevlength + path_length(w_seg_path),
             c_r_w_path = closed_path_for_height(r_w_path, w_height),
             c_l_w_path = closed_path_for_height(l_w_path, w_height)
-          push!(refs, realize_pyramid_fustrum(b, c_l_w_path, c_r_w_path, false))
+          push!(refs, realize_pyramid_fustrum(b, c_l_w_path, c_r_w_path, material))
           prevlength = currlength
         end
       end
@@ -756,7 +757,7 @@ backend_wall(b::Unity, path, height, l_thickness, r_thickness, family) =
 
 realize(b::Unity, w::Wall) =
   let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height + wall_z_fighting_delta,
+      w_height = (w.top_level.height - w_base_height)*wall_z_fighting_factor,
       r_thickness = r_thickness(w),
       l_thickness = l_thickness(w),
       w_path = translate(w.path, vz(w_base_height)),
