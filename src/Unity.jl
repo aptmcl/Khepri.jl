@@ -637,24 +637,22 @@ end
 unity_resource_family(name, pairs...) = UnityResourceFamily(name, Dict(pairs...), Parameter{Any}(nothing))
 backend_get_family_ref(b::Unity, f::Family, uf::UnityResourceFamily) = @remote(b, LoadResource(uf.name))
 
+set_backend_family(default_wall_family(), unity, unity_material_family("Default/Materials/Plaster"))
+set_backend_family(default_slab_family(), unity, unity_material_family("Default/Materials/Concrete"))
+set_backend_family(default_roof_family(), unity, unity_material_family("Default/Materials/Concrete"))
+set_backend_family(default_beam_family(), unity, unity_material_family("Default/Materials/Aluminum"))
+set_backend_family(default_column_family(), unity, unity_material_family("Default/Materials/Concrete"))
+set_backend_family(default_door_family(), unity, unity_material_family("Default/Materials/Wood"))
+set_backend_family(default_panel_family(), unity, unity_material_family("Default/Materials/Glass"))
 
-set_backend_family(default_wall_family(), unity, unity_material_family("Materials/Plaster/Plaster1"))
-set_backend_family(default_slab_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
-set_backend_family(default_roof_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
-set_backend_family(default_beam_family(), unity, unity_material_family("Materials/Metal/Aluminum"))
-set_backend_family(default_column_family(), unity, unity_material_family("Materials/Concrete/Concrete2"))
-set_backend_family(default_door_family(), unity, unity_material_family("Materials/Wood/InteriorWood2"))
-set_backend_family(default_panel_family(), unity, unity_material_family("Materials/Glass/Glass"))
+set_backend_family(default_table_family(), unity, unity_resource_family("Default/Prefabs/Table"))
+set_backend_family(default_chair_family(), unity, unity_resource_family("Default/Prefabs/Chair"))
+set_backend_family(default_table_chair_family(), unity, unity_resource_family("Default/Prefabs/TableChair"))
 
-set_backend_family(default_table_family(), unity, unity_resource_family("Prefabs/Tables/ModernTable/ModernTable"))
-set_backend_family(default_chair_family(), unity, unity_resource_family("Prefabs/Chairs/ModernChair/ModernChair"))
-set_backend_family(default_table_chair_family(), unity, unity_resource_family("Prefabs/TablesChairs/ModernTableChair/ModernTableChair"))
-
-set_backend_family(default_curtain_wall_family().panel, unity, unity_material_family("Materials/Glass/Glass"))
-set_backend_family(default_curtain_wall_family().boundary_frame, unity, unity_material_family("Materials/Metal/Steel"))
-set_backend_family(default_curtain_wall_family().transom_frame, unity, unity_material_family("Materials/Metal/Steel"))
-set_backend_family(default_curtain_wall_family().mullion_frame, unity, unity_material_family("Materials/Metal/Steel"))
-
+set_backend_family(default_curtain_wall_family().panel, unity, unity_material_family("Default/Materials/Glass"))
+set_backend_family(default_curtain_wall_family().boundary_frame, unity, unity_material_family("Default/Materials/Steel"))
+set_backend_family(default_curtain_wall_family().transom_frame, unity, unity_material_family("Default/Materials/Steel"))
+set_backend_family(default_curtain_wall_family().mullion_frame, unity, unity_material_family("Default/Materials/Steel"))
 
 backend_rectangular_table(b::Unity, c, angle, family) =
     @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
