@@ -589,7 +589,7 @@ realize(b::RH, s::UnionMirror) =
 
 realize(b::RH, s::SurfaceGrid) =
   let (nu, nv) = size(s.points)
-    RHSurfaceFromGrid(connection(b), nu, nv, reshape(s.points,:), s.closed_u, s.closed_v,
+    RHSurfaceFromGrid(connection(b), nu, nv, reshape(permutedims(s.points),:), s.closed_u, s.closed_v,
       max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
   end
 #=
