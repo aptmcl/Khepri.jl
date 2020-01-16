@@ -592,7 +592,7 @@ realize(b::RH, s::SurfaceGrid) =
     RHSurfaceFromGrid(connection(b), nu, nv, reshape(permutedims(s.points),:), s.closed_u, s.closed_v,
       max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
   end
-#=
+
 realize(b::RH, s::Thicken) =
   and_delete_shape(
     map_ref(s.shape) do r
@@ -600,7 +600,6 @@ realize(b::RH, s::Thicken) =
     end,
     s.shape)
 
-=#
 # BIM
 
 # Families
