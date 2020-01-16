@@ -433,8 +433,11 @@ join_walls(walls...) =
 # a non-closed wall should have a wall offset of zero and a r_thickness and a l_thickness of 1/2*thickness
 # a closed wall should have a wall offset of 1/2 and a r_thickness of zero and a l_thickness of 1*thickness
 # Thus, we have:
-r_thickness(w::Wall) = (1/2 - w.offset)*w.family.thickness
-l_thickness(w::Wall) = (1/2 + w.offset)*w.family.thickness
+r_thickness(offset, thickness) = (1/2 - offset)*thickness
+l_thickness(offset, thickness) = (1/2 + offset)*thickness
+
+r_thickness(w::Wall) = r_thickness(w.offset, w.family.thickness)
+l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
 
 # Door
 
@@ -491,13 +494,12 @@ realize_wall_opening(b::Backend, w_ref, w_path, l_thickness, r_thickness, op, fa
 realize(b::Backend, s::Union{Door, Window}) =
   let base_height = s.wall.bottom_level.height + s.loc.y,
       height = s.family.height,
-      subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height))
-      backend_wall_element(b, s, subpath, height, s.family.thickness, s.family)
+      subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height)),
+      r_thickness = r_thickness(s.wall),
+      l_thickness = l_thickness(s.wall),
+      thickness = s.family.thickness
+    backend_wall(b, subpath, height, (l_thickness - r_thickness + thickness)/2, (r_thickness - l_thickness + thickness)/2, s.family)
   end
-
-backend_wall_element(b::Backend, s::Union{Door, Window}, path, height, thickness, family) =
-  # we emulate doors and windows using a small wall
-  backend_wall(b::Backend, path, height, -thickness/2, thickness/2, family)
 
 ##
 
