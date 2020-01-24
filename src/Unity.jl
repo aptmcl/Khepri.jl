@@ -140,7 +140,9 @@ public void SetResolution(int width, int height)
 public void ScreenShot(String path)
 public void SelectGameObjects(GameObject[] objs)
 public void StartSelectingGameObject()
-public int SelectedGameObjectId(bool existing)
+public void StartSelectingGameObjects()
+public bool EndedSelectingGameObjects()
+public int[] SelectedGameObjectsIds(bool existing)
 public void SetSun(float x, float y, float z)
 public Vector3 GetSunRotation()
 public string GetRenderResolution()
@@ -180,8 +182,8 @@ realize(b::Unity, s::UniversalShape) =
 
 fast_unity() =
   begin
-    @remote(b, SetApplyMaterials(false))
-    @remote(b, SetApplyColliders(false))
+    @remote(unity, SetApplyMaterials(false))
+    @remote(unity, SetApplyColliders(false))
   end
 
 #=
@@ -1148,13 +1150,24 @@ select_position(prompt::String, b::Unity) =
     end
   end
 
+selected_game_objects(b) =
+  begin
+    while ! @remote(b, EndedSelectingGameObject())
+      sleep(0.1)
+    end
+    @remote(b, SelectedGameObjectsIds(true))
+  end
+
 select_shape(prompt::String, b::Unity) =
   select_one_with_prompt(prompt, b, (c, prompt) ->
-    let s = -2 # Means not found
+    begin
       @remote(b, StartSelectingGameObject())
-      while s == -2
-        sleep(0.1)
-        s = @remote(b, SelectedGameObjectId(true))
-      end
-      [s]
+      selected_game_objects(b)
     end)
+
+select_shapes(prompt::String, b::Unity) =
+  select_many_with_prompt(prompt, b, (c, prompt) ->
+  begin
+    @remote(b, StartSelectingGameObjects())
+    selected_game_objects(b)
+  end)
