@@ -399,7 +399,7 @@ macro defproxy(name, parent, fields...)
   name_str = string(name)
   struct_name = esc(Symbol(string(map(uppercasefirst,split(name_str,'_'))...)))
   field_names = map(field -> field.args[1].args[1], fields)
-  field_types = map(field -> field.args[1].args[2], fields)
+  field_types = map(field -> esc(field.args[1].args[2]), fields)
   field_inits = map(field -> field.args[2], fields)
 #  field_renames = map(esc ∘ Symbol ∘ uppercasefirst ∘ string, field_names)
   field_renames = map(Symbol ∘ string, field_names)
@@ -1183,11 +1183,8 @@ to_render(f, name) =
 # Seletion
 
 select_one_with_prompt(prompt::String, b::Backend, f::Function) =
-  begin
-    @info "$(prompt) on the $(b) backend."
-    let ans = f(connection(b), prompt)
-      length(ans) > 0 ? shape_from_ref(ans[1], b) : nothing
-    end
+  let ans = select_many_with_prompt(prompt, b, f)
+    length(ans) > 0 ? ans[1] : nothing
   end
 
 select_many_with_prompt(prompt::String, b::Backend, f::Function) =
