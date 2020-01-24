@@ -1152,7 +1152,7 @@ select_position(prompt::String, b::Unity) =
 
 selected_game_objects(b) =
   begin
-    while ! @remote(b, EndedSelectingGameObject())
+    while ! @remote(b, EndedSelectingGameObjects())
       sleep(0.1)
     end
     @remote(b, SelectedGameObjectsIds(true))
