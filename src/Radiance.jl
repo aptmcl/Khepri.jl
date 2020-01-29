@@ -214,10 +214,16 @@ path_replace_suffix(path::String, suffix::String) =
     base * suffix
   end
 
-radiance_oconv(path_rad) =
-  let path_oct = path_replace_suffix(path_rad, ".oct")
-    run(pipeline(`$(radiance_cmd("oconv")) $path_rad`, stdout=path_oct))
-    path_oct
+radiance_oconv(radpath) =
+  let octpath = path_replace_suffix(radpath, ".oct")
+    run(pipeline(`$(radiance_cmd("oconv")) $radpath`, stdout=octpath))
+    octpath
+  end
+
+radiance_oconv(radpath, matpath, skypath) =
+  let octpath = path_replace_suffix(radpath, ".oct")
+    run(pipeline(`$(radiance_cmd("oconv")) $matpath $skypath $radpath`, stdout=octpath))
+    octpath
   end
 
 radiance_rview(path_oct, camera, target, light=(1,1,1)) =
@@ -225,7 +231,6 @@ radiance_rview(path_oct, camera, target, light=(1,1,1)) =
       v = target-camera
     run(`$(radiance_cmd("rvu")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $path_oct`)
   end
-
 
 #=
 # Test1
@@ -271,14 +276,14 @@ open(room_rad, "w") do out
   write_rad_quad(out, "gray_paint", "room", "4", xyz(3,2,1.75), xyz(0,2,1.75), xyz(0,2,0), xyz(3,2,0))
   write_rad_quad(out, "gray_paint", "room", "5", xyz(3,2,1.75), xyz(3,2,0), xyz(3,0,0), xyz(3,0,1.75))
   write_rad_quad(out, "gray_paint", "room", "6", xyz(3,2,1.75), xyz(3,0,1.75), xyz(0,0,1.75), xyz(0,2,1.75))
-  println(out, radiance_plastic_material("blue_plastic", red=.1, green=.1, blue=.6, specularity=.05, roughness=.1))
+  write_rad_material(out, radiance_plastic_material("blue_plastic", red=.1, green=.1, blue=.6, specularity=.05, roughness=.1))
   write_rad_quad(out, "blue_plastic", "box", "1540", xyz(0.98,0.88,0), xyz(0.98,0.88,0.5), xyz(0.5,0.75,0.5), xyz(0.5,0.75,0))
   write_rad_quad(out, "blue_plastic", "box", "4620", xyz(0.5,0.75,0.5), xyz(0.37,1.23,0.5), xyz(0.37,1.23,0), xyz(0.5,0.75,0))
   write_rad_quad(out, "blue_plastic", "box", "2310", xyz(0.37,1.23,0), xyz(0.85,1.36,0), xyz(0.98,0.88,0), xyz(0.5,0.75,0))
   write_rad_quad(out, "blue_plastic", "box", "3267", xyz(0.85,1.36,0), xyz(0.37,1.23,0), xyz(0.37,1.23,0.5), xyz(0.85,1.36,0.5))
   write_rad_quad(out, "blue_plastic", "box", "5137", xyz(0.98,0.88,0.5), xyz(0.98,0.88,0), xyz(0.85,1.36,0), xyz(0.85,1.36,0.5))
   write_rad_quad(out, "blue_plastic", "box", "6457", xyz(0.37,1.23,0.5), xyz(0.5,0.75,0.5), xyz(0.98,0.88,0.5), xyz(0.85,1.36,0.5))
-  println(out, radiance_metal_material("chrome", gray=.8, specularity=.9, roughness=0))
+  write_rad_material(out, radiance_metal_material("chrome", gray=.8, specularity=.9, roughness=0))
   write_rad_cylinder(out, "chrome", "fixture_support", xyz(2,1,1.5), .05, xyz(2,1,1.75))
 end
 
@@ -417,8 +422,39 @@ realize(b::ACAD, s::IrregularPrism) =
 ## FIXME: deal with the rotation angle
 realize(b::ACAD, s::RightCuboid) =
   ACADCenteredBox(connection(b), s.cb, s.width, s.height, s.h)
-realize(b::ACAD, s::Box) =
-  ACADBox(connection(b), s.c, s.dx, s.dy, s.dz)
+=#
+realize(b::Radiance, s::Box) =
+  let id = next_id(b),
+      mod = next_modifier(b, missing),
+      kind = "box",
+      buf = buffer(b)
+    write_rad_box(buf, "mat$(kind)$(mod)", id, in_world(s.c), s.dx, s.dy, s.dz)
+    id
+  end
+
+#=
+open(room_rad, "w") do out
+  write_rad_material(out, radiance_light_material("bright", gray=100))
+  write_rad_material(out, radiance_plastic_material("red_plastic", red=.7, green=.05, blue=.05, specularity=.5, roughness=.5))
+  write_rad_material(out, radiance_plastic_material("gray_paint", gray=.5))
+  write_rad_sphere(out, "bright", "fixture", xyz(2, 1, 1.5), .125)
+  write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
+  write_rad_box(out, "gray_paint", "1", xyz(0,0,0), 3, 2, 1.75)
+  write_rad_material(out, radiance_plastic_material("blue_plastic", red=.1, green=.1, blue=.6, specularity=.05, roughness=.1))
+  write_rad_quad(out, "blue_plastic", "box", "1540", xyz(0.98,0.88,0), xyz(0.98,0.88,0.5), xyz(0.5,0.75,0.5), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "4620", xyz(0.5,0.75,0.5), xyz(0.37,1.23,0.5), xyz(0.37,1.23,0), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "2310", xyz(0.37,1.23,0), xyz(0.85,1.36,0), xyz(0.98,0.88,0), xyz(0.5,0.75,0))
+  write_rad_quad(out, "blue_plastic", "box", "3267", xyz(0.85,1.36,0), xyz(0.37,1.23,0), xyz(0.37,1.23,0.5), xyz(0.85,1.36,0.5))
+  write_rad_quad(out, "blue_plastic", "box", "5137", xyz(0.98,0.88,0.5), xyz(0.98,0.88,0), xyz(0.85,1.36,0), xyz(0.85,1.36,0.5))
+  write_rad_quad(out, "blue_plastic", "box", "6457", xyz(0.37,1.23,0.5), xyz(0.5,0.75,0.5), xyz(0.98,0.88,0.5), xyz(0.85,1.36,0.5))
+  write_rad_material(out, radiance_metal_material("chrome", gray=.8, specularity=.9, roughness=0))
+  write_rad_cylinder(out, "chrome", "fixture_support", xyz(2,1,1.5), .05, xyz(2,1,1.75))
+end
+
+  radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+=#
+
+#=
 realize(b::ACAD, s::Cone) =
   ACADCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
 realize(b::ACAD, s::ConeFrustum) =
@@ -755,7 +791,7 @@ realize(b::Radiance, w::Wall) =
       l_thickness = l_thickness(w),
       w_path = translate(w.path, vz(w_base_height)),
       w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, r_thickness)),
+      r_w_paths = subpaths(offset(w_path, -r_thickness)),
       l_w_paths = subpaths(offset(w_path, l_thickness)),
       openings = [w.doors..., w.windows...],
       prevlength = 0,
@@ -775,7 +811,7 @@ realize(b::Radiance, w::Wall) =
                 op_path = subpath(w_path,
                                   max(prevlength, op.loc.x),
                                   min(currlength, op.loc.x + op.family.width)),
-                r_op_path = offset(op_path, r_thickness),
+                r_op_path = offset(op_path, -r_thickness),
                 l_op_path = offset(op_path, l_thickness),
                 fixed_r_op_path =
                   open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
@@ -813,7 +849,7 @@ realize(b::Radiance, w::Door) = nothing
 
 backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
   let w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, r_thickness)),
+      r_w_paths = subpaths(offset(w_path, -r_thickness)),
       l_w_paths = subpaths(offset(w_path, l_thickness)),
       modright = next_modifier(b, realize(b, s.family).material_right),
       modleft = next_modifier(b, realize(b, s.family).material_left)
@@ -881,10 +917,9 @@ radiance_visualization(b::Radiance=radiance) =
   let path=radiance_simulation_path(),
       radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
-      skypath = export_sky(b, path),
-      octpath = radiance_oconv(radpath)
-    radiance_cmd("""oconv "$(matpath)" "$(skypath)" "$(radpath)" > "$(octpath)" """)
-    radiance_rview(octpath, b.camera, b.target- b.camera) #Ignoring lens for now
+      skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
+      octpath = radiance_oconv(radpath, matpath, skypath)
+    radiance_rview(octpath, b.camera, b.target) #Ignoring lens for now
   end
 
 struct DaysimAnalysis <: LightingAnalysis
