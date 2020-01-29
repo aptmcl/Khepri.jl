@@ -53,7 +53,8 @@ abstract type ClosedPath <: Path end
 
 is_closed_path(path::Path) = false
 is_closed_path(path::ClosedPath) = true
-
+# To avoid duplicate convertions, we also deal with Locs
+is_closed_path(pts::Locs) = coincident_path_location(pts[1], pts[end])
 
 struct ArcPath <: OpenPath
     center::Loc

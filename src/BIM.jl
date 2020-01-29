@@ -367,27 +367,10 @@ A wall contains doors and windows
 
 @defproxy(wall, Shape3D, path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
-          top_level::Level=upper_level(bottom_level),
+          top_level::Level=upper_level(convert(Level, bottom_level)),
           family::WallFamily=default_wall_family(),
           offset::Real=is_closed_path(path) ? 1/2 : 0, # offset is relative to the thickness
           doors::Shapes=Shape[], windows::Shapes=Shape[])
-wall(pts::Locs;
-     bottom_level::Level=default_level(),
-     top_level::Level=upper_level(bottom_level),
-     family::WallFamily=default_wall_family()) =
-  wall(polygonal_path(pts),
-     bottom_level=bottom_level,
-     top_level=top_level,
-     family=family)
-wall(p0::Loc, p1::Loc;
-    bottom_level::Level=default_level(),
-    top_level::Level=upper_level(bottom_level),
-    family::WallFamily=default_wall_family()) =
- wall([p0, p1],
-      bottom_level=bottom_level,
-      top_level=top_level,
-      family=family)
-
 #=
 Walls can be joined. That is very important because the wall needs to have
 uniform thickness along the entire path.
