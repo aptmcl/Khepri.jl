@@ -423,6 +423,8 @@ macro defproxy(name, parent, fields...)
       ref::LazyRef
       $(struct_fields...)
     end
+    # we don't need to convert anything because Julia already does that with the default constructor
+    # and, by the same idea, we don't need to define parameter types.
     @noinline $(constructor_name)($(opt_params...); $(key_params...), backend::Backend=current_backend(), ref::LazyRef=LazyRef(backend)) =
       after_init($(struct_name)(ref, $(field_converts...)))
     $(predicate_name)(v::$(struct_name)) = true
