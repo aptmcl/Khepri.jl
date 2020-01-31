@@ -149,6 +149,9 @@ public string GetRenderResolution()
 public float GetCurrentFPS()
 public int GetViewTriangleCount()
 public int GetViewVertexCount()
+public String ShapeType(GameObject s)
+public Vector3 SphereCenter(GameObject s)
+public float SphereRadius(GameObject s)
 """
 
 abstract type UnityKey end
