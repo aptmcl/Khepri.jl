@@ -111,7 +111,7 @@ write_rad_box(io::IO, modifier, id, p0, l, w, h) =
     write_rad_quad(io, modifier, id, "face2", p2, p3, p7, p6)
     write_rad_quad(io, modifier, id, "face3", p3, p0, p4, p7)
     write_rad_quad(io, modifier, id, "face4", p3, p2, p1, p0)
-    write_rad_quad(io, modifier, id, "face5", p2, p5, p6, p7)
+    write_rad_quad(io, modifier, id, "face5", p4, p5, p6, p7)
   end
 
 #=
@@ -179,6 +179,8 @@ radiance_outside_facade_35 = radiance_plastic_material("OutsideFacade_35", gray=
 radiance_generic_glass_80 = radiance_glass_material("Glass_80", gray=0.8)
 radiance_generic_metal = radiance_metal_material("SheetMetal_80", gray=0.8)
 
+default_radiance_material = Parameter(radiance_generic_metal)
+
 export radiance_material_white,
        radiance_generic_ceiling_70,
        radiance_generic_ceiling_80,
@@ -190,7 +192,8 @@ export radiance_material_white,
        radiance_outside_facade_30,
        radiance_outside_facade_35,
        radiance_generic_glass_80,
-       radiance_generic_metal
+       radiance_generic_metal,
+       default_radiance_material
 
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
@@ -334,7 +337,7 @@ buffer(b::Radiance) = b.buffer()
 next_id(b::Radiance) =
     begin
         b.count += 1
-        b.count -1
+        b.count - 1
     end
 next_modifier(b::Radiance, key) =
     get!(b.materials, key, key.name)
@@ -372,15 +375,15 @@ get_view(b::Radiance) =
 delete_all_shapes(b::Radiance) =
   begin
     delete_all_shapes(autocad)
-    (empty!(b.shapes); empty!(b.materials); nothing)
+    (empty!(b.shapes); empty!(b.materials); b.count = 0; nothing)
   end
 
 realize(b::Radiance, s::Sphere) =
   let id = next_id(b),
-      mod = next_modifier(b, missing),
+      mod = next_modifier(b, default_radiance_material()),
       kind = "sphere",
       buf = buffer(b)
-    write_rad_sphere(buf, "mat$(kind)$(mod)", id, in_world(s.center), s.radius)
+    write_rad_sphere(buf, #="mat$(kind)$(mod)"=# mod, id, in_world(s.center), s.radius)
     id
   end
 
@@ -425,10 +428,10 @@ realize(b::ACAD, s::RightCuboid) =
 =#
 realize(b::Radiance, s::Box) =
   let id = next_id(b),
-      mod = next_modifier(b, missing),
+      mod = next_modifier(b, default_radiance_material()),
       kind = "box",
       buf = buffer(b)
-    write_rad_box(buf, "mat$(kind)$(mod)", id, in_world(s.c), s.dx, s.dy, s.dz)
+    write_rad_box(buf, #="mat$(kind)$(mod)"=# mod, id, in_world(s.c), s.dx, s.dy, s.dz)
     id
   end
 
@@ -464,7 +467,7 @@ realize(b::Radiance, s::Cylinder) =
   let bot_id = next_id(b),
       top_id = next_id(b),
       side_id = next_id(b),
-      mod = next_modifier(b, missing),
+      mod = next_modifier(b, default_radiance_material()),
       kind = "cylinder",
       buf = buffer(b),
       bot = in_world(s.cb),
@@ -696,7 +699,8 @@ backend_get_family_ref(b::Radiance, f::Family, rf::RadianceFamily) = rf
 
 export radiance_material_family,
        radiance_slab_family,
-       radiance_wall_family
+       radiance_wall_family,
+       default_radiance_material
 
 
 set_backend_family(default_wall_family(), radiance,
@@ -714,10 +718,10 @@ set_backend_family(default_panel_family(), radiance,
 
 # Radiance-specific operations
 
-material_ground = Parameter(radiance_generic_floor_20)
+default_radiance_ground_material = Parameter(radiance_generic_floor_20)
 
 #=
-create_ground_plane(shapes, material=material_ground()) =
+create_ground_plane(shapes, material=default_radiance_ground_material()) =
   if shapes == []
     error("No shapes selected for analysis. Use add-radiance-shape!.")
   else
@@ -919,6 +923,9 @@ radiance_visualization(b::Radiance=radiance) =
       matpath = export_materials(b, path),
       skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
       octpath = radiance_oconv(radpath, matpath, skypath)
+      @info radpath
+      @info matpath
+      @info skypath
     radiance_rview(octpath, b.camera, b.target) #Ignoring lens for now
   end
 
@@ -1022,8 +1029,6 @@ export_sky_for_date_location(b::Radiance, path::AbstractString, date::Date, loca
                meridian,
                time_zone)
   end
-
-
 
 radiance_sensors = Parameter(Loc[])
 
