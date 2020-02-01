@@ -6,13 +6,17 @@ To visualize RAD files, check
 https://www.ladybug.tools/spider-rad-viewer/rad-viewer/r7/rad-viewer.html
 
 =#
-export radiance,
+export Radiance,
+       radiance,
        save_rad,
        @save_rad,
+       RadianceMaterial,
        radiance_material,
        radiance_plastic_material,
        radiance_metal_material,
-       radiance_glass_material
+       radiance_glass_material,
+       radiance_light_material,
+       radiance_dielectric_material
 
 write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
   begin
@@ -165,6 +169,9 @@ radiance_metal_material(name::String; args...) =
 radiance_glass_material(name::String; args...) =
   radiance_material(name, "glass"; args...)
 
+radiance_dielectric_material(name::String; args...) =
+  radiance_material(name, "dielectric"; args...)
+
 #Some pre-defined materials
 radiance_material_white = radiance_plastic_material("white", gray=1.0) #
 radiance_generic_ceiling_70 = radiance_plastic_material("GenericCeiling_70", gray=0.7)
@@ -223,6 +230,12 @@ radiance_oconv(radpath) =
     octpath
   end
 
+radiance_oconv(radpath, matpath) =
+  let octpath = path_replace_suffix(radpath, ".oct")
+    run(pipeline(`$(radiance_cmd("oconv")) $matpath $radpath`, stdout=octpath))
+    octpath
+  end
+
 radiance_oconv(radpath, matpath, skypath) =
   let octpath = path_replace_suffix(radpath, ".oct")
     run(pipeline(`$(radiance_cmd("oconv")) $matpath $skypath $radpath`, stdout=octpath))
@@ -235,8 +248,8 @@ radiance_rview(path_oct, camera, target, light=(1,1,1)) =
     run(`$(radiance_cmd("rvu")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $path_oct`)
   end
 
-#=
 # Test1
+#=
 room_rad = radiance_simulation_path()
 
 open(room_rad, "w") do out
@@ -246,7 +259,9 @@ open(room_rad, "w") do out
   write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
 end
 radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125))
+=#
 
+#=
 # Test2
 
 open(room_rad, "w") do out
@@ -473,9 +488,9 @@ realize(b::Radiance, s::Cylinder) =
       bot = in_world(s.cb),
       top = in_world(s.cb + vz(s.h, s.cb.cs)),
       normal = unitized(top-bot)
-    write_rad_ring(buf, "mat$(kind)bot$(mod)", bot_id, bot, 0, s.r, -normal)
-    write_rad_cylinder(buf, "mat$(kind)side$(mod)", side_id, bot, s.r, top)
-    write_rad_ring(buf, "mat$(kind)top$(mod)", top_id, top, 0, s.r, normal)
+    write_rad_ring(buf, #="mat$(kind)bot$(mod)"=# mod, bot_id, bot, 0, s.r, -normal)
+    write_rad_cylinder(buf, #="mat$(kind)side$(mod)"=# mod, side_id, bot, s.r, top)
+    write_rad_ring(buf, #="mat$(kind)top$(mod)"=# mod, top_id, top, 0, s.r, normal)
     bot_id
   end
 
@@ -523,8 +538,8 @@ realize_pyramid_fustrum(b::Radiance, top::String, bot::String, side::String, bot
 realize_pyramid_fustrum(b::Radiance, top::String, bot::String, side::String, bot_vs, top_vs, closed=true) =
   let buf = buffer(b)
     if closed
-      write_rad_polygon(buf, top, next_id(b), reverse(bot_vs))
-      write_rad_polygon(buf, bot, next_id(b), top_vs)
+      write_rad_polygon(buf, bot, next_id(b), reverse(bot_vs))
+      write_rad_polygon(buf, top, next_id(b), top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
       write_rad_polygon(buf, side, next_id(b), vs)
@@ -745,20 +760,18 @@ create_ground_plane(shapes, material=default_radiance_ground_material()) =
 
 =#
 
-realize(b::Radiance, s::Slab) =
-  let base = vz(s.level.height + s.family.coating_thickness - s.family.thickness),
-      thickness = vz(s.family.coating_thickness + s.family.thickness),
-      path = s.contour,
-      modtop = next_modifier(b, realize(b, s.family).top_material),
+backend_slab(b::Radiance, profile, holes, thickness, family) =
+  let modtop = next_modifier(b, realize(b, s.family).top_material),
       modbot = next_modifier(b, realize(b, s.family).bottom_material),
-      modside = next_modifier(b, realize(b, s.family).side_material)
+      modside = next_modifier(b, realize(b, s.family).side_material),
+      path = profile
     for op in s.openings
       path = subtract_paths(path, op)
     end
     realize_pyramid_fustrum(
       b, modtop, modbot, modside,
-      path_vertices(translate(path, base)),
-      path_vertices(translate(path, base + thickness)))
+      path_vertices(path),
+      path_vertices(translate(path, thickness)))
   end
 
 #=
@@ -805,7 +818,7 @@ realize(b::Radiance, w::Wall) =
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
+        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, true)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -916,18 +929,29 @@ abstract type LightingAnalysis <: Analysis end
 struct RadianceVisualization <: LightingAnalysis
 end
 
-export radiance_visualization
-radiance_visualization(b::Radiance=radiance) =
+export radiance_visualization, overcast_sky_radiance_visualization
+radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
   let path=radiance_simulation_path(),
       radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
-      skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
-      octpath = radiance_oconv(radpath, matpath, skypath)
+      octpath = radiance_oconv(radpath, matpath)
       @info radpath
       @info matpath
-      @info skypath
-    radiance_rview(octpath, b.camera, b.target) #Ignoring lens for now
+    radiance_rview(octpath, b.camera, b.target, light) #Ignoring lens for now
   end
+overcast_sky_radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
+    let path=radiance_simulation_path(),
+        radpath = export_geometry(b, path),
+        matpath = export_materials(b, path),
+        skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
+        octpath = radiance_oconv(radpath, matpath) #, skypath)
+        @info radpath
+        @info matpath
+        @info skypath
+      radiance_rview(octpath, b.camera, b.target, light) #Ignoring lens for now
+    end
+
+
 
 struct DaysimAnalysis <: LightingAnalysis
 end
