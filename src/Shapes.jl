@@ -459,6 +459,9 @@ Shapes0D = Vector{<:Any}
 Shapes1D = Vector{<:Any}
 Shapes2D = Vector{<:Any}
 
+# This might be usable, so
+export @defproxy, realize, Shape0D, Shape1D, Shape2D, Shape3D
+
 @defproxy(empty_shape, Shape0D)
 @defproxy(universal_shape, Shape3D)
 @defproxy(point, Shape0D, position::Loc=u0())
