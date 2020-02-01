@@ -992,10 +992,17 @@ backend_ieslight(b::Unity, file::String, loc::Loc, dir::Vec, alpha::Real, beta::
 shape_from_ref(r, b::Unity) =
   let idx = findfirst(s -> r in collect_ref(s), collected_shapes())
     if isnothing(idx)
+      let kind = @remote(b, ShapeType(r))
+        if kind == "Sphere"
+          sphere(@remote(b, SphereCenter(r)), @remote(b, SphereRadius(r)),
+                 backend=b, ref=LazyRef(b, UnityNativeRef(r)))
+        else
           unknown(r, backend=b, ref=LazyRef(b, UnityNativeRef(r), 0, 0))
           #code = @remote(b, ShapeCode(r)),
           #ref = LazyRef(b, UnityNativeRef(r))
           #error("Unknown shape with code $(code)")
+        end
+      end
     else
       collected_shapes()[idx]
     end
