@@ -27,6 +27,8 @@ BIMElements = Vector{<:BIMElement}
 levels_cache = Dict{Real,Level}()
 maybe_replace(level::Level) = get!(levels_cache, level.height, level)
 
+convert(::Type{Level}, h::Real) = level(h)
+
 current_levels() = values(level_cache)
 default_level = Parameter{Level}(level())
 default_level_to_level_height = Parameter{Real}(3)
