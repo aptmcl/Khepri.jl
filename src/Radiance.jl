@@ -44,6 +44,7 @@ write_rad_polygon(io::IO, modifier, id, vertices) =
   begin
     with(current_backend, autocad) do
       polygon(vertices)
+      #surface_polygon(vertices)
     end
     println(io, modifier, " ", "polygon", " ", id)
     println(io, 0) #0 strings
@@ -224,29 +225,42 @@ path_replace_suffix(path::String, suffix::String) =
     base * suffix
   end
 
-radiance_oconv(radpath) =
-  let octpath = path_replace_suffix(radpath, ".oct")
-    run(pipeline(`$(radiance_cmd("oconv")) $radpath`, stdout=octpath))
+##########################################
+# oconv
+
+radiance_oconv(radpath, matpath=missing, skypath=missing) =
+  let octpath = path_replace_suffix(radpath, ".oct"),
+      pipe = ismissing(matpath) ?
+             `$(radiance_cmd("oconv")) $radpath` :
+             ismissing(skypath) ?
+            `$(radiance_cmd("oconv")) $matpath $radpath` :
+            `$(radiance_cmd("oconv")) $matpath $skypath $radpath`
+    run(pipeline(pipe, stdout=octpath))
     octpath
   end
 
-radiance_oconv(radpath, matpath) =
-  let octpath = path_replace_suffix(radpath, ".oct")
-    run(pipeline(`$(radiance_cmd("oconv")) $matpath $radpath`, stdout=octpath))
-    octpath
-  end
+##########################################
+# rview
 
-radiance_oconv(radpath, matpath, skypath) =
-  let octpath = path_replace_suffix(radpath, ".oct")
-    run(pipeline(`$(radiance_cmd("oconv")) $matpath $skypath $radpath`, stdout=octpath))
-    octpath
-  end
-
-radiance_rview(path_oct, camera, target, light=(1,1,1)) =
+radiance_rview(octpath, camera, target, lens, light=(1,1,1)) =
   let p = camera,
-      v = target-camera
-    run(`$(radiance_cmd("rvu")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $path_oct`)
+      v = target-camera # Rview ignores focal length
+    run(`$(radiance_cmd("rvu")) -ab 2 -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $octpath`,
+        wait=false)
   end
+
+##########################################
+# rview
+
+radiance_rpict(path_oct, camera, target, lens) =
+  let picpath = path_replace_suffix(path_oct, ".pic"),
+      p = camera,
+      v = unitized(target-camera)*lens/1000
+    run(pipeline(`$(radiance_cmd("rpict")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -aa 0.1 -ab 6 -ad 4096 -dc 0.75 -st 0.15 -lw 0.005 -as 4096 -ar 128 -lr 8 -dt 0.15 -dr 3 -ds 0.05 -dp 512 $path_oct`, stdout=picpath))
+    run(`perl $(radiance_cmd("falsecolor.pl")) $picpath`, wait=false)
+  end
+
+
 
 # Test1
 #=
@@ -258,7 +272,7 @@ open(room_rad, "w") do out
   write_rad_sphere(out, "bright", "fixture", xyz(2, 1, 1.5), .125)
   write_rad_sphere(out, "red_plastic", "ball", xyz(.7, 1.125, .625), .125)
 end
-radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125))
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), 50)
 =#
 
 #=
@@ -278,7 +292,7 @@ open(room_rad, "w") do out
   write_rad_quad(out, "gray_paint", "room", "6", xyz(3,2,1.75), xyz(3,0,1.75), xyz(0,0,1.75), xyz(0,2,1.75))
 end
 
-radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), 50, (.5, .5, .5))
 
 # Test2
 
@@ -305,7 +319,7 @@ open(room_rad, "w") do out
   write_rad_cylinder(out, "chrome", "fixture_support", xyz(2,1,1.5), .05, xyz(2,1,1.75))
 end
 
-radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), 50, (.5, .5, .5))
 
 =#
 
@@ -469,7 +483,7 @@ open(room_rad, "w") do out
   write_rad_cylinder(out, "chrome", "fixture_support", xyz(2,1,1.5), .05, xyz(2,1,1.75))
 end
 
-  radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), (.5, .5, .5))
+  radiance_rview(radiance_oconv(room_rad), xyz(2.25, .375, 1), xyz(2.25, .375, 1) + vxyz(-.25, .125, -.125), 50, (.5, .5, .5))
 =#
 
 #=
@@ -549,13 +563,11 @@ realize_pyramid_fustrum(b::Radiance, top::String, bot::String, side::String, bot
 realize_polygon(b::Radiance, key, kind::String, path::Path, acw=true) =
   realize_polygon(b, key, kind, path_vertices(path), acw)
 
-realize_polygon(b::Radiance, key, kind::String, vs, acw=true) =
-  let mod = next_modifier(b, key),
-      buf = buffer(b),
-      side = acw ? "top" : "bot"
-    write_rad_polygon(buf, "mat$(kind)$(side)$(mod)", next_id(b), acw ? vs : reverse(vs))
+realize_polygon(b::Radiance, mod, kind::String, vs, acw=true) =
+  let buf = buffer(b)
+    polygon(vs, backend=autocad)
+    write_rad_polygon(buf, mod, next_id(b), acw ? vs : reverse(vs))
   end
-
 #=
 
 Upon daysim processing, we need to compute the useful daylight illumination, which is the fraction of time that a sensor is within a given range of illumination
@@ -702,6 +714,9 @@ end
 radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top, side::RadianceMaterial=bot) =
   RadianceSlabFamily(top, bot, side)
 
+radiance_roof_family = radiance_slab_family
+
+
 struct RadianceWallFamily <: RadianceFamily
   right_material::RadianceMaterial
   left_material::RadianceMaterial
@@ -714,6 +729,7 @@ backend_get_family_ref(b::Radiance, f::Family, rf::RadianceFamily) = rf
 
 export radiance_material_family,
        radiance_slab_family,
+       radiance_roof_family,
        radiance_wall_family,
        default_radiance_material
 
@@ -722,6 +738,8 @@ set_backend_family(default_wall_family(), radiance,
   radiance_wall_family(radiance_generic_interior_wall_70))
 set_backend_family(default_slab_family(), radiance,
   radiance_slab_family(radiance_generic_floor_20, radiance_generic_ceiling_80))
+set_backend_family(default_roof_family(), radiance,
+  radiance_roof_family(radiance_generic_floor_20, radiance_outside_facade_30))
 set_backend_family(default_beam_family(), radiance,
   radiance_material_family(radiance_generic_metal))
 set_backend_family(default_column_family(), radiance,
@@ -760,18 +778,18 @@ create_ground_plane(shapes, material=default_radiance_ground_material()) =
 
 =#
 
-backend_slab(b::Radiance, profile, holes, thickness, family) =
-  let modtop = next_modifier(b, realize(b, s.family).top_material),
-      modbot = next_modifier(b, realize(b, s.family).bottom_material),
-      modside = next_modifier(b, realize(b, s.family).side_material),
+backend_slab(b::Radiance, profile, openings, thickness, family) =
+  let modtop = next_modifier(b, realize(b, family).top_material),
+      modbot = next_modifier(b, realize(b, family).bottom_material),
+      modside = next_modifier(b, realize(b, family).side_material),
       path = profile
-    for op in s.openings
+    for op in openings
       path = subtract_paths(path, op)
     end
     realize_pyramid_fustrum(
       b, modtop, modbot, modside,
       path_vertices(path),
-      path_vertices(translate(path, thickness)))
+      path_vertices(translate(path, vz(thickness))))
   end
 
 #=
@@ -818,7 +836,7 @@ realize(b::Radiance, w::Wall) =
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, true)
+        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -854,8 +872,8 @@ realize(b::Radiance, w::Wall) =
           end
         end
         prevlength = currlength
-        #realize_polygon(b, modleft, modright, modright, c_l_w_path, false)
-        #realize_polygon(b, modleft, modright, modright, c_r_w_path, true)
+        realize_polygon(b, modleft, "wall", c_l_w_path, false)
+        realize_polygon(b, modright, "wall", c_r_w_path, true)
       end
     end
     void_ref(b)
@@ -865,7 +883,8 @@ realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
 
 backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
-  let w_paths = subpaths(w_path),
+  error("BUM")
+#=  let w_paths = subpaths(w_path),
       r_w_paths = subpaths(offset(w_path, -r_thickness)),
       l_w_paths = subpaths(offset(w_path, l_thickness)),
       modright = next_modifier(b, realize(b, s.family).material_right),
@@ -881,7 +900,7 @@ backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
     end
     void_ref(b)
   end
-
+=#
 
 
 #=
@@ -937,20 +956,29 @@ radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
       octpath = radiance_oconv(radpath, matpath)
       @info radpath
       @info matpath
-    radiance_rview(octpath, b.camera, b.target, light) #Ignoring lens for now
+    radiance_rview(octpath, b.camera, b.target, b.lens, light)
   end
 overcast_sky_radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
     let path=radiance_simulation_path(),
         radpath = export_geometry(b, path),
         matpath = export_materials(b, path),
         skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
-        octpath = radiance_oconv(radpath, matpath) #, skypath)
+        octpath = radiance_oconv(radpath, matpath, skypath)
         @info radpath
         @info matpath
         @info skypath
-      radiance_rview(octpath, b.camera, b.target, light) #Ignoring lens for now
+      radiance_rview(octpath, b.camera, b.target, b.lens, light)
     end
 
+export radiance_render, overcast_sky_radiance_render
+radiance_render(b::Radiance=radiance) =
+  let path=radiance_simulation_path(),
+      radpath = export_geometry(b, path),
+      matpath = export_materials(b, path),
+      octpath = radiance_oconv(radpath, matpath)
+      @info radpath
+    radiance_rpict(octpath, b.camera, b.target, b.lens)
+  end
 
 
 struct DaysimAnalysis <: LightingAnalysis
