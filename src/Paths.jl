@@ -177,6 +177,10 @@ translate(path::OpenSplinePath, v::Vec) = open_spline_path(translate(path.vertic
 translate(path::ClosedSplinePath, v::Vec) = closed_spline_path(translate(path.vertices, v))
 translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
+scale(path::RectangularPath, s::Real, p::Loc=u0()) =
+  let v = path.corner - p
+    rectangular_path(p + v*s, path.dx*s, path.dy*s)
+  end
 
 path_length(path::CircularPath) = 2*pi*path.radius
 path_length(path::ArcPath) = path.radius*abs(path.amplitude)
