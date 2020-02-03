@@ -46,8 +46,10 @@ const render_exposure = Parameter{Real}(0)  # [-3, +3]
 const render_floor_width = Parameter(1000)
 const render_floor_height = Parameter(1000)
 
+render_size() =
+  (render_width(), render_height())
 render_size(width::Integer, heigth::Integer) =
-    (render_width(width), render_height(heigth))
+  (render_width(width), render_height(heigth))
 
 prepare_for_saving_file(path::String) =
     let p = normpath(path)
@@ -132,6 +134,7 @@ rendering_with(f;
     end
 
 export default_lens,
+       view_angles,
        track_still_target,
        track_moving_target,
        walkthrough,
@@ -145,6 +148,14 @@ export default_lens,
        select_camera_target_lens_positions
 
 default_lens = Parameter(50)
+
+view_angles(lens=default_lens(), width=render_width(), height=render_height()) =
+  let h_angle = 2*180/pi*atan(36/(2*lens)),
+      v_angle = 2*180/pi*atan(height/width*36/(2*lens))
+    (h_angle, v_angle)
+  end
+
+
 
 set_view_save_frame(camera, target, lens=default_lens()) =
   begin
