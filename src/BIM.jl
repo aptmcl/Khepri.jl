@@ -188,6 +188,19 @@ abstract type FamilyInstance <: Family end
 family(f::Family) = f
 family(f::FamilyInstance) = f.family
 
+# Default implementation in CAD tools classify BIM elements in layers
+export family_in_layer
+const family_in_layer = Parameter(false)
+
+with_family_in_layer(f::Function, backend::Backend, family::Family) =
+  family_in_layer() ?
+    with(f, current_layer, realize(backend, family)) :
+    f()
+
+
+
+
+
 #HACK Using Dict instead of IdDict just because get is not fully implemented for IdDict
 #FIXME after updating to Julia 1.2
 macro deffamily(name, parent, fields...)
@@ -444,7 +457,9 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
 
 # Default implementation
 realize(b::Backend, w::Wall) =
-  realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
+  with_family_in_layer(b, w.family) do
+    realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
+  end
 
 realize_wall_no_openings(b::Backend, w::Wall) =
   let w_base_height = w.bottom_level.height,
@@ -477,15 +492,16 @@ realize_wall_opening(b::Backend, w_ref, w_path, l_thickness, r_thickness, op, fa
   end
 
 realize(b::Backend, s::Union{Door, Window}) =
-  let base_height = s.wall.bottom_level.height + s.loc.y,
-      height = s.family.height,
-      subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height)),
-      r_thickness = r_thickness(s.wall),
-      l_thickness = l_thickness(s.wall),
-      thickness = s.family.thickness
-    backend_wall(b, subpath, height, (l_thickness - r_thickness + thickness)/2, (r_thickness - l_thickness + thickness)/2, s.family)
+  with_family_in_layer(b, s.family) do
+    let base_height = s.wall.bottom_level.height + s.loc.y,
+        height = s.family.height,
+        subpath = translate(subpath(s.wall.path, s.loc.x, s.loc.x + s.family.width), vz(base_height)),
+        r_thickness = r_thickness(s.wall),
+        l_thickness = l_thickness(s.wall),
+        thickness = s.family.thickness
+      backend_wall(b, subpath, height, (l_thickness - r_thickness + thickness)/2, (r_thickness - l_thickness + thickness)/2, s.family)
+    end
   end
-
 ##
 
 export add_door
@@ -550,39 +566,41 @@ curtain_wall(p0::Loc, p1::Loc;
          family=family, offset=offset)
 
 realize(b::Backend, s::CurtainWall) =
-  let th = s.family.panel.thickness,
-      bfw = s.family.boundary_frame.width,
-      bfd = s.family.boundary_frame.depth,
-      bfdo = s.family.boundary_frame.depth_offset,
-      mfw = s.family.mullion_frame.width,
-      mfd = s.family.mullion_frame.depth,
-      mdfo = s.family.mullion_frame.depth_offset,
-      tfw = s.family.transom_frame.width,
-      tfd = s.family.transom_frame.depth,
-      tfdo = s.family.transom_frame.depth_offset,
-      path = curtain_wall_path(b, s, s.family.panel),
-      path_length = path_length(path),
-      bottom = level_height(s.bottom_level),
-      top = level_height(s.top_level),
-      height = top - bottom,
-      x_panels = ceil(Int, path_length/s.family.max_panel_dx),
-      y_panels = ceil(Int, height/s.family.max_panel_dy),
-      refs = []
-    push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+bfw, height-2*bfw, th, :panel))
-    push!(refs, backend_curtain_wall(b, s, path, bottom, bfw, bfd, :boundary_frame))
-    push!(refs, backend_curtain_wall(b, s, path, top-bfw, bfw, bfd, :boundary_frame))
-    push!(refs, backend_curtain_wall(b, s, subpath(path, 0, bfw), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
-    push!(refs, backend_curtain_wall(b, s, subpath(path, path_length-bfw, path_length), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
-    for i in 1:y_panels-1
-      l = height/y_panels*i
-      sub = subpath(path, bfw, path_length-bfw)
-      push!(refs, backend_curtain_wall(b, s, sub, bottom+l-tfw/2, tfw, tfd, :transom_frame))
+  with_family_in_layer(b, s.family) do
+    let th = s.family.panel.thickness,
+        bfw = s.family.boundary_frame.width,
+        bfd = s.family.boundary_frame.depth,
+        bfdo = s.family.boundary_frame.depth_offset,
+        mfw = s.family.mullion_frame.width,
+        mfd = s.family.mullion_frame.depth,
+        mdfo = s.family.mullion_frame.depth_offset,
+        tfw = s.family.transom_frame.width,
+        tfd = s.family.transom_frame.depth,
+        tfdo = s.family.transom_frame.depth_offset,
+        path = curtain_wall_path(b, s, s.family.panel),
+        path_length = path_length(path),
+        bottom = level_height(s.bottom_level),
+        top = level_height(s.top_level),
+        height = top - bottom,
+        x_panels = ceil(Int, path_length/s.family.max_panel_dx),
+        y_panels = ceil(Int, height/s.family.max_panel_dy),
+        refs = []
+      push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+bfw, height-2*bfw, th, :panel))
+      push!(refs, backend_curtain_wall(b, s, path, bottom, bfw, bfd, :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, path, top-bfw, bfw, bfd, :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, subpath(path, 0, bfw), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, subpath(path, path_length-bfw, path_length), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
+      for i in 1:y_panels-1
+        l = height/y_panels*i
+        sub = subpath(path, bfw, path_length-bfw)
+        push!(refs, backend_curtain_wall(b, s, sub, bottom+l-tfw/2, tfw, tfd, :transom_frame))
+      end
+      for i in 1:x_panels-1
+        l = path_length/x_panels*i
+        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
+      end
+      [ensure_ref(b,r) for r in refs]
     end
-    for i in 1:x_panels-1
-      l = path_length/x_panels*i
-      push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
-    end
-    [ensure_ref(b,r) for r in refs]
   end
 
 # By default, curtain wall panels are planar
@@ -653,21 +671,23 @@ free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column
   bottom_level::Level=default_level(), top_level::Level=upper_level(bottom_level),
   family::ColumnFamily=default_column_family())
 
-# Default implementation dispatches to the section profile
 realize(b::Backend, s::Beam) =
-  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
-
-realize(b::Backend, s::FreeColumn) =
-  realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
-
-realize(b::Backend, s::Column) =
-  let base_height = s.bottom_level.height,
-      height = s.top_level.height - base_height
-    realize_beam_profile(b, s, s.family.profile, add_z(s.cb, base_height), height)
+  with_family_in_layer(b, s.family) do
+    realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
   end
 
+realize(b::Backend, s::FreeColumn) =
+  with_family_in_layer(b, s.family) do
+    realize_beam_profile(b, s, s.family.profile, s.cb, s.h)
+  end
 
-
+realize(b::Backend, s::Column) =
+  with_family_in_layer(b, s.family) do
+    let base_height = s.bottom_level.height,
+        height = s.top_level.height - base_height
+      realize_beam_profile(b, s, s.family.profile, add_z(s.cb, base_height), height)
+    end
+  end
 
 # Tables and chairs
 
@@ -697,34 +717,34 @@ realize(b::Backend, s::Column) =
 @defproxy(table, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableFamily=default_table_family())
 
 realize(b::Backend, s::Table) =
-    backend_rectangular_table(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  backend_rectangular_table(b, add_z(s.loc, s.level.height), s.angle, s.family)
 
 @defproxy(chair, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::ChairFamily=default_chair_family())
 
 realize(b::Backend, s::Chair) =
-    backend_chair(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  backend_chair(b, add_z(s.loc, s.level.height), s.angle, s.family)
 
 @defproxy(table_and_chairs, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableChairFamily=default_table_chair_family())
 
 realize(b::Backend, s::TableAndChairs) =
-    backend_rectangular_table_and_chairs(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  backend_rectangular_table_and_chairs(b, add_z(s.loc, s.level.height), s.angle, s.family)
 
 # Lights
 
 @defproxy(pointlight, Shape3D, loc::Loc=z(3), color::RGB=rgb(255,255,255), range::Real=10, intensity::Real=4, level::Level=default_level())
 
 realize(b::Backend, s::Pointlight) =
-    backend_pointlight(b, add_z(s.loc, s.level.height), s.color, s.range, s.intensity)
+  backend_pointlight(b, add_z(s.loc, s.level.height), s.color, s.range, s.intensity)
 
 @defproxy(spotlight, Shape3D, loc::Loc=z(3), dir::Vec=vz(-1), hotspot::Real=pi/4, falloff::Real=pi/3)
 
 realize(b::Backend, s::Spotlight) =
-    backend_spotlight(b, s.loc, s.dir, s.hotspot, s.falloff)
+  backend_spotlight(b, s.loc, s.dir, s.hotspot, s.falloff)
 
 @defproxy(ieslight, Shape3D, file::String=required(), loc::Loc=z(3), dir::Vec=vz(-1), alpha::Real=0, beta::Real=0, gamma::Real=0)
 
 realize(b::Backend, s::Ieslight) =
-    backend_ieslight(b, s.file, s.loc, s.dir, s.alpha, s.beta, s.gamma)
+  backend_ieslight(b, s.file, s.loc, s.dir, s.alpha, s.beta, s.gamma)
 
 
 #################################
@@ -739,9 +759,14 @@ realize(b::Backend, s::Ieslight) =
 @defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
 
-realize(b::Backend, s::TrussNode) = sphere(s.p, s.family.radius)
-realize(b::Backend, s::TrussBar) = cylinder(s.p0, s.family.radius, s.p1)
-
+realize(b::Backend, s::TrussNode) =
+  with_family_in_layer(b, s.family) do
+    sphere(s.p, s.family.radius)
+  end
+realize(b::Backend, s::TrussBar) =
+  with_family_in_layer(b, s.family) do
+    cylinder(s.p0, s.family.radius, s.p1)
+  end
 
 ###################################
 # BIM
