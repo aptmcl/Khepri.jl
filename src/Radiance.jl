@@ -220,6 +220,12 @@ radiance_cmd(cmd::AbstractString) =
     radiance_folder * cmd
   end
 
+diva_radiance_cmd(cmd::AbstractString) =
+  # By default DIVA in Windows is installed in C:\Program Files\DIVA
+  let diva_radiance_folder = "C:/DIVA/Radiance/bin_64/"
+    diva_radiance_folder * cmd
+  end
+
 path_replace_suffix(path::String, suffix::String) =
   let (base, old_suffix) = splitext(path)
     base * suffix
@@ -244,20 +250,42 @@ radiance_oconv(radpath, matpath=missing, skypath=missing) =
 
 radiance_rview(octpath, camera, target, lens, light=(1,1,1)) =
   let p = camera,
-      v = target-camera # Rview ignores focal length
-    run(`$(radiance_cmd("rvu")) -ab 2 -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -av $(light[1]) $(light[2]) $(light[3]) $octpath`,
+      v = target-camera,
+      (h_angle, v_angle) = view_angles(lens)
+    run(`$(radiance_cmd("rvu"))
+        -ab 2
+        -vp $(p.x) $(p.y) $(p.z)
+        -vd $(v.x) $(v.y) $(v.z)
+        -vh $(h_angle)
+        -vv $(v_angle)
+        -av $(light[1]) $(light[2]) $(light[3]) $octpath`,
         wait=false)
   end
 
 ##########################################
 # rview
 
-radiance_rpict(path_oct, camera, target, lens) =
-  let picpath = path_replace_suffix(path_oct, ".pic"),
+radiance_rpict(octpath, camera, target, lens) =
+  let picpath = path_replace_suffix(octpath, ".pic"),
       p = camera,
-      v = unitized(target-camera)*lens/1000
-    run(pipeline(`$(radiance_cmd("rpict")) -vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -aa 0.1 -ab 6 -ad 4096 -dc 0.75 -st 0.15 -lw 0.005 -as 4096 -ar 128 -lr 8 -dt 0.15 -dr 3 -ds 0.05 -dp 512 $path_oct`, stdout=picpath))
-    run(`perl $(radiance_cmd("falsecolor.pl")) $picpath`, wait=false)
+      v = target-camera,
+      (h_angle, v_angle) = view_angles(lens)
+    run(pipeline(`$(radiance_cmd("rpict"))
+        -vp $(p.x) $(p.y) $(p.z)
+        -vd $(v.x) $(v.y) $(v.z)
+        -vh $(h_angle)
+        -vv $(v_angle)
+        -x $(render_width())
+        -y $(render_height())
+        -aa 0.1 -ab 6 -ad 4096
+        -dc 0.75 -st 0.15 -lw 0.005
+        -as 4096 -ar 128 -lr 8
+        -dt 0.15 -dr 3 -ds 0.05 -dp 512
+        $octpath`,
+        #`$(radiance_cmd("pfilt"))`,
+        stdout=picpath))
+    #run(`perl $(radiance_cmd("falsecolor.pl")) $picpath`, wait=false)
+    run(`$(diva_radiance_cmd("wxFalseColor")) $picpath`, wait=false)
   end
 
 
@@ -1099,4 +1127,14 @@ export_sensors(path::Path, sensors=radiance_sensors()) =
       end
     end
     ptspath
+  end
+
+
+############################################
+# To add materials to shapes that do not have them
+@defproxy(radiance_shape, Shape3D, base_shape::Shape3D=empty_shape(), material::RadianceMaterial=default_radiance_material())
+
+realize(b::Backend, s::RadianceShape) =
+  with(default_radiance_material, s.material) do
+    realize(b, s.base_shape)
   end
