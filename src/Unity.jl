@@ -74,6 +74,7 @@ public void SetApplyColliders(bool apply)
 public GameObject SurfacePolygon(Vector3[] ps)
 public GameObject Text(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)
 public GameObject Sphere(Vector3 center, float radius)
+public GameObject SphereWithMaterial(Vector3 center, float radius, Material material)
 public GameObject Pyramid(Vector3[] ps, Vector3 q)
 public GameObject PyramidFrustum(Vector3[] ps, Vector3[] qs)
 public GameObject PyramidFrustumWithMaterial(Vector3[] ps, Vector3[] qs, Material material)
@@ -81,6 +82,7 @@ public GameObject RightCuboid(Vector3 position, Vector3 vx, Vector3 vy, float dx
 public GameObject RightCuboidWithMaterial(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle, Material material)
 public GameObject Box(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz)
 public GameObject Cylinder(Vector3 bottom, float radius, Vector3 top)
+public GameObject CylinderWithMaterial(Vector3 bottom, float radius, Vector3 top, Material material)
 public GameObject Unite(GameObject s0, GameObject s1)
 public GameObject Intersect(GameObject s0, GameObject s1)
 public GameObject Subtract(GameObject s0, GameObject s1)
@@ -649,6 +651,8 @@ set_backend_family(default_beam_family(), unity, unity_material_family("Default/
 set_backend_family(default_column_family(), unity, unity_material_family("Default/Materials/Concrete"))
 set_backend_family(default_door_family(), unity, unity_material_family("Default/Materials/Wood"))
 set_backend_family(default_panel_family(), unity, unity_material_family("Default/Materials/Glass"))
+set_backend_family(default_truss_node_family(), unity, unity_material_family("Default/Materials/Steel"))
+set_backend_family(default_truss_bar_family(), unity, unity_material_family("Default/Materials/Steel"))
 
 set_backend_family(default_table_family(), unity, unity_resource_family("Default/Prefabs/Table"))
 set_backend_family(default_chair_family(), unity, unity_resource_family("Default/Prefabs/Chair"))
@@ -832,6 +836,13 @@ realize_pyramid_fustrum(b::Unity, bot_path::Path, top_path::Path, material) =
 
 realize_pyramid_fustrum(b::Unity, bot_vs, top_vs, material) =
     UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, material)))
+
+#
+
+realize(b::Unity, s::TrussNode) =
+    @remote(b, SphereWithMaterial(s.p, s.family.radius, realize(b, s.family)))
+realize(b::Unity, s::TrussBar) =
+    @remote(b, CylinderWithMaterial(s.p0, s.family.radius, s.p1, realize(b, s.family)))
 
 ############################################
 #=
