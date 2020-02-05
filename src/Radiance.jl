@@ -203,6 +203,43 @@ export radiance_material_white,
        radiance_generic_metal,
        default_radiance_material
 
+####################################################
+# Sky models
+
+const radiance_extra_sky_rad_contents = """
+skyfunc glow sky_mat
+0
+0
+4 1 1 1 0
+sky_mat source sky
+0
+0
+4 0 0 1 180
+skyfunc glow ground_glow
+0
+0
+4 1 .8 .5 0
+ground_glow source ground
+0
+0
+4 0 0 -1 180
+"""
+
+radiance_cie_overcast_sky(;
+    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
+    latitude::Real=61,
+    longitude::Real=150,
+    meridian::Real=135,
+    altitude::Union{Missing,Real}=missing,
+    azimuth::Union{Missing,Real}=missing,
+    withsun::Bool=true) =
+  let _2d(n) = lpad(n, 2, '0')
+    "!gensky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) $(withsun ? "+s" : "-s") -a $(latitude) -o $(longitude) -m $(meridian)" *
+    (ismissing(azimuth) ? "" : " -ang $(altitude) $(azimuth)") *
+    "\n" *
+    radiance_extra_sky_rad_contents
+  end
+
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
 simulations running at the same time.
@@ -246,6 +283,52 @@ radiance_oconv(radpath, matpath=missing, skypath=missing) =
   end
 
 ##########################################
+# rview and rpict share a lot of parameters that define the rendering quality
+#=
+rpict_abbrev_parameter = Dict(
+  "ambient_bounces"=>"ab",
+  "ambient_divisions"=>"ad",
+  "ambient_supersamples"=>"as",
+  "ambient_resolution"=>"ar",
+  "ambient_accuracy"=>"aa",
+  "pixel_sampling"=>"ps",
+  "pixel_tolerance"=>"pt",
+  "pixel_jitter"=>"pj",
+  "direct_jitter"=>"dj",
+  "direct_sampling"=>"ds",
+  "direct_threshold"=>"dt",
+  "direct_certainty"=>"dc",
+  "direct_sec_relays"=>"dr",
+  "direct_presamp_density"=>"dp",
+  "specular_threshold"=>"st",
+  "limit_reflections"=>"lr",
+  "limit_weight"=>"lw",
+  "specular_sampling"=>"ss"
+)
+
+
+rpict_number_parameters = {
+    ("ambient_bounces", "ab", int, "default_value": 2, "values": [2, 3, 6]},
+    ("ambient_divisions", "ad", int, "default_value": 512, "values": [512, 2048, 4096]},
+    ("ambient_supersamples", "as", int, "default_value": 128, "values": [128, 2048, 4096]},
+    ("ambient_resolution", "ar", int, "default_value": 16, "values": [16, 64, 128]},
+    ("ambient_accuracy", "aa", float, "default_value": .25, "values": [.25, .2, .1]},
+    ("pixel_sampling", "ps", int, "default_value": 8, "values": [8, 4, 2]},
+    ("pixel_tolerance", "pt", float, "default_value": .15, "values": [.15, .10, .05]},
+    ("pixel_jitter", "pj", float, "default_value": .6, "values": [.6, .9, .9]},
+    ("direct_jitter", "dj", float, "default_value": 0, "values": [0, .5, 1]},
+    ("direct_sampling", "ds", float, "default_value": .5, "values": [.5, .25, .05]},
+    ("direct_threshold", "dt", float, "default_value": .5, "values": [.5, .25, .15]},
+    ("direct_certainty", "dc", float, "default_value": .25, "values": [.25, .5, .75]},
+    ("direct_sec_relays", "dr", int, "default_value": 0, "values": [0, 1, 3]},
+    ("direct_presamp_density", "dp", int, "default_value": 64, "values": [64, 256, 512]},
+    ("specular_threshold", "st", float, "default_value": .85, "values": [.85, .5, .15]},
+    ("limit_reflections", "lr", int, "default_value": 4, "values": [4, 6, 8]},
+    ("limit_weight", "lw", float, "default_value": .05, "values": [.05, .01, .005]},
+    ("specular_sampling", "ss", "dscrip": "specular sampling", "type": float, "default_value": 0, "values": [0, .7, 1]}}
+=#
+
+##########################################
 # rview
 
 radiance_rview(octpath, camera, target, lens, light=(1,1,1)) =
@@ -258,7 +341,8 @@ radiance_rview(octpath, camera, target, lens, light=(1,1,1)) =
         -vd $(v.x) $(v.y) $(v.z)
         -vh $(h_angle)
         -vv $(v_angle)
-        -av $(light[1]) $(light[2]) $(light[3]) $octpath`,
+        -av $(light[1]) $(light[2]) $(light[3])
+        $octpath`,
         wait=false)
   end
 
@@ -367,6 +451,7 @@ const RadianceSubtractionRef = SubtractionRef{RadianceKey, RadianceId}
 
 mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   shapes::Shapes
+  sky::String
   buffer::LazyParameter{IOBuffer}
   count::Integer
   materials::Dict
@@ -385,9 +470,9 @@ void_ref(b::Radiance) = RadianceNativeRef(-1)
 
 create_radiance_buffer() = IOBuffer()
 
-const radiance = Radiance{500}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer),
+const radiance = Radiance{500}(Shape[], "", LazyParameter(IOBuffer, create_radiance_buffer),
   0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
-const radiance_lod100 = Radiance{100}(Shape[], LazyParameter(IOBuffer, create_radiance_buffer),
+const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, create_radiance_buffer),
   0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
 
 buffer(b::Radiance) = b.buffer()
@@ -426,6 +511,9 @@ set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
 
 get_view(b::Radiance) =
   b.camera, b.target, b.lens
+
+cie_overcast_sky(backend::Backend=radiance; args...) =
+  backend.sky = radiance_cie_overcast_sky(; args...)
 
 #current_backend(radiance)
 
@@ -602,7 +690,7 @@ Upon daysim processing, we need to compute the useful daylight illumination, whi
 
 To do that, we start by reading the .ill file generated
 
-ill = CSV.read(path, delim=' ', datarow=1)
+ill = CSV.read(path, delim=" ", datarow=1)
 
 The file looks like this:
 
@@ -627,7 +715,7 @@ Then, for each sensor (i.e., starting at column 5) we compute the number of time
 
 path = "C:\\Users\\aml\\Downloads\\Geometry_0_0_0629.ill"
 
-ill = CSV.read(path, delim=' ', datarow=1)
+ill = CSV.read(path, delim=" ", datarow=1)
 
 udi_in_range(df, min, max) =
   let occupied_hours_per_year = nrow(df)
@@ -661,61 +749,6 @@ test = DataFrame([
 
 udi_in_range(test, -1, 5)
 =#
-
-const extra_sky_rad_contents = """
-skyfunc glow sky_mat
-0
-0
-4 1 1 1 0
-
-sky_mat source sky
-0
-0
-4 0 0 1 180
-
-skyfunc glow ground_glow
-0
-0
-4 1 .8 .5 0
-
-ground_glow source ground
-0
-0
-4 0 0 -1 180
-"""
-
-#
-const CIE_Overcast_Sky_rad_contents = """
-!gensky 12 21 12.00 -c -a 42.300 -o 71.100 -m 75.000 -B 100
-
-skyfunc glow sky_mat
-0
-0
-4 1 1 1 0
-
-sky_mat source sky
-0
-0
-4 0 0 1 180
-
-skyfunc glow ground_glow
-0
-0
-4 1 1 1  0
-
-ground_glow source ground
-0
-0
-4 0 0 -1 180
-"""
-
-export_CIE_Overcast_Sky(path::String) =
-  let skypath = path_replace_suffix(path, "_sky.rad")
-    open(skypath, "w") do out
-      write(out, CIE_Overcast_Sky_rad_contents)
-    end
-    skypath
-  end
 
 #=
 Radiance families need to know the different kinds of materials
@@ -790,7 +823,7 @@ create_ground_plane(shapes, material=default_radiance_ground_material()) =
         (center, ratio) = (quad_center(p0, p1, p2, p3),
                   distance(p0, p4)/distance(p0, p2));
      ratio == 0 ?
-      error("Couldn't compute height. Use add-radiance-shape!.") :
+      error("Couldn"t compute height. Use add-radiance-shape!.") :
       let pts = map(p -> intermediate_loc(center, p, ratio*10), [p0, p1, p2, p3]);
          create_surface_layer(pts, 0, ground_layer(), material)
         end
@@ -976,35 +1009,29 @@ abstract type LightingAnalysis <: Analysis end
 struct RadianceVisualization <: LightingAnalysis
 end
 
-export radiance_visualization, overcast_sky_radiance_visualization
+export radiance_visualization
 radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
   let path=radiance_simulation_path(),
       radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
-      octpath = radiance_oconv(radpath, matpath)
+      skypath = export_sky(b, path),
+      octpath = radiance_oconv(radpath, matpath, skypath)
       @info radpath
       @info matpath
+      @info skypath
     radiance_rview(octpath, b.camera, b.target, b.lens, light)
   end
-overcast_sky_radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
-    let path=radiance_simulation_path(),
-        radpath = export_geometry(b, path),
-        matpath = export_materials(b, path),
-        skypath = export_CIE_Overcast_Sky(path), #export_sky(b, path),
-        octpath = radiance_oconv(radpath, matpath, skypath)
-        @info radpath
-        @info matpath
-        @info skypath
-      radiance_rview(octpath, b.camera, b.target, b.lens, light)
-    end
 
-export radiance_render, overcast_sky_radiance_render
+export radiance_render
 radiance_render(b::Radiance=radiance) =
   let path=radiance_simulation_path(),
       radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
-      octpath = radiance_oconv(radpath, matpath)
+      skypath = export_sky(b, path),
+      octpath = radiance_oconv(radpath, matpath, skypath)
       @info radpath
+      @info matpath
+      @info skypath
     radiance_rpict(octpath, b.camera, b.target, b.lens)
   end
 
@@ -1077,37 +1104,12 @@ export_materials(b::Radiance, path::AbstractString) =
     matpath
   end
 
-export_sky(b::Radiance, path::AbstractString;
-           date::DateTime=DateTime(0, 9, 21),
-           latitude::Real=61,
-           longitude::Real=150,
-           meridian::Real=135,
-           sun::Bool=true) =
+export_sky(b::Radiance, path::AbstractString) =
   let skypath = path_replace_suffix(path, "_sky.rad"),
-      d2(i) = lpad(i, 2, '0')
     open(skypath, "w") do out
-      let mo = d2(month(date)),
-          da = d2(day(date)),
-          ho = d2(hour(date)),
-          mi = d2(minute(date))
-        write(out, "!gensky $(mo) $(da) $(ho):$(mi) $(sun ? "+s" : "-s") -a $(latitude) -o $(longitude) -m $(meridian)\n")
-        write(out, extra_sky_rad_contents)
-      end
+      write(out, b.sky)
     end
     skypath
-  end
-
-export_sky_for_date_location(b::Radiance, path::AbstractString, date::Date, location::String) =
-  let (place, latitude, longitude, time_zone, site_elevation, weapath) = get_weather_for_location(path, location)
-    export_sky(path,
-               date,
-               date,
-               latitude,
-               latitude,
-               longitude,
-               longitude,
-               meridian,
-               time_zone)
   end
 
 radiance_sensors = Parameter(Loc[])
