@@ -1105,7 +1105,7 @@ export_materials(b::Radiance, path::AbstractString) =
   end
 
 export_sky(b::Radiance, path::AbstractString) =
-  let skypath = path_replace_suffix(path, "_sky.rad"),
+  let skypath = path_replace_suffix(path, "_sky.rad")
     open(skypath, "w") do out
       write(out, b.sky)
     end
