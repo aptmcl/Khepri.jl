@@ -251,17 +251,12 @@ radiance_simulation_path() =
    path
  end
 
-radiance_cmd(cmd::AbstractString) =
-  # By default Radiance in Windows is installed in C:\Program Files\Radiance\bin
-  let radiance_folder = "C:/Program Files/Radiance/bin/"
-    radiance_folder * cmd
-  end
+export radiance_folder
+const radiance_folder = Parameter("C:/Program Files/Radiance/bin/")
 
-diva_radiance_cmd(cmd::AbstractString) =
-  # By default DIVA in Windows is installed in C:\Program Files\DIVA
-  let diva_radiance_folder = "C:/DIVA/Radiance/bin_64/"
-    diva_radiance_folder * cmd
-  end
+radiance_folder("C:/DIVA/Radiance/bin_64/")
+
+radiance_cmd(cmd::AbstractString) = radiance_folder() * cmd
 
 path_replace_suffix(path::String, suffix::String) =
   let (base, old_suffix) = splitext(path)
@@ -369,10 +364,76 @@ radiance_rpict(octpath, camera, target, lens) =
         #`$(radiance_cmd("pfilt"))`,
         stdout=picpath))
     #run(`perl $(radiance_cmd("falsecolor.pl")) $picpath`, wait=false)
-    run(`$(diva_radiance_cmd("wxFalseColor")) $picpath`, wait=false)
+    run(`$(radiance_cmd("wxFalseColor")) $picpath`, wait=false)
   end
 
+diva_render(octpath, camera, target, lens) =
+  let aaapath = path_replace_suffix(octpath, ".aaa"),
+      ambpath = path_replace_suffix(octpath, ".amb"),
+      unfpath = path_replace_suffix(octpath, ".unf"),
+      picpath = path_replace_suffix(octpath, ".pic"),
+      p = camera,
+      v = target-camera,
+      (h_angle, v_angle) = view_angles(lens),
+      viewstr = "-vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -vu 0 0 1",
+      sizestr = "-vh $(h_angle) -vv $(v_angle)",
+      resolutionstr = "-x $(2*render_width()) -y $(2*render_height())",
+      basestr = "-vtv $(viewstr) $(sizestr) -vs 0 -vl 0 -af $(ambpath) $(resolutionstr)",
+      run1str = "-ps 4 -pt .10 -pj .9 -dj .5 -ds .25 -dt .25 -dc .50 -dr 1 -dp 256 -st .50 -ab 3 -aa .2 -ar 256 -ad 2048 -as 1024 -lr 6 -lw .010",
+      run2str = "-ps 2 -pt .05 -pj .9 -dj .7 -ds .15 -dt .05 -dc .75 -dr 3 -dp 512 -st .15 -ab 4 -aa .1 -ar 512 -ad 2048 -as 1024 -lr 8 -lw .005"
+    run(pipeline(`$(radiance_cmd("rpict")) $basestr $run1str $octpath`, stdout=aaapath))
+    run(pipeline(`$(radiance_cmd("rpict")) $basestr $run2str $octpath`, stdout=unfpath))
+    run(pipeline(`$(radiance_cmd("pfilt")) -r .6 -x /2 -y /2 $unfpath`, stdout=picpath))
+    run(`$(radiance_cmd("wxFalseColor")) $picpath`, wait=false)
+  end
 
+#= From DIVA
+
+rpict -t 15 -vtv -vp 9 19.3 4.4 -vd 0 -4.3 0.3 -vu 0 0 1 -vh 80.4462463224827 -vv 57.6922631046869 -vs 0 -vl 0 -af test01.amb -x 1600 -y 1200 -ps 4 -pt .10 -pj .9 -dj .5 -ds .25 -dt .25 -dc .5 -dr 1 -dp 256 -st .5 -ab 3 -aa .2 -ar 256 -ad 2048 -as 1024 -lr 6 -lw .01 test01.oct  1>test01_Perspective41.overture
+del test01_Perspective41.overture
+rpict -t 15 -vtv -vp 9 19.3 4.4 -vd 0 -4.3 0.3 -vu 0 0 1 -vh 80.4462463224827 -vv 57.6922631046869 -vs 0 -vl 0 -af test01.amb -x 1600 -y 1200 -ps 4 -pt .10 -pj .9 -dj .5 -ds .25 -dt .25 -dc .5 -dr 1 -dp 256 -st .5 -ab 3 -aa .2 -ar 256 -ad 2048 -as 1024 -lr 6 -lw .01 test01.oct  1>test01_Perspective41.unf
+rpict -t 15 -vtv -vp 9 19.3 4.4 -vd 0 -4.3 0.3 -vu 0 0 1 -vh 80.4462463224827 -vv 57.6922631046869 -vs 0 -vl 0 -af test01.amb -x 1600 -y 1200 -ps 2 -pt .05 -pj .9 -dj .7 -ds .15 -dt .05 -dc .75 -dr 3 -dp 512 -st .15 -ab 4 -aa .1 -ar 512 -ad 2048 -as 1024 -lr 8 -lw .005 test01.oct  1>test01_Perspective41.unf
+
+
+
+pfilt -r .6 -x /2 -y /2 test01_Perspective41.unf 1>test01_Perspective41.pic
+del test01_Perspective41.unf
+del test01.amb
+
+
+
+rpict
+-t 15  # report progress
+-vtv #perpective view
+-vp 9 19.3 4.4 # camera
+-vd 0 -4.3 0.3 # target
+-vu 0 0 1 # up
+-vh 80.4462463224827
+-vv 57.6922631046869
+-vs 0
+-vl 0
+-af test01.amb
+-x 1600 -y 1200
+-ps 2
+-pt .05
+-pj .9
+-dj .7
+-ds .15
+-dt .05
+-dc .75
+-dr 3
+-dp 512
+-st .15
+-ab 4
+-aa .1
+-ar 512
+-ad 2048
+-as 1024
+-lr 8
+-lw .005
+test01.oct  1>test01_Perspective41.overture
+
+=#
 
 # Test1
 #=
