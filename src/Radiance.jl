@@ -378,13 +378,18 @@ diva_render(octpath, camera, target, lens) =
       viewstr = "-vp $(p.x) $(p.y) $(p.z) -vd $(v.x) $(v.y) $(v.z) -vu 0 0 1",
       sizestr = "-vh $(h_angle) -vv $(v_angle)",
       resolutionstr = "-x $(2*render_width()) -y $(2*render_height())",
-      basestr = "-vtv $(viewstr) $(sizestr) -vs 0 -vl 0 -af $(ambpath) $(resolutionstr)",
-      run1str = "-ps 4 -pt .10 -pj .9 -dj .5 -ds .25 -dt .25 -dc .50 -dr 1 -dp 256 -st .50 -ab 3 -aa .2 -ar 256 -ad 2048 -as 1024 -lr 6 -lw .010",
-      run2str = "-ps 2 -pt .05 -pj .9 -dj .7 -ds .15 -dt .05 -dc .75 -dr 3 -dp 512 -st .15 -ab 4 -aa .1 -ar 512 -ad 2048 -as 1024 -lr 8 -lw .005"
-    run(pipeline(`$(radiance_cmd("rpict")) $basestr $run1str $octpath`, stdout=aaapath))
-    run(pipeline(`$(radiance_cmd("rpict")) $basestr $run2str $octpath`, stdout=unfpath))
-    run(pipeline(`$(radiance_cmd("pfilt")) -r .6 -x /2 -y /2 $unfpath`, stdout=picpath))
-    run(`$(radiance_cmd("wxFalseColor")) $picpath`, wait=false)
+      basestr = "-vtv $(viewstr) $(sizestr) -vs 0 -vl 0 $(resolutionstr)",
+      arg1str = "-ps 4 -pt .10 -pj .9 -dj .5 -ds .25 -dt .25 -dc .50 -dr 1 -dp 256 -st .50 -ab 3 -aa .2 -ar 256 -ad 2048 -as 1024 -lr 6 -lw .010",
+      arg2str = "-ps 2 -pt .05 -pj .9 -dj .7 -ds .15 -dt .05 -dc .75 -dr 3 -dp 512 -st .15 -ab 4 -aa .1 -ar 512 -ad 2048 -as 1024 -lr 8 -lw .005",
+      run1str = split("$(basestr) $(arg1str)", ' '),
+      run2str = split("$(basestr) $(arg2str)", ' ')
+    println(`$(radiance_cmd("rpict")) $(run1str) -af $(ambpath) $(octpath)`)
+    @time run(pipeline(`$(radiance_cmd("rpict")) $(run1str) -af $(ambpath) $(octpath)`, stdout=aaapath))
+    println(`$(radiance_cmd("rpict")) $(run2str) -af $(ambpath) $(octpath)`)
+    @time run(pipeline(`$(radiance_cmd("rpict")) $(run2str) -af $(ambpath) $(octpath)`, stdout=unfpath))
+    println(`$(radiance_cmd("pfilt")) -r .6 -x /2 -y /2 $(unfpath)`)
+    @time run(pipeline(`$(radiance_cmd("pfilt")) -r .6 -x /2 -y /2 $(unfpath)`, stdout=picpath))
+    run(`$(radiance_cmd("wxFalseColor")) $(picpath)`, wait=false)
   end
 
 #= From DIVA
@@ -1089,7 +1094,7 @@ radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
 
 export radiance_render
 radiance_render(b::Radiance=radiance) =
-  let path=radiance_simulation_path(),
+  let path = radiance_simulation_path(),
       radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
       skypath = export_sky(b, path),
@@ -1097,7 +1102,8 @@ radiance_render(b::Radiance=radiance) =
       @info radpath
       @info matpath
       @info skypath
-    radiance_rpict(octpath, b.camera, b.target, b.lens)
+    #radiance_rpict(octpath, b.camera, b.target, b.lens)
+    diva_render(octpath, b.camera, b.target, b.lens)
   end
 
 
