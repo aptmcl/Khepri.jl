@@ -512,6 +512,10 @@ set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
 get_view(b::Radiance) =
   b.camera, b.target, b.lens
 
+export empty_sky,
+       cie_overcast_sky
+empty_sky(backend::Backend=radiance) =
+  backend.sky = ""
 cie_overcast_sky(backend::Backend=radiance; args...) =
   backend.sky = radiance_cie_overcast_sky(; args...)
 
