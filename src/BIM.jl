@@ -615,8 +615,11 @@ curtain_wall_path(b::Backend, s::CurtainWall, panel_family::PanelFamily) =
   end
 
 backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
-  backend_wall(b, translate(path, vz(bottom)), height, thickness/2, thickness/2, getproperty(s.family, kind))
-
+  let family = getproperty(s.family, kind)
+    with_family_in_layer(b, family) do
+      backend_wall(b, translate(path, vz(bottom)), height, thickness/2, thickness/2, family)
+    end
+  end
 #
 # We need to redefine the default method (maybe add an option to the macro to avoid defining the meta_program)
 # This needs to be fixed for windows
