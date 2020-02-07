@@ -70,6 +70,7 @@ check_plugin() =
           return
         catch exc
           if isa(exc, Base.IOError) && i < 10
+              println(exc)
             @error("The AutoCAD plugin is outdated! Please, close AutoCAD.")
             sleep(5)
           else
@@ -794,35 +795,45 @@ backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
     @remote(b, TableAndChairs(c, angle, realize(b, family)))
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
-  let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
-                              ensure_ref(b, backend_fill(b, profile))),
-      main_body = slab(profile),
-      holes_bodies = map(slab, holes)
-    foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
+  with_family_in_layer(b, family) do
+    let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
+                                ensure_ref(b, backend_fill(b, profile))),
+        main_body = slab(profile),
+        holes_bodies = map(slab, holes)
+      foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
+    end
   end
 
 realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
-  @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
+  with_family_in_layer(b, s.family) do
+    @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
+  end
 
 realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, cb::Loc, length::Real) =
-  let profile_u0 = profile.corner,
-      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-      # need to test whether it is rotation on center or on axis
-      o = loc_from_o_phi(c, s.angle)
-    @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, length))
+  with_family_in_layer(b, s.family) do
+    let profile_u0 = profile.corner,
+        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+        # need to test whether it is rotation on center or on axis
+        o = loc_from_o_phi(c, s.angle)
+        @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, length))
+    end
   end
 
 #Columns are aligned along the center axis.
 realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, length::Real) =
-  let profile_u0 = profile.corner,
-      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-      # need to test whether it is rotation on center or on axis
-      o = loc_from_o_phi(c, s.angle)
-    @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
+  with_family_in_layer(b, s.family) do
+    let profile_u0 = profile.corner,
+        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+        # need to test whether it is rotation on center or on axis
+        o = loc_from_o_phi(c, s.angle)
+      @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
+    end
   end
 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
-  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)), vz(height))), r_thickness + l_thickness))
+  with_family_in_layer(b, family) do
+    @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)), vz(height))), r_thickness + l_thickness))
+  end
 
 ############################################
 
