@@ -146,6 +146,7 @@ public void StartSelectingGameObjects()
 public bool EndedSelectingGameObjects()
 public int[] SelectedGameObjectsIds(bool existing)
 public void SetSun(float x, float y, float z)
+public void SetSunDirection(Vector3 v)
 public Vector3 GetSunRotation()
 public string GetRenderResolution()
 public float GetCurrentFPS()
@@ -191,6 +192,11 @@ fast_unity() =
     @remote(unity, SetApplyColliders(false))
   end
 
+slow_unity() =
+  begin
+    @remote(unity, SetApplyMaterials(true))
+    @remote(unity, SetApplyColliders(true))
+  end
 #=
 realize(b::Unity, s::Point) =
   @remote(b, Point(s.position))
@@ -1192,3 +1198,8 @@ select_shapes(prompt::String, b::Unity) =
     @remote(b, StartSelectingGameObjects())
     selected_game_objects(b)
   end)
+
+#
+export set_sun_direction
+set_sun_direction(v::Vec, b::Unity) =
+  @remote(b, SetSunDirection(v))
