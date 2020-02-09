@@ -40,11 +40,12 @@ with(f, p, newvalue, others...) =
   end
 
 mutable struct LazyParameter{T}
-  initializer::Function #This should be a more specific type: None->T
+  initializer::Union{DataType,Function} #This should be a more specific type: None->T
   value::Union{T, Nothing}
 end
 
-LazyParameter(T::DataType, initializer::Function) = LazyParameter{T}(initializer, nothing)
+LazyParameter(T::DataType, initializer::Union{DataType,Function}) =
+  LazyParameter{T}(initializer, nothing)
 
 # This no longer works in 1.0
 #(p::LazyParameter{T}){T}()::T = p.value == nothing ? (p.value = p.initializer()) : get(p.value)
