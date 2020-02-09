@@ -139,8 +139,9 @@ random_range(x0, x1) =
   end
 
 export RGB, rgb, rgb_radiance
+const rgb = RGB
 
-rgb_radiance(c::RGB) = 0.265*c.r+0.67*c.g+0.065*c.b
+rgb_radiance(c::RGB) = 0.265*red(c)+0.67*green(c)+0.065*blue(c)
 
 required() = error("Required parameter")
 
@@ -197,4 +198,11 @@ export errormsg
 errormsg(e) =
   let b = backtrace()
     sprint((io, e) -> showerror(io, e, b, backtrace=true), e)
+  end
+
+# To create paths from paths
+
+path_replace_suffix(path::String, suffix::String) =
+  let (base, old_suffix) = splitext(path)
+    base * suffix
   end

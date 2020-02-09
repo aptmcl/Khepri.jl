@@ -240,6 +240,19 @@ radiance_cie_overcast_sky(;
     radiance_extra_sky_rad_contents
   end
 
+#
+radiance_utah_sky(;
+    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
+    turbidity::Real=5.0,
+    latitude::Real=61,
+    longitude::Real=150,
+    meridian::Real=135) =
+  let _2d(n) = lpad(n, 2, '0')
+    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) -y $(year) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
+    "\n" *
+    radiance_extra_sky_rad_contents
+  end
+
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
 simulations running at the same time.
@@ -257,11 +270,6 @@ const radiance_folder = Parameter("C:/Program Files/Radiance/bin/")
 radiance_folder("C:/DIVA/Radiance/bin_64/")
 
 radiance_cmd(cmd::AbstractString) = radiance_folder() * cmd
-
-path_replace_suffix(path::String, suffix::String) =
-  let (base, old_suffix) = splitext(path)
-    base * suffix
-  end
 
 ##########################################
 # oconv
@@ -368,7 +376,7 @@ radiance_rpict(octpath, camera, target, lens) =
   end
 
 diva_render(octpath, camera, target, lens) =
-  let aaapath = path_replace_suffix(octpath, ".aaa"),
+  let ovepath = path_replace_suffix(octpath, ".overture"),
       ambpath = path_replace_suffix(octpath, ".amb"),
       unfpath = path_replace_suffix(octpath, ".unf"),
       picpath = path_replace_suffix(octpath, ".pic"),
@@ -384,7 +392,8 @@ diva_render(octpath, camera, target, lens) =
       run1str = split("$(basestr) $(arg1str)", ' '),
       run2str = split("$(basestr) $(arg2str)", ' ')
     println(`$(radiance_cmd("rpict")) $(run1str) -af $(ambpath) $(octpath)`)
-    @time run(pipeline(`$(radiance_cmd("rpict")) $(run1str) -af $(ambpath) $(octpath)`, stdout=aaapath))
+    @time run(pipeline(`$(radiance_cmd("rpict")) $(run1str) -af $(ambpath) $(octpath)`, stdout=ovepath))
+    #rm(ovepath)
     println(`$(radiance_cmd("rpict")) $(run2str) -af $(ambpath) $(octpath)`)
     @time run(pipeline(`$(radiance_cmd("rpict")) $(run2str) -af $(ambpath) $(octpath)`, stdout=unfpath))
     println(`$(radiance_cmd("pfilt")) -r .6 -x /2 -y /2 $(unfpath)`)
@@ -534,11 +543,9 @@ The Radiance backend cannot realize shapes immediately, only when requested.
 
 void_ref(b::Radiance) = RadianceNativeRef(-1)
 
-create_radiance_buffer() = IOBuffer()
-
-const radiance = Radiance{500}(Shape[], "", LazyParameter(IOBuffer, create_radiance_buffer),
+const radiance = Radiance{500}(Shape[], "", LazyParameter(IOBuffer, IOBuffer),
   0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
-const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, create_radiance_buffer),
+const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, IOBuffer),
   0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
 
 buffer(b::Radiance) = b.buffer()
@@ -579,12 +586,14 @@ get_view(b::Radiance) =
   b.camera, b.target, b.lens
 
 export empty_sky,
-       cie_overcast_sky
+       cie_overcast_sky,
+       utah_sky
 empty_sky(backend::Backend=radiance) =
   backend.sky = ""
 cie_overcast_sky(backend::Backend=radiance; args...) =
   backend.sky = radiance_cie_overcast_sky(; args...)
-
+utah_sky(backend::Backend=radiance; args...) =
+  backend.sky = radiance_utah_sky(; args...)
 #current_backend(radiance)
 
 delete_all_shapes(b::Radiance) =
@@ -598,7 +607,7 @@ realize(b::Radiance, s::Sphere) =
       mod = next_modifier(b, default_radiance_material()),
       kind = "sphere",
       buf = buffer(b)
-    write_rad_sphere(buf, #="mat$(kind)$(mod)"=# mod, id, in_world(s.center), s.radius)
+    write_rad_sphere(buf, mod, id, in_world(s.center), s.radius)
     id
   end
 
