@@ -2,6 +2,7 @@ module Khepri
 using Base.Iterators
 using Sockets
 using Dates
+using ColorTypes
 #using PyCall
 
 include("Parameters.jl")
