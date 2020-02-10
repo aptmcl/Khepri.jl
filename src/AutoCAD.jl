@@ -70,7 +70,6 @@ check_plugin() =
           return
         catch exc
           if isa(exc, Base.IOError) && i < 10
-              println(exc)
             @error("The AutoCAD plugin is outdated! Please, close AutoCAD.")
             sleep(5)
           else
@@ -307,12 +306,15 @@ set_backend_family(default_table_family(), autocad, acad_layer_family("Table"))
 set_backend_family(default_chair_family(), autocad, acad_layer_family("Chair"))
 set_backend_family(default_table_chair_family(), autocad, acad_layer_family("TableChairs"))
 
+set_backend_family(default_curtain_wall_family(), autocad, acad_layer_family("CurtainWall"))
 set_backend_family(default_curtain_wall_family().panel, autocad, acad_layer_family("CurtainWall-Panel"))
 set_backend_family(default_curtain_wall_family().boundary_frame, autocad, acad_layer_family("CurtainWall-Boundary"))
 set_backend_family(default_curtain_wall_family().transom_frame, autocad, acad_layer_family("CurtainWall-Transom"))
 set_backend_family(default_curtain_wall_family().mullion_frame, autocad, acad_layer_family("CurtainWall-Mullion"))
 #current_backend(autocad)
 
+set_backend_family(default_truss_node_family(), autocad, acad_layer_family("TrussNodes"))
+set_backend_family(default_truss_bar_family(), autocad, acad_layer_family("TrussBars"))
 
 backend_stroke_color(b::ACAD, path::Path, color::RGB) =
     let r = backend_stroke(b, path)
@@ -795,45 +797,35 @@ backend_rectangular_table_and_chairs(b::ACAD, c, angle, family) =
     @remote(b, TableAndChairs(c, angle, realize(b, family)))
 
 backend_slab(b::ACAD, profile, holes, thickness, family) =
-  with_family_in_layer(b, family) do
-    let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
-                                ensure_ref(b, backend_fill(b, profile))),
-        main_body = slab(profile),
-        holes_bodies = map(slab, holes)
-      foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
-    end
+  let slab(profile) = map_ref(b, r -> @remote(b, Extrude(r, vz(thickness))),
+                              ensure_ref(b, backend_fill(b, profile))),
+      main_body = slab(profile),
+      holes_bodies = map(slab, holes)
+    foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
   end
 
 realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
-  with_family_in_layer(b, s.family) do
-    @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
-  end
+  @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
 
 realize_beam_profile(b::ACAD, s::Union{Beam,Column}, profile::RectangularPath, cb::Loc, length::Real) =
-  with_family_in_layer(b, s.family) do
-    let profile_u0 = profile.corner,
-        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-        # need to test whether it is rotation on center or on axis
-        o = loc_from_o_phi(c, s.angle)
-        @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, length))
-    end
+  let profile_u0 = profile.corner,
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+      # need to test whether it is rotation on center or on axis
+      o = loc_from_o_phi(c, s.angle)
+    @remote(b, CenteredBox(add_y(o, -profile.dy/2), profile.dx, profile.dy, length))
   end
 
 #Columns are aligned along the center axis.
 realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, length::Real) =
-  with_family_in_layer(b, s.family) do
-    let profile_u0 = profile.corner,
-        c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
-        # need to test whether it is rotation on center or on axis
-        o = loc_from_o_phi(c, s.angle)
-      @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
-    end
+  let profile_u0 = profile.corner,
+      c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
+      # need to test whether it is rotation on center or on axis
+      o = loc_from_o_phi(c, s.angle)
+    @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
   end
 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
-  with_family_in_layer(b, family) do
-    @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)), vz(height))), r_thickness + l_thickness))
-  end
+  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)), vz(height))), r_thickness + l_thickness))
 
 ############################################
 
@@ -888,8 +880,9 @@ create_layer(name::String, b::ACAD) =
   @remote(b, CreateLayer(name))
 
 create_layer(name::String, color::RGB, b::ACAD) =
-  let layer = @remote(b, CreateLayer(name))
-    @remote(b, SetLayerColor(layer, color.r, color.g, color.b))
+  let layer = @remote(b, CreateLayer(name)),
+      to255(x) = round(UInt8, x*255)
+    @remote(b, SetLayerColor(layer, to255(red(color)), to255(green(color)), to255(blue(color))))
     layer
   end
 
