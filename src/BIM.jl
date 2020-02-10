@@ -585,19 +585,19 @@ realize(b::Backend, s::CurtainWall) =
         x_panels = ceil(Int, path_length/s.family.max_panel_dx),
         y_panels = ceil(Int, height/s.family.max_panel_dy),
         refs = []
-      push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+bfw, height-2*bfw, th, :panel))
-      push!(refs, backend_curtain_wall(b, s, path, bottom, bfw, bfd, :boundary_frame))
-      push!(refs, backend_curtain_wall(b, s, path, top-bfw, bfw, bfd, :boundary_frame))
-      push!(refs, backend_curtain_wall(b, s, subpath(path, 0, bfw), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
-      push!(refs, backend_curtain_wall(b, s, subpath(path, path_length-bfw, path_length), bottom+bfw, height-2*bfw, bfd, :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, subpath(path, bfw, path_length-bfw), bottom+bfw, height-2*bfw, th/2, th/2, :panel))
+      push!(refs, backend_curtain_wall(b, s, path, bottom, bfw, l_thickness(bfdo, bfd), r_thickness(bfdo, bfd), :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, path, top-bfw, bfw, l_thickness(bfdo, bfd), r_thickness(bfdo, bfd), :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, subpath(path, 0, bfw), bottom+bfw, height-2*bfw, l_thickness(bfdo, bfd), r_thickness(bfdo, bfd), :boundary_frame))
+      push!(refs, backend_curtain_wall(b, s, subpath(path, path_length-bfw, path_length), bottom+bfw, height-2*bfw, l_thickness(bfdo, bfd), r_thickness(bfdo, bfd), :boundary_frame))
       for i in 1:y_panels-1
         l = height/y_panels*i
         sub = subpath(path, bfw, path_length-bfw)
-        push!(refs, backend_curtain_wall(b, s, sub, bottom+l-tfw/2, tfw, tfd, :transom_frame))
+        push!(refs, backend_curtain_wall(b, s, sub, bottom+l-tfw/2, tfw, l_thickness(tfdo, tfd), r_thickness(tfdo, tfd), :transom_frame))
       end
       for i in 1:x_panels-1
         l = path_length/x_panels*i
-        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, mfd, :mullion_frame))
+        push!(refs, backend_curtain_wall(b, s, subpath(path, l-mfw/2, l+mfw/2), bottom+bfw, height-2*bfw, l_thickness(mdfo, mfd), r_thickness(mdfo, mfd), :mullion_frame))
       end
       [ensure_ref(b,r) for r in refs]
     end
@@ -614,10 +614,10 @@ curtain_wall_path(b::Backend, s::CurtainWall, panel_family::PanelFamily) =
     polygonal_path(pts)
   end
 
-backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, thickness::Real, kind::Symbol) =
+backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, l_thickness::Real, r_thickness::Real, kind::Symbol) =
   let family = getproperty(s.family, kind)
     with_family_in_layer(b, family) do
-      backend_wall(b, translate(path, vz(bottom)), height, thickness/2, thickness/2, family)
+      backend_wall(b, translate(path, vz(bottom)), height, l_thickness, r_thickness, family)
     end
   end
 #
@@ -734,7 +734,7 @@ realize(b::Backend, s::TableAndChairs) =
 
 # Lights
 
-@defproxy(pointlight, Shape3D, loc::Loc=z(3), color::RGB=rgb(255,255,255), range::Real=10, intensity::Real=4, level::Level=default_level())
+@defproxy(pointlight, Shape3D, loc::Loc=z(3), color::RGB=rgb(1,1,1), range::Real=10, intensity::Real=4, level::Level=default_level())
 
 realize(b::Backend, s::Pointlight) =
   backend_pointlight(b, add_z(s.loc, s.level.height), s.color, s.range, s.intensity)
