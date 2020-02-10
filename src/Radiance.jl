@@ -1159,14 +1159,14 @@ export_geometry(b::Radiance, path::AbstractString) =
     for s in b.shapes
       realize(b, s)
     end
-    add_ground_plane(b.shapes, buf)
+    add_ground_plane(b)
     open(radpath, "w") do out
       write(out, String(take!(buf)))
     end
     radpath
   end
 
-add_ground_plane(shapes, buf) =
+add_ground_plane(b::Radiance) =
   @warn "Not generating ground plane"
 
 used_materials(b::Radiance) =

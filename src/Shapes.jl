@@ -46,7 +46,8 @@ export Shape,
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
 
 abstract type Backend{K,R} end
-Base.show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
+import Base.show
+show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
 
 backend_name(b::Backend{K,R}) where {K,R} = "Backend"
 
@@ -179,7 +180,7 @@ ensure_ref(b::Backend{K,T}, v::Proxy) where {K,T} = ref(v)
 set_ref!(s::Proxy, value) = s.ref.value = value
 
 abstract type Shape <: Proxy end
-Base.show(io::IO, s::Shape) =
+show(io::IO, s::Shape) =
     print(io, "$(typeof(s))(...)")
 
 Shapes = Vector{<:Shape}
@@ -235,7 +236,11 @@ maybe_realize(b::Backend, s::Shape) =
 
 abstract type LazyBackend{K,T} <: Backend{K,T} end
 maybe_realize(b::LazyBackend, s::Shape) = delay_realize(b, s)
-delay_realize(b::LazyBackend, s::Shape) = (push!(b.shapes, s); s)
+delay_realize(b::LazyBackend, s::Shape) = save_shape!(b, s)
+
+# By default, save_shape! assumes there is a field in the backend to store shapes
+save_shape!(b::Backend, s::Shape) = (push!(b.shapes, s); s)
+
 
 with_transaction(fn) =
   maybe_realize(with(fn, delaying_realize, true))
@@ -344,7 +349,7 @@ has_current_backend() = current_backend() != undefined_backend
 # Side-effect full operations need to have a backend selected and will generate an exception if there is none
 
 struct UndefinedBackendException <: Exception end
-Base.show(io::IO, e::UndefinedBackendException) = print(io, "No current backend.")
+show(io::IO, e::UndefinedBackendException) = print(io, "No current backend.")
 
 realize(::UndefinedBackend, ::Shape) = throw(UndefinedBackendException())
 
@@ -394,10 +399,12 @@ end
 Base.showerror(io::IO, e::WrongTypeForParam) =
   print(io, "$(e.param) expected a $(e.expected_type) but got $(e.value) of type $(typeof(e.value))")
 
-
-macro defproxy(name, parent, fields...)
+macro defproxy(name_typename, parent, fields...)
+  (name, typename) = name_typename isa Symbol ?
+    (name_typename, Symbol(string(map(uppercasefirst,split(string(name_typename),'_'))...))) :
+    name_typename.args
   name_str = string(name)
-  struct_name = esc(Symbol(string(map(uppercasefirst,split(name_str,'_'))...)))
+  struct_name = esc(typename)
   field_names = map(field -> field.args[1].args[1], fields)
   field_types = map(field -> esc(field.args[1].args[2]), fields)
   field_inits = map(field -> field.args[2], fields)
@@ -1064,6 +1071,8 @@ end
 @defop enable_update()
 @defop set_view(camera::Loc, target::Loc, lens::Real)
 @defop get_view()
+@defop set_sun_direction()
+@defop add_ground_plane()
 @defop zoom_extents()
 @defop view_top()
 @defop get_layer(name::String)
@@ -1077,8 +1086,8 @@ end
 @defop create_material(name::String)
 @defop current_material()
 @defop current_material(material)
-
-angle_of_view(size, focal_length) = 2atan(size/2focal_length)
+@defop set_normal_sky()
+@defop set_overcast_sky()
 
 function dolly_effect(camera, target, lens, new_camera)
   cur_dist = distance(camera, target)

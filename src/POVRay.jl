@@ -2,7 +2,8 @@
 A backend for POVRay
 =#
 export POVRay,
-       povray
+       povray,
+       default_povray_material
 
 # We will use MIME types to encode for POVRay
 const MIMEPOVRay = MIME"text/povray"
@@ -70,14 +71,16 @@ write_povray_material(io::IO, material) =
     write(io, '\n')
   end
 
-write_povray_camera(io::IO, camera, target, lens=50) =
+write_povray_camera(io::IO, camera, target, lens) =
   write_povray_object(io, "camera", nothing) do
     write_povray_param(io, "location", camera)
-    write_povray_param(io, "look_at", target - camera)
+    write_povray_param(io, "look_at", target)
+    write_povray_param(io, "angle", view_angles(lens)[1])
   end
 
 write_povray_pointlight(io::IO, location, color) =
   write_povray_object(io, "light_source", nothing, location, color)
+
 
 #=
 struct POVRayPigment
@@ -251,6 +254,10 @@ show(io::IO, ::MIMEPOVRay, m::POVRayIncludeMaterial) =
 default_povray_material =
   Parameter(POVRayIncludeTexture("stones.inc", "T_Grnt25"))
 
+export povray_include_material, povray_include_texture
+povray_include_material = POVRayIncludeMaterial
+povray_include_texture = POVRayIncludeTexture
+
 ####################################################
 # Sky models
 
@@ -272,9 +279,18 @@ mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   camera::Loc
   target::Loc
   lens::Real
+  sun_direction::Vec
 end
 
 const POVRay = POVRayBackend{POVRayKey, POVRayId}
+
+# In POVRay, everytime we save a shape, we attach the default_povray_material
+save_shape!(b::POVRayBackend, s::Shape) =
+  begin
+    push!(b.shapes, s)
+    b.shape_material[s] = default_povray_material()
+    s
+  end
 
 #=
 The POVRay backend cannot realize shapes immediately, only when requested.
@@ -290,7 +306,8 @@ const povray =
          Dict(),
          xyz(10,10,10),
          xyz(0,0,0),
-         35)
+         35,
+         vz(1))
 
 buffer(b::POVRay) = b.buffer()
 get_material(b::POVRay, key) = get!(b.materials, key, key)
@@ -669,8 +686,11 @@ backend_wall(b::POVRay, w_path, w_height, l_thickness, r_thickness, family) =
 =#
 =#
 
+set_sun_direction(v::Vec, b::POVRay) =
+  b.sun_direction = v
 
-add_ground_plane(shapes, buf) =
+
+add_ground_plane(b::POVRay) =
   @warn "Not generating ground plane"
 
 used_materials(b::POVRay) =
@@ -723,7 +743,7 @@ export povray_render
 povray_render() =
   let path = povray_simulation_path()
     export_to_povray(path)
-    #run(`$(povray_cmd()) +w$(render_width()) +h$(render_height()) $path`)
-    run(`$(povray_cmd()) /RENDER $path`)
+    #run(`$(povray_cmd()) +w +h $path`)
+    run(`$(povray_cmd()) Width=$(render_width()) Height=$(render_height()) /RENDER $path`, wait=false)
     #run(`$(povray_cmd("wxFalseColor")) $picpath`, wait=false)
   end
