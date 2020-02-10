@@ -1199,7 +1199,5 @@ select_shapes(prompt::String, b::Unity) =
     selected_game_objects(b)
   end)
 
-#
-export set_sun_direction
 set_sun_direction(v::Vec, b::Unity) =
   @remote(b, SetSunDirection(v))
