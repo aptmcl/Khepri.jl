@@ -1289,7 +1289,7 @@ create_cladding(id, pts) =
   let pts = in_world.(pts),
       rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY),
       objserver = objects(structure(project(application())))
-    println("Creating cladding for $(pts)")
+    println("Creating cladding for $(id) and points $(pts)")
     set_size(rpts, length(pts))
     for i in 1:length(pts)
         set_position(rpts, i, pts[i].x, pts[i].y, pts[i].z)
@@ -1299,16 +1299,17 @@ create_cladding(id, pts) =
 #        m = Main(contour)
 #      Geometry(m, contour)
 #      Meshed(Attribs(m), false)
+      initialize(contour)
       Main(contour)
       Attribs(Main(contour))
       Meshed(Attribs(Main(contour)))
-      initialize(contour)
       set_label(contour, I_LT_CLADDING, "Two-way")
       update(contour)
       contour
     end
   end
-#=
+
+
 mypts = [xyz(-4.0,2.0,0.0), xyz(1.0,-3.0,0.0), xyz(1.0,2.0,4.0)]
 rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY)
 objserver = objects(structure(project(application())))
@@ -1318,13 +1319,14 @@ for i in 1:length(mypts)
 end
 create_contour(objserver, 1234, rpts)
 contour = get_contour(objserver, 1234)
+
 Main(contour)
 Attribs(Main(contour))
 Meshed(Attribs(Main(contour)))
 initialize(contour)
 set_label(contour, I_LT_CLADDING, "Two-way")
 update(contour)
-=#
+
 
 new_case(number, name, nature, analize_type, setup, process_results) =
   let case = create_simple(cases(structure(project(application()))),
@@ -1397,6 +1399,10 @@ create_ROBOT_connection() = new_project!(project_kind())
 
 const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
 
+# Robot does not need layers
+with_family_in_layer(f::Function, backend::ROBOT, family::Family) = f()
+
+
 # Robot Families
 abstract type RobotFamily <: Family end
 
@@ -1452,10 +1458,12 @@ realize(b::ROBOT, s::Panel) =
 
 show_truss_deformation(results;
     node_radius=0.08, bar_radius=0.02, factor=100,
-    deformation_color=rgb(255, 0, 0),
-    no_deformation_color=rgb(0, 255, 0)) =
-  let deformation_layer = create_layer("Deformation", deformation_color)
-      no_deformation_layer = create_layer("No deformation", no_deformation_color)
+    deformation_name="Deformation",
+    deformation_color=rgb(1, 0, 0),
+    no_deformation_name="No deformation",
+    no_deformation_color=rgb(0, 1, 0)) =
+  let deformation_layer = create_layer(deformation_name, deformation_color)
+      no_deformation_layer = create_layer(no_deformation_name, no_deformation_color)
       disps = displacements(nodes(results))
       disp = (node) -> node_displacement_vector(disps, node.id, I_LRT_NODE_DISPLACEMENT)
     for node in values(added_nodes())
