@@ -533,9 +533,9 @@ mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   camera::Loc
   target::Loc
   lens::Real
-  count::Integer
   sun_altitude::Real
   sun_azimuth::Real
+  count::Integer
 end
 
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
@@ -546,10 +546,19 @@ The Radiance backend cannot realize shapes immediately, only when requested.
 
 void_ref(b::Radiance) = RadianceNativeRef(-1)
 
-const radiance = Radiance{500}(Shape[], "", LazyParameter(IOBuffer, IOBuffer),
-  0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
-const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, IOBuffer),
-  0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
+const radiance =
+  Radiance{500}(Shape[],
+                Dict{Shape,RadianceMaterial}(),
+                Dict(),
+                "",
+                LazyParameter(IOBuffer, IOBuffer),
+                0,
+                xyz(10,10,10),
+                xyz(0,0,0),
+                35,
+                90,
+                0,
+                0)
 
 buffer(b::Radiance) = b.buffer()
 get_material(b::Radiance, key) = get!(b.materials, key, key)
