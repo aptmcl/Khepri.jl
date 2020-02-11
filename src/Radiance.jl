@@ -742,7 +742,7 @@ realize(b::Radiance, s::Rotate) =
 
 # This requires three different keys, so that gets into the materials dict.
 realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
-  let buf = buffer(b),
+  let buf = buffer(b)
     if closed
       write_rad_polygon(buf, bot, reverse(bot_vs))
       write_rad_polygon(buf, top, top_vs)
