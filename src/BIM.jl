@@ -312,6 +312,22 @@ realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level
         # Change this to a better named protocol?
         backend_slab(b, translate(contour, base), map(c -> translate(c, base), holes), thickness, family)
     end
+
+backend_slab(b::Backend, profile, openings, thickness, family) =
+  let mattop = realize(b, family).top_material,
+      matbot = realize(b, family).bottom_material,
+      matside = realize(b, family).side_material,
+      path = profile
+    for op in openings
+      path = subtract_paths(path, op)
+    end
+    realize_pyramid_fustrum(b, mattop, matbot, matside, path, translate(path, vz(thickness)))
+  end
+
+# If we don't know how to process a path, we convert it to a sequence of vertices
+realize_pyramid_fustrum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
+  realize_pyramid_fustrum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
+
 #
 export add_slab_opening
 add_slab_opening(s::Slab=required(), contour::ClosedPath=circular_path()) =

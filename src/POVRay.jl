@@ -279,7 +279,8 @@ mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   camera::Loc
   target::Loc
   lens::Real
-  sun_direction::Vec
+  sun_altitude::Real
+  sun_azimuth::Real
 end
 
 const POVRay = POVRayBackend{POVRayKey, POVRayId}
@@ -341,6 +342,12 @@ set_view(camera::Loc, target::Loc, lens::Real, b::POVRay) =
 
 get_view(b::POVRay) =
   b.camera, b.target, b.lens
+
+set_sun(altitude, azimuth, b::POVRay) =
+  begin
+    b.altitude = altitude
+    b.azimuth = azimuth
+  end
 
 delete_all_shapes(b::POVRay) =
   begin
@@ -446,33 +453,33 @@ realize(b::POVRay, s::Rotate) =
     end
 
 =#
-
+=#
 # BIM
 
-realize_pyramid_fustrum(b::POVRay, top::String, bot::String, side::String, bot_path::Path, top_path::Path, closed=true) =
-  realize_pyramid_fustrum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
-
-# This requires three different keys, so that gets into the materials dict.
-realize_pyramid_fustrum(b::POVRay, top::String, bot::String, side::String, bot_vs, top_vs, closed=true) =
+realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
   let buf = buffer(b)
     if closed
-      write_povray_polygon(buf, bot, next_id(b), reverse(bot_vs))
-      write_povray_polygon(buf, top, next_id(b), top_vs)
+      write_povray_polygon(buf, bot, reverse(bot_vs))
+      write_povray_polygon(buf, top, top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-      write_povray_polygon(buf, side, next_id(b), vs)
+      write_povray_polygon(buf, side, vs)
     end
   end
 
-realize_polygon(b::POVRay, key, kind::String, path::Path, acw=true) =
-  realize_polygon(b, key, kind, path_vertices(path), acw)
+realize_polygon(b::POVRay, path::Path, acw=true) =
+  realize_polygon(b, path_vertices(path), acw)
 
-realize_polygon(b::POVRay, mod, kind::String, vs, acw=true) =
+realize_polygon(b::POVRay, vs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
-    write_povray_polygon(buf, mod, next_id(b), acw ? vs : reverse(vs))
+    write_povray_polygon(buf, acw ? vs : reverse(vs))
   end
 
+write_povray_polygon(io::IO, mat, vs) =
+  write_povray_object(buf, "polygon", mat, length(vs), vs...)
+
+#=
 #=
 POVRay families need to know the different kinds of materials
 that go on each surface.
@@ -560,21 +567,23 @@ create_ground_plane(shapes, material=default_povray_ground_material()) =
     end
 
 =#
+=#
 
 backend_slab(b::POVRay, profile, openings, thickness, family) =
-  let modtop = next_modifier(b, realize(b, family).top_material),
-      modbot = next_modifier(b, realize(b, family).bottom_material),
-      modside = next_modifier(b, realize(b, family).side_material),
+  let mattop = realize(b, family).top_material,
+      matbot = realize(b, family).bottom_material,
+      matside = realize(b, family).side_material,
       path = profile
     for op in openings
       path = subtract_paths(path, op)
     end
     realize_pyramid_fustrum(
-      b, modtop, modbot, modside,
+      b, mattop, matbot, matside,
       path_vertices(path),
       path_vertices(translate(path, vz(thickness))))
   end
 
+#=
 #=
 #FIXME define the family parameters for beams
 realize(b::POVRay, s::Beam) =
