@@ -49,7 +49,7 @@ abstract type Backend{K,R} end
 import Base.show
 show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
 
-backend_name(b::Backend{K,R}) where {K,R} = "Backend"
+backend_name(b::Backend{K,R}) where {K,R} = typeof(b)
 
 #References can be (single) native references or union or substraction of References
 #Unions and subtractions are needed because actual backends frequently fail those operations
