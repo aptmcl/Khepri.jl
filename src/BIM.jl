@@ -454,8 +454,8 @@ realize(b::Backend, w::Wall) =
           end
         end
         prevlength = currlength
-        realize_polygon(b, matleft, "wall", c_l_w_path, false)
-        realize_polygon(b, matright, "wall", c_r_w_path, true)
+        realize_polygon(b, matleft, c_l_w_path, false)
+        realize_polygon(b, matright, c_r_w_path, true)
       end
     end
     void_ref(b)
@@ -465,6 +465,9 @@ closed_path_for_height(path, h) =
   let ps = path_vertices(path)
     closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
   end
+
+realize_polygon(b::Backend, mat, path::Path, acw=true) =
+  realize_polygon(b, mat, path_vertices(path), acw)
 
 #=
 Walls can be joined. That is very important because the wall needs to have

@@ -484,13 +484,10 @@ realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, c
     end
   end
 
-realize_polygon(b::POVRay, path::Path, acw=true) =
-  realize_polygon(b, path_vertices(path), acw)
-
-realize_polygon(b::POVRay, vs, acw=true) =
+realize_polygon(b::POVRay, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
-    write_povray_polygon(buf, acw ? vs : reverse(vs))
+    write_povray_polygon(buf, mat, acw ? vs : reverse(vs))
   end
 
 write_povray_polygon(io::IO, mat, vs) =

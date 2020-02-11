@@ -752,10 +752,7 @@ realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs,
     end
   end
 
-realize_polygon(b::Radiance, mat, path::Path, acw=true) =
-  realize_polygon(b, mat, path_vertices(path), acw)
-
-realize_polygon(b::Radiance, mat, vs, acw=true) =
+realize_polygon(b::Radiance, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
     write_rad_polygon(buf, get_material(b, mat), next_id(b), acw ? vs : reverse(vs))
