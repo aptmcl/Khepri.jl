@@ -197,10 +197,6 @@ with_family_in_layer(f::Function, backend::Backend, family::Family) =
     with(f, current_layer, realize(backend, family)) :
     f()
 
-
-
-
-
 #HACK Using Dict instead of IdDict just because get is not fully implemented for IdDict
 #FIXME after updating to Julia 1.2
 macro deffamily(name, parent, fields...)
@@ -792,3 +788,33 @@ realize(b::Backend, s::TrussBar) =
 @defop all_levels()
 @defop all_walls()
 @defop all_walls_at_level(level)
+
+####################################
+# Backend families
+# Some backends (e.g., Radiance and POVRay) can specify different materials to different parts of a family.
+# For example, a slab might have different materials for the top, the bottom, and the sides
+
+abstract type BackendFamily <: Family end
+
+struct BackendMaterialFamily{Material} <: BackendFamily
+  material::Material
+end
+
+struct BackendSlabFamily{Material} <: BackendFamily
+  top_material::Material
+  bottom_material::Material
+  side_material::Material
+end
+
+struct BackendRoofFamily{Material} <: BackendFamily
+  top_material::Material
+  bottom_material::Material
+  side_material::Material
+end
+
+struct BackendWallFamily{Material} <: BackendFamily
+  right_material::Material
+  left_material::Material
+end
+
+backend_get_family_ref(b::Backend, f::Family, bf::BackendFamily) = bf

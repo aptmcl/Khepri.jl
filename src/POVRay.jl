@@ -229,34 +229,50 @@ struct POVRayMaterial
 end
 =#
 
-abstract type POVRayAbstractMaterial end
-abstract type POVRayInclude <: POVRayAbstractMaterial end
+abstract type POVRayMaterial end
 
-write_povray_include(io::IO, m::POVRayInclude) =
+struct POVRayDefinition <: POVRayMaterial
+  name::String
+  kind::String
+  description::String
+end
+
+write_povray_definition(io::IO, d::POVRayDefinition) =
+  write(io, "#declare $(d.name) =\n  $(d.kind) $(d.description)\n")
+
+show(io::IO, ::MIMEPOVRay, d::POVRayDefinition) =
+  write(io, "$(d.kind) { $(d.name) }")
+
+struct POVRayInclude <: POVRayMaterial
+  filename::AbstractString
+  kind::String
+  name::String
+end
+
+write_povray_definition(io::IO, m::POVRayInclude) =
   write(io, "#include \"$(m.filename)\"\n")
 
-struct POVRayIncludeTexture <: POVRayInclude
-  filename::AbstractString
-  name::String
-end
+show(io::IO, ::MIMEPOVRay, m::POVRayInclude) =
+  write(io, "$(m.kind) { $(m.name) }")
 
-show(io::IO, ::MIMEPOVRay, t::POVRayIncludeTexture) =
-  write(io, "texture { $(t.name) }")
+export povray_definition, povray_include
+const povray_definition = POVRayDefinition
+const povray_include = POVRayInclude
 
-struct POVRayIncludeMaterial <: POVRayInclude
-  filename::AbstractString
-  name::String
-end
+const texture_concrete =
+  povray_definition("Concrete", "texture", """{
+   pigment {
+     granite turbulence 1.5 color_map {
+       [0  .25 color White color Gray75] [.25  .5 color White color Gray75]
+       [.5 .75 color White color Gray75] [.75 1.1 color White color Gray75]}}
+  finish {
+    ambient 0.2 diffuse 0.3 crand 0.03 reflection 0 }
+  normal {
+    dents .5 scale .5 }}""")
 
-show(io::IO, ::MIMEPOVRay, m::POVRayIncludeMaterial) =
-  write(io, "material { $(m.name) }")
-
-default_povray_material =
-  Parameter(POVRayIncludeTexture("stones.inc", "T_Grnt25"))
-
-export povray_include_material, povray_include_texture
-povray_include_material = POVRayIncludeMaterial
-povray_include_texture = POVRayIncludeTexture
+const default_povray_material =
+  #Parameter(povray_include("stones.inc", "texture", "T_Grnt25"))
+  Parameter(texture_concrete("stones.inc", "texture", "T_Grnt25"))
 
 ####################################################
 # Sky models
@@ -480,7 +496,7 @@ realize_polygon(b::POVRay, vs, acw=true) =
 write_povray_polygon(io::IO, mat, vs) =
   write_povray_object(buf, "polygon", mat, length(vs), vs...)
 
-#=
+
 #=
 POVRay families need to know the different kinds of materials
 that go on each surface.
@@ -488,45 +504,29 @@ In some cases it might be the same material, but in others, such
 as slabs, outside walls, etc, we will have different materials.
 =#
 
-abstract type POVRayFamily <: Family end
-
-struct POVRayMaterialFamily <: POVRayFamily
-  material::POVRayMaterial
-end
-
+const POVRayMaterialFamily = BackendMaterialFamily{POVRayMaterial}
 povray_material_family(mat::POVRayMaterial) =
   POVRayMaterialFamily(mat)
 
-struct POVRaySlabFamily <: POVRayFamily
-  top_material::POVRayMaterial
-  bottom_material::POVRayMaterial
-  side_material::POVRayMaterial
-end
-
+const POVRaySlabFamily = BackendSlabFamily{POVRayMaterial}
 povray_slab_family(top::POVRayMaterial, bot::POVRayMaterial=top, side::POVRayMaterial=bot) =
   POVRaySlabFamily(top, bot, side)
 
-povray_roof_family = povray_slab_family
+const POVRayFoofFamily = BackendRoofFamily{POVRayMaterial}
+povray_roof_family(top::POVRayMaterial, bot::POVRayMaterial=top, side::POVRayMaterial=bot) =
+  POVRayRoofFamily(top, bot, side)
 
-
-struct POVRayWallFamily <: POVRayFamily
-  right_material::POVRayMaterial
-  left_material::POVRayMaterial
-end
-
+const POVRayWallFamily = BackendWallFamily{POVRayMaterial}
 povray_wall_family(right::POVRayMaterial, left::POVRayMaterial=right) =
   POVRayWallFamily(right, left)
-
-backend_get_family_ref(b::POVRay, f::Family, rf::POVRayFamily) = rf
 
 export povray_material_family,
        povray_slab_family,
        povray_roof_family,
        povray_wall_family,
        default_povray_material
-
-set_backend_family(default_wall_family(), povray,
-  povray_wall_family(povray_generic_interior_wall_70))
+#=
+set_backend_family(default_wall_family(), povray, povray_include_texture())
 set_backend_family(default_slab_family(), povray,
   povray_slab_family(povray_generic_floor_20, povray_generic_ceiling_80))
 set_backend_family(default_roof_family(), povray,
@@ -539,11 +539,7 @@ set_backend_family(default_door_family(), povray,
   povray_material_family(povray_generic_furniture_50))
 set_backend_family(default_panel_family(), povray,
   povray_material_family(povray_glass_material("GenericGlass", gray=0.3)))
-
-# POVRay-specific operations
-
-default_povray_ground_material = Parameter(povray_generic_floor_20)
-
+=#
 #=
 create_ground_plane(shapes, material=default_povray_ground_material()) =
   if shapes == []
@@ -567,7 +563,6 @@ create_ground_plane(shapes, material=default_povray_ground_material()) =
       end
     end
 
-=#
 =#
 
 backend_slab(b::POVRay, profile, openings, thickness, family) =
@@ -695,6 +690,32 @@ backend_wall(b::POVRay, w_path, w_height, l_thickness, r_thickness, family) =
   end
 =#
 =#
+
+set_backend_family(default_wall_family(), povray, acad_layer_family("Wall"))
+set_backend_family(default_slab_family(), povray, acad_layer_family("Slab"))
+set_backend_family(default_roof_family(), povray, acad_layer_family("Roof"))
+set_backend_family(default_beam_family(), povray, acad_layer_family("Beam"))
+set_backend_family(default_column_family(), povray, acad_layer_family("Column"))
+set_backend_family(default_door_family(), povray, acad_layer_family("Door"))
+set_backend_family(default_panel_family(), povray, acad_layer_family("Panel"))
+
+set_backend_family(default_table_family(), povray, acad_layer_family("Table"))
+set_backend_family(default_chair_family(), povray, acad_layer_family("Chair"))
+set_backend_family(default_table_chair_family(), povray, acad_layer_family("TableChairs"))
+
+set_backend_family(default_curtain_wall_family(), povray, acad_layer_family("CurtainWall"))
+set_backend_family(default_curtain_wall_family().panel, povray, acad_layer_family("CurtainWall-Panel"))
+set_backend_family(default_curtain_wall_family().boundary_frame, povray, acad_layer_family("CurtainWall-Boundary"))
+set_backend_family(default_curtain_wall_family().transom_frame, povray, acad_layer_family("CurtainWall-Transom"))
+set_backend_family(default_curtain_wall_family().mullion_frame, povray, acad_layer_family("CurtainWall-Mullion"))
+#current_backend(povray)
+
+set_backend_family(default_truss_node_family(), povray, acad_layer_family("TrussNodes"))
+set_backend_family(default_truss_bar_family(), povray, acad_layer_family("TrussBars"))
+
+
+
+
 
 set_sun_direction(v::Vec, b::POVRay) =
   b.sun_direction = v
