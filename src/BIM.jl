@@ -535,6 +535,7 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
 
 @defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
+#=
 # Default implementation
 realize(b::Backend, w::Wall) =
   with_family_in_layer(b, w.family) do
@@ -610,6 +611,7 @@ backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
     end
     w
   end
+=#
 
 #=
 A curtain wall is a special kind of wall that is made of a frame with windows.
