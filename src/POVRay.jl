@@ -288,7 +288,7 @@ const POVRaySubtractionRef = SubtractionRef{POVRayKey, POVRayId}
 
 mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   shapes::Shapes
-  shape_material::Dict{Shape,POVRayAbstractMaterial}
+  shape_material::Dict{Shape,POVRayMaterial}
   sky::String
   buffer::LazyParameter{IOBuffer}
   materials::Dict
@@ -317,7 +317,7 @@ void_ref(b::POVRay) = POVRayNativeRef(-1)
 
 const povray =
   POVRay(Shape[],
-         Dict{Shape,POVRayAbstractMaterial}(),
+         Dict{Shape,POVRayMaterial}(),
          "",
          LazyParameter(IOBuffer, IOBuffer),
          Dict(),
