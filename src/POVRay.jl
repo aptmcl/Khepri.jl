@@ -308,7 +308,8 @@ const povray =
          xyz(10,10,10),
          xyz(0,0,0),
          35,
-         vz(1))
+         90,
+         0)
 
 buffer(b::POVRay) = b.buffer()
 get_material(b::POVRay, key) = get!(b.materials, key, key)
