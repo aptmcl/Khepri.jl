@@ -145,9 +145,7 @@ public void StartSelectingGameObject()
 public void StartSelectingGameObjects()
 public bool EndedSelectingGameObjects()
 public int[] SelectedGameObjectsIds(bool existing)
-public void SetSun(float x, float y, float z)
-public void SetSunDirection(Vector3 v)
-public Vector3 GetSunRotation()
+public void SetSun(float altitude, float azimuth)
 public string GetRenderResolution()
 public float GetCurrentFPS()
 public int GetViewTriangleCount()
@@ -1199,5 +1197,74 @@ select_shapes(prompt::String, b::Unity) =
     selected_game_objects(b)
   end)
 
-set_sun_direction(v::Vec, b::Unity) =
-  @remote(b, SetSunDirection(v))
+set_sun(altitude::Real, azimuth::Real, b::Unity) =
+  @remote(b, SetSun(altitude, azimuth))
+
+#=
+function SunPos(year, month, day, hour, minute, Lstm, latitude, longitude)
+  if abs(longitude-Lstm)>30
+     @info("Longitude $(longitude) differs by more than 30 degrees from timezone meridian $(Lstm).")
+  end
+  # Calculate universal time (UT)
+  T = hour+(minute/60);
+  UT = T-Lstm/15;
+  if 0 > UT
+     day = day-1;
+     UT = 24+UT;
+  end
+  if UT > 24
+     day = day+1;
+     UT = UT-24;
+  end
+  int(x) = floor(Int, x)
+  radians(x) = pi*x/180
+  degrees(x) = 180*x/pi
+  # Amount of days to, or from, the year 2000
+  d = 367*year-int((7*int((year+int((month+9))/12)))/4)+int((275*month)/9)+day-730530+UT/24;
+  # Longitude of perihelion (w), eccentricity (e)
+  w = 282.9404+4.70935E-5*d;
+  e = 0.016709-1.151E-9*d;
+  # Mean anomaly (M), sun's mean longitude (L)
+  M = 356.0470+0.9856002585*d;
+  if 0 < M < 360
+     M = M-floor(M/360)*360;
+  end
+  L = w+M;
+  if (0<L<360)
+     L = L-floor(L/360)*360;
+  end
+  # Obliquity of the ecliptic, eccentric anomaly (E)
+  oblecl = 23.4393-3.563E-7*d;
+  E = M+(180/pi)*e*sin(radians(M))*(1+e*cos(radians(M)));
+  # Sun's rectangular coordinates in the plane of ecliptic (A,B)
+  A = cos(radians(E))-e;
+  B = sin(radians(E))*sqrt(1-e*e);
+  # Distance (r), true anomaly (V), longitude of the sun (lon)
+  r = sqrt(A*A+B*B);
+  V = degrees(atan(radians(B),radians(A)));
+  lon = V+w;
+  if 0 < lon < 360
+     lon = lon-floor(lon/360)*360;
+  end
+  # Calculate declination and right ascension
+  decl = asin(sin(radians(oblecl))*sin(radians(lon)));
+  RA = degrees(atan(sin(radians(lon))*cos(radians(oblecl)),cos(radians(lon))))/15;
+  # Greenwich meridian siderial time at 00:00 (GMST0),siderial time (SIDTIME), hour angle (HA)
+  GMST0 = L/15+12;
+  SIDTIME = GMST0+UT+longitude/15;
+  HA = (SIDTIME-RA)*15;
+  # This is what we're looking for: Altitude & Azimuth
+  Al = degrees(asin(sin(radians(latitude))*sin(decl)+cos(radians(latitude))*cos(decl)*cos(radians(HA))));
+  Az = degrees(atan(sin(radians(HA)),cos(radians(HA))*sin(radians(latitude))-tan(decl)*cos(radians(latitude))))+180;
+  Al, Az
+end
+
+SunPos(2000, 6, 21, 4, 0, 0, 51, 0)
+
+for i in 0:23
+  set_sun(SunPos(2000, 6, 21, i, 0, 0, 51, 0)..., unity)
+  sleep(0.2)
+end
+
+
+=#

@@ -1071,7 +1071,7 @@ end
 @defop enable_update()
 @defop set_view(camera::Loc, target::Loc, lens::Real)
 @defop get_view()
-@defop set_sun_direction()
+@defop set_sun(altitude, azimuth)
 @defop add_ground_plane()
 @defop zoom_extents()
 @defop view_top()
