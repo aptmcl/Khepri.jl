@@ -272,7 +272,7 @@ const texture_concrete =
 
 const default_povray_material =
   #Parameter(povray_include("stones.inc", "texture", "T_Grnt25"))
-  Parameter(texture_concrete("stones.inc", "texture", "T_Grnt25"))
+  Parameter(texture_concrete)
 
 ####################################################
 # Sky models
