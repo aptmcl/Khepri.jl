@@ -259,7 +259,7 @@ export povray_definition, povray_include
 const povray_definition = POVRayDefinition
 const povray_include = POVRayInclude
 
-const texture_concrete =
+const povray_texture_concrete =
   povray_definition("Concrete", "texture", """{
    pigment {
      granite turbulence 1.5 color_map {
@@ -272,7 +272,7 @@ const texture_concrete =
 
 const default_povray_material =
   #Parameter(povray_include("stones.inc", "texture", "T_Grnt25"))
-  Parameter{POVRayMaterial}(texture_concrete)
+  Parameter{POVRayMaterial}(povray_texture_concrete)
 
 ####################################################
 # Sky models
@@ -494,7 +494,7 @@ realize_polygon(b::POVRay, vs, acw=true) =
   end
 
 write_povray_polygon(io::IO, mat, vs) =
-  write_povray_object(buf, "polygon", mat, length(vs), vs...)
+  write_povray_object(io, "polygon", mat, length(vs), vs...)
 
 
 #=
@@ -512,7 +512,7 @@ const POVRaySlabFamily = BackendSlabFamily{POVRayMaterial}
 povray_slab_family(top::POVRayMaterial, bot::POVRayMaterial=top, side::POVRayMaterial=bot) =
   POVRaySlabFamily(top, bot, side)
 
-const POVRayFoofFamily = BackendRoofFamily{POVRayMaterial}
+const POVRayRoofFamily = BackendRoofFamily{POVRayMaterial}
 povray_roof_family(top::POVRayMaterial, bot::POVRayMaterial=top, side::POVRayMaterial=bot) =
   POVRayRoofFamily(top, bot, side)
 
@@ -525,21 +525,20 @@ export povray_material_family,
        povray_roof_family,
        povray_wall_family,
        default_povray_material
-#=
-set_backend_family(default_wall_family(), povray, povray_include_texture())
-set_backend_family(default_slab_family(), povray,
-  povray_slab_family(povray_generic_floor_20, povray_generic_ceiling_80))
-set_backend_family(default_roof_family(), povray,
-  povray_roof_family(povray_generic_floor_20, povray_outside_facade_30))
-set_backend_family(default_beam_family(), povray,
-  povray_material_family(povray_generic_metal))
-set_backend_family(default_column_family(), povray,
-  povray_material_family(povray_generic_metal))
-set_backend_family(default_door_family(), povray,
-  povray_material_family(povray_generic_furniture_50))
-set_backend_family(default_panel_family(), povray,
-  povray_material_family(povray_glass_material("GenericGlass", gray=0.3)))
-=#
+
+povray_stone = povray_include("stones2.inc", "texture", "T_Stone35")
+povray_metal = povray_include("textures.inc", "texture", "Chrome_Metal")
+povray_wood = povray_include("textures.inc", "texture", "DMFWood1")
+povray_glass = povray_include("textures.inc", "texture", "NBglass")
+export povray_stone, povray_metal, povray_wood, povray_glass
+set_backend_family(default_wall_family(), povray, povray_wall_family(povray_stone))
+set_backend_family(default_slab_family(), povray, povray_slab_family(povray_stone))
+set_backend_family(default_roof_family(), povray, povray_roof_family(povray_stone))
+set_backend_family(default_beam_family(), povray, povray_material_family(povray_metal))
+set_backend_family(default_column_family(), povray, povray_material_family(povray_metal))
+set_backend_family(default_door_family(), povray, povray_material_family(povray_wood))
+set_backend_family(default_panel_family(), povray, povray_material_family(povray_glass))
+
 #=
 create_ground_plane(shapes, material=default_povray_ground_material()) =
   if shapes == []
@@ -565,161 +564,14 @@ create_ground_plane(shapes, material=default_povray_ground_material()) =
 
 =#
 
-backend_slab(b::POVRay, profile, openings, thickness, family) =
-  let mattop = realize(b, family).top_material,
-      matbot = realize(b, family).bottom_material,
-      matside = realize(b, family).side_material,
-      path = profile
-    for op in openings
-      path = subtract_paths(path, op)
-    end
-    realize_pyramid_fustrum(
-      b, mattop, matbot, matside,
-      path_vertices(path),
-      path_vertices(translate(path, vz(thickness))))
-  end
-
-#=
 #=
 #FIXME define the family parameters for beams
 realize(b::POVRay, s::Beam) =
     ref(right_cuboid(s.p0, 0.2, 0.2, s.p1, 0))
 
-=#
-realize(b::POVRay, s::Panel) =
-  let p1 = s.vertices[1],
-      p2 = s.vertices[2],
-      p3 = s.vertices[3],
-      n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1)),
-      mod = next_modifier(b, realize(b, s.family).material)
-    realize_pyramid_fustrum(
-        b, mod, mod, mod,
-        map(p -> in_world(p - n), s.vertices),
-        map(p -> in_world(p + n), s.vertices))
-  end
-
-closed_path_for_height(path, h) =
-  let ps = path_vertices(path)
-    closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
-  end
-
-#=
-One important restriction is that POVRay only supports _planar_ polygons.
-This forces us to create multiple subpaths.
-=#
-realize(b::POVRay, w::Wall) =
-  let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w),
-      w_path = translate(w.path, vz(w_base_height)),
-      w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, -r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      openings = [w.doors..., w.windows...],
-      prevlength = 0,
-      modright = next_modifier(b, realize(b, w.family).right_material),
-      modleft = next_modifier(b, realize(b, w.family).left_material)
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let currlength = prevlength + path_length(w_seg_path),
-          c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
-        openings = filter(openings) do op
-          if prevlength <= op.loc.x < currlength ||
-             prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
-            let op_height = op.family.height,
-                op_at_start = op.loc.x <= prevlength,
-                op_at_end = op.loc.x + op.family.width >= currlength,
-                op_path = subpath(w_path,
-                                  max(prevlength, op.loc.x),
-                                  min(currlength, op.loc.x + op.family.width)),
-                r_op_path = offset(op_path, -r_thickness),
-                l_op_path = offset(op_path, l_thickness),
-                fixed_r_op_path =
-                  open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
-                                       path_end(op_at_end ? r_w_path : r_op_path)]),
-                fixed_l_op_path =
-                  open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
-                                       path_end(op_at_end ? l_w_path : l_op_path)]),
-                c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
-                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
-                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              realize_pyramid_fustrum(b, modleft, modright, modright, c_r_op_path, c_l_op_path, false)
-              c_r_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
-              c_l_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
-              # preserve if not totally contained
-              ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
-            end
-          else
-            true
-          end
-        end
-        prevlength = currlength
-        realize_polygon(b, modleft, "wall", c_l_w_path, false)
-        realize_polygon(b, modright, "wall", c_r_w_path, true)
-      end
-    end
-    void_ref(b)
-  end
-
 realize(b::POVRay, w::Window) = nothing
 realize(b::POVRay, w::Door) = nothing
-
-backend_wall(b::POVRay, w_path, w_height, l_thickness, r_thickness, family) =
-  error("BUM")
-#=  let w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, -r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      modright = next_modifier(b, realize(b, s.family).material_right),
-      modleft = next_modifier(b, realize(b, s.family).material_left)
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
-        # This is surely wrong!
-        #realize_polygon(b, family, "wall", c_l_w_path, false)
-        #realize_polygon(b, family, "wall", c_r_w_path, true)
-      end
-    end
-    void_ref(b)
-  end
 =#
-=#
-
-set_backend_family(default_wall_family(), povray, acad_layer_family("Wall"))
-set_backend_family(default_slab_family(), povray, acad_layer_family("Slab"))
-set_backend_family(default_roof_family(), povray, acad_layer_family("Roof"))
-set_backend_family(default_beam_family(), povray, acad_layer_family("Beam"))
-set_backend_family(default_column_family(), povray, acad_layer_family("Column"))
-set_backend_family(default_door_family(), povray, acad_layer_family("Door"))
-set_backend_family(default_panel_family(), povray, acad_layer_family("Panel"))
-
-set_backend_family(default_table_family(), povray, acad_layer_family("Table"))
-set_backend_family(default_chair_family(), povray, acad_layer_family("Chair"))
-set_backend_family(default_table_chair_family(), povray, acad_layer_family("TableChairs"))
-
-set_backend_family(default_curtain_wall_family(), povray, acad_layer_family("CurtainWall"))
-set_backend_family(default_curtain_wall_family().panel, povray, acad_layer_family("CurtainWall-Panel"))
-set_backend_family(default_curtain_wall_family().boundary_frame, povray, acad_layer_family("CurtainWall-Boundary"))
-set_backend_family(default_curtain_wall_family().transom_frame, povray, acad_layer_family("CurtainWall-Transom"))
-set_backend_family(default_curtain_wall_family().mullion_frame, povray, acad_layer_family("CurtainWall-Mullion"))
-#current_backend(povray)
-
-set_backend_family(default_truss_node_family(), povray, acad_layer_family("TrussNodes"))
-set_backend_family(default_truss_bar_family(), povray, acad_layer_family("TrussBars"))
-
-
-
-
-
-set_sun_direction(v::Vec, b::POVRay) =
-  b.sun_direction = v
-
 
 add_ground_plane(b::POVRay) =
   @warn "Not generating ground plane"

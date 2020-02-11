@@ -550,12 +550,12 @@ const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, IOBuf
 
 buffer(b::Radiance) = b.buffer()
 next_id(b::Radiance) =
-    begin
-        b.count += 1
-        b.count - 1
-    end
-next_modifier(b::Radiance, key) =
-    get!(b.materials, key, key.name)
+  begin
+      b.count += 1
+      b.count - 1
+  end
+
+get_material(b::Radiance, key) = get!(b.materials, key, key.name)
 
 save_rad(path::String, b::Radiance=current_backend()) =
   let buf = b.buffer()
@@ -604,7 +604,7 @@ delete_all_shapes(b::Radiance) =
 
 realize(b::Radiance, s::Sphere) =
   let id = next_id(b),
-      mod = next_modifier(b, default_radiance_material()),
+      mod = get_material(b, default_radiance_material()),
       kind = "sphere",
       buf = buffer(b)
     write_rad_sphere(buf, mod, id, in_world(s.center), s.radius)
@@ -652,7 +652,7 @@ realize(b::ACAD, s::RightCuboid) =
 =#
 realize(b::Radiance, s::Box) =
   let id = next_id(b),
-      mod = next_modifier(b, default_radiance_material()),
+      mod = get_material(b, default_radiance_material()),
       kind = "box",
       buf = buffer(b)
     write_rad_box(buf, #="mat$(kind)$(mod)"=# mod, id, in_world(s.c), s.dx, s.dy, s.dz)
@@ -691,7 +691,7 @@ realize(b::Radiance, s::Cylinder) =
   let bot_id = next_id(b),
       top_id = next_id(b),
       side_id = next_id(b),
-      mod = next_modifier(b, default_radiance_material()),
+      mod = get_material(b, default_radiance_material()),
       kind = "cylinder",
       buf = buffer(b),
       bot = in_world(s.cb),
@@ -740,28 +740,25 @@ realize(b::Radiance, s::Rotate) =
 
 # BIM
 
-realize_pyramid_fustrum(b::Radiance, top::String, bot::String, side::String, bot_path::Path, top_path::Path, closed=true) =
-  realize_pyramid_fustrum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
-
 # This requires three different keys, so that gets into the materials dict.
-realize_pyramid_fustrum(b::Radiance, top::String, bot::String, side::String, bot_vs, top_vs, closed=true) =
-  let buf = buffer(b)
+realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
+  let buf = buffer(b),
     if closed
-      write_rad_polygon(buf, bot, next_id(b), reverse(bot_vs))
-      write_rad_polygon(buf, top, next_id(b), top_vs)
+      write_rad_polygon(buf, bot, reverse(bot_vs))
+      write_rad_polygon(buf, top, top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-      write_rad_polygon(buf, side, next_id(b), vs)
+      write_rad_polygon(buf, side, vs)
     end
   end
 
-realize_polygon(b::Radiance, key, kind::String, path::Path, acw=true) =
-  realize_polygon(b, key, kind, path_vertices(path), acw)
+realize_polygon(b::Radiance, mat, path::Path, acw=true) =
+  realize_polygon(b, mat, path_vertices(path), acw)
 
-realize_polygon(b::Radiance, mod, kind::String, vs, acw=true) =
+realize_polygon(b::Radiance, mat, vs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
-    write_rad_polygon(buf, mod, next_id(b), acw ? vs : reverse(vs))
+    write_rad_polygon(buf, get_material(b, mat), next_id(b), acw ? vs : reverse(vs))
   end
 #=
 
@@ -918,130 +915,16 @@ create_ground_plane(shapes, material=default_radiance_ground_material()) =
 
 =#
 
-backend_slab(b::Radiance, profile, openings, thickness, family) =
-  let modtop = next_modifier(b, realize(b, family).top_material),
-      modbot = next_modifier(b, realize(b, family).bottom_material),
-      modside = next_modifier(b, realize(b, family).side_material),
-      path = profile
-    for op in openings
-      path = subtract_paths(path, op)
-    end
-    realize_pyramid_fustrum(
-      b, modtop, modbot, modside,
-      path_vertices(path),
-      path_vertices(translate(path, vz(thickness))))
-  end
-
 #=
 #FIXME define the family parameters for beams
 realize(b::Radiance, s::Beam) =
     ref(right_cuboid(s.p0, 0.2, 0.2, s.p1, 0))
 
 =#
-realize(b::Radiance, s::Panel) =
-  let p1 = s.vertices[1],
-      p2 = s.vertices[2],
-      p3 = s.vertices[3],
-      n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1)),
-      mod = next_modifier(b, realize(b, s.family).material)
-    realize_pyramid_fustrum(
-        b, mod, mod, mod,
-        map(p -> in_world(p - n), s.vertices),
-        map(p -> in_world(p + n), s.vertices))
-  end
 
-closed_path_for_height(path, h) =
-  let ps = path_vertices(path)
-    closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
-  end
-
-#=
-One important restriction is that Radiance only supports _planar_ polygons.
-This forces us to create multiple subpaths.
-=#
-realize(b::Radiance, w::Wall) =
-  let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w),
-      w_path = translate(w.path, vz(w_base_height)),
-      w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, -r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      openings = [w.doors..., w.windows...],
-      prevlength = 0,
-      modright = next_modifier(b, realize(b, w.family).right_material),
-      modleft = next_modifier(b, realize(b, w.family).left_material)
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let currlength = prevlength + path_length(w_seg_path),
-          c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
-        openings = filter(openings) do op
-          if prevlength <= op.loc.x < currlength ||
-             prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
-            let op_height = op.family.height,
-                op_at_start = op.loc.x <= prevlength,
-                op_at_end = op.loc.x + op.family.width >= currlength,
-                op_path = subpath(w_path,
-                                  max(prevlength, op.loc.x),
-                                  min(currlength, op.loc.x + op.family.width)),
-                r_op_path = offset(op_path, -r_thickness),
-                l_op_path = offset(op_path, l_thickness),
-                fixed_r_op_path =
-                  open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
-                                       path_end(op_at_end ? r_w_path : r_op_path)]),
-                fixed_l_op_path =
-                  open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
-                                       path_end(op_at_end ? l_w_path : l_op_path)]),
-                c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
-                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
-                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              realize_pyramid_fustrum(b, modleft, modright, modright, c_r_op_path, c_l_op_path, false)
-              c_r_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
-              c_l_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
-              # preserve if not totally contained
-              ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
-            end
-          else
-            true
-          end
-        end
-        prevlength = currlength
-        realize_polygon(b, modleft, "wall", c_l_w_path, false)
-        realize_polygon(b, modright, "wall", c_r_w_path, true)
-      end
-    end
-    void_ref(b)
-  end
 
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
-
-backend_wall(b::Radiance, w_path, w_height, l_thickness, r_thickness, family) =
-  error("BUM")
-#=  let w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, -r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      modright = next_modifier(b, realize(b, s.family).material_right),
-      modleft = next_modifier(b, realize(b, s.family).material_left)
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, modleft, modright, modright, c_l_w_path, c_r_w_path, false)
-        # This is surely wrong!
-        #realize_polygon(b, family, "wall", c_l_w_path, false)
-        #realize_polygon(b, family, "wall", c_r_w_path, true)
-      end
-    end
-    void_ref(b)
-  end
-=#
-
 
 #=
 
