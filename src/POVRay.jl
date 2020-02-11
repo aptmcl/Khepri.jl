@@ -289,9 +289,9 @@ const POVRaySubtractionRef = SubtractionRef{POVRayKey, POVRayId}
 mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   shapes::Shapes
   shape_material::Dict{Shape,POVRayMaterial}
+  materials::Dict
   sky::String
   buffer::LazyParameter{IOBuffer}
-  materials::Dict
   camera::Loc
   target::Loc
   lens::Real

@@ -526,13 +526,16 @@ const RadianceSubtractionRef = SubtractionRef{RadianceKey, RadianceId}
 
 mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   shapes::Shapes
+  shape_material::Dict{Shape,RadianceMaterial}
+  materials::Dict
   sky::String
   buffer::LazyParameter{IOBuffer}
-  count::Integer
-  materials::Dict
   camera::Loc
   target::Loc
   lens::Real
+  count::Integer
+  sun_altitude::Real
+  sun_azimuth::Real
 end
 
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
@@ -549,6 +552,8 @@ const radiance_lod100 = Radiance{100}(Shape[], "", LazyParameter(IOBuffer, IOBuf
   0, Dict(), xyz(10,10,10), xyz(0,0,0), 35)
 
 buffer(b::Radiance) = b.buffer()
+get_material(b::Radiance, key) = get!(b.materials, key, key)
+get_material(b::Radiance, s::Shape) = get_material(b, get(b.shape_material, s, default_radiance_material()))
 next_id(b::Radiance) =
   begin
       b.count += 1
@@ -604,7 +609,7 @@ delete_all_shapes(b::Radiance) =
 
 realize(b::Radiance, s::Sphere) =
   let id = next_id(b),
-      mod = get_material(b, default_radiance_material()),
+      mod = get_material(b, s),
       kind = "sphere",
       buf = buffer(b)
     write_rad_sphere(buf, mod, id, in_world(s.center), s.radius)
@@ -652,7 +657,7 @@ realize(b::ACAD, s::RightCuboid) =
 =#
 realize(b::Radiance, s::Box) =
   let id = next_id(b),
-      mod = get_material(b, default_radiance_material()),
+      mod = get_material(b, s),
       kind = "box",
       buf = buffer(b)
     write_rad_box(buf, #="mat$(kind)$(mod)"=# mod, id, in_world(s.c), s.dx, s.dy, s.dz)
@@ -691,7 +696,7 @@ realize(b::Radiance, s::Cylinder) =
   let bot_id = next_id(b),
       top_id = next_id(b),
       side_id = next_id(b),
-      mod = get_material(b, default_radiance_material()),
+      mod = get_material(b, s),
       kind = "cylinder",
       buf = buffer(b),
       bot = in_world(s.cb),
