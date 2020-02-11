@@ -272,7 +272,7 @@ const texture_concrete =
 
 const default_povray_material =
   #Parameter(povray_include("stones.inc", "texture", "T_Grnt25"))
-  Parameter(texture_concrete)
+  Parameter{POVRayMaterial}(texture_concrete)
 
 ####################################################
 # Sky models
@@ -738,9 +738,9 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
     end
     open(path, "w") do out
       # write materials
-      write_povray_include(out, POVRayIncludeMaterial("colors.inc", "dummy"))
+      write_povray_definition(out, povray_include("colors.inc", "dummy", "dummy"))
       for (k,v) in b.materials
-        write_povray_include(out, k)
+        write_povray_definition(out, k)
       end
       # write sky
       write(out, b.sky, "\n")
