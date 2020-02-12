@@ -1108,13 +1108,3 @@ export_sensors(path::Path, sensors=radiance_sensors()) =
     end
     ptspath
   end
-
-
-############################################
-# To add materials to shapes that do not have them
-@defproxy(radiance_shape, Shape3D, base_shape::Shape3D=empty_shape(), material::RadianceMaterial=default_radiance_material())
-
-realize(b::Backend, s::RadianceShape) =
-  with(default_radiance_material, s.material) do
-    realize(b, s.base_shape)
-  end
