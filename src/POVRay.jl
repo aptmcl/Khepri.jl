@@ -318,7 +318,7 @@ void_ref(b::POVRay) = POVRayNativeRef(-1)
 const povray =
   POVRay(Shape[],
          Dict{Shape,POVRayMaterial}(),
-         Dict(){POVRayMaterial,POVRayMaterial},
+         Dict{POVRayMaterial,POVRayMaterial}(),
          "",
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
