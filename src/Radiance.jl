@@ -552,7 +552,6 @@ const radiance =
                 Dict(),
                 "",
                 LazyParameter(IOBuffer, IOBuffer),
-                0,
                 xyz(10,10,10),
                 xyz(0,0,0),
                 35,
