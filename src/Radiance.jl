@@ -560,15 +560,13 @@ const radiance =
                 0)
 
 buffer(b::Radiance) = b.buffer()
-get_material(b::Radiance, key) = get!(b.materials, key, key)
+get_material(b::Radiance, key) = get!(b.materials, key, key.name)
 get_material(b::Radiance, s::Shape) = get_material(b, get(b.shape_material, s, default_radiance_material()))
 next_id(b::Radiance) =
   begin
       b.count += 1
       b.count - 1
   end
-
-get_material(b::Radiance, key) = get!(b.materials, key, key.name)
 
 save_rad(path::String, b::Radiance=current_backend()) =
   let buf = b.buffer()
