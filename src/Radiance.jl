@@ -755,18 +755,18 @@ realize(b::Radiance, s::Rotate) =
 realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
   let buf = buffer(b)
     if closed
-      write_rad_polygon(buf, bot, reverse(bot_vs))
-      write_rad_polygon(buf, top, top_vs)
+      write_rad_polygon(buf, bot, next_id(b), reverse(bot_vs))
+      write_rad_polygon(buf, top, next_id(b), top_vs)
     end
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
-      write_rad_polygon(buf, side, vs)
+      write_rad_polygon(buf, side, next_id(b), vs)
     end
   end
 
 realize_polygon(b::Radiance, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
-    write_rad_polygon(buf, get_material(b, mat), next_id(b), acw ? vs : reverse(vs))
+    write_rad_polygon(buf, mat, next_id(b), acw ? vs : reverse(vs))
   end
 #=
 
