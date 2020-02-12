@@ -289,7 +289,7 @@ const POVRaySubtractionRef = SubtractionRef{POVRayKey, POVRayId}
 mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   shapes::Shapes
   shape_material::Dict{Shape,POVRayMaterial}
-  materials::Dict
+  materials::Dict{POVRayMaterial,POVRayMaterial}
   sky::String
   buffer::LazyParameter{IOBuffer}
   camera::Loc
@@ -318,7 +318,7 @@ void_ref(b::POVRay) = POVRayNativeRef(-1)
 const povray =
   POVRay(Shape[],
          Dict{Shape,POVRayMaterial}(),
-         Dict(),
+         Dict(){POVRayMaterial,POVRayMaterial},
          "",
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
@@ -344,8 +344,22 @@ sky_sphere{
  }
  """
 
+const povray_freecad_sky = """
+sky_sphere {
+    pigment {
+        gradient y
+        color_map {
+            [0.0 color Gray50]
+            [0.7 color White]
+        }
+    }
+}
+"""
+
 set_normal_sky(b::POVRay) =
   b.sky = povray_normal_sky
+
+
 
 #
 
