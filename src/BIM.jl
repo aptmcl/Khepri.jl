@@ -401,7 +401,7 @@ A wall contains doors and windows
           offset::Real=is_closed_path(path) ? 1/2 : 0, # offset is relative to the thickness
           doors::Shapes=Shape[], windows::Shapes=Shape[])
 
-realize(b::Backend, w::Wall) =
+realize(b::LazyBackend, w::Wall) =
   let w_base_height = w.bottom_level.height,
       w_height = w.top_level.height - w_base_height,
       r_thickness = r_thickness(w),
@@ -466,7 +466,7 @@ closed_path_for_height(path, h) =
     closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
   end
 
-realize_polygon(b::Backend, mat, path::Path, acw=true) =
+realize_polygon(b::LazyBackend, mat, path::Path, acw=true) =
   realize_polygon(b, mat, path_vertices(path), acw)
 
 #=
@@ -538,7 +538,6 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
 
 @defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
-#=
 # Default implementation
 realize(b::Backend, w::Wall) =
   with_family_in_layer(b, w.family) do
@@ -614,7 +613,6 @@ backend_add_window(b::Backend, w::Wall, loc::Loc, family::WindowFamily) =
     end
     w
   end
-=#
 
 #=
 A curtain wall is a special kind of wall that is made of a frame with windows.
