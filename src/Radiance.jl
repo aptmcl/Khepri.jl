@@ -540,6 +540,13 @@ end
 
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
 
+save_shape!(b::Radiance, s::Shape) =
+  begin
+    push!(b.shapes, s)
+    b.shape_material[s] = default_radiance_material()
+    s
+  end
+
 #=
 The Radiance backend cannot realize shapes immediately, only when requested.
 =#
@@ -610,7 +617,7 @@ utah_sky(backend::Backend=radiance; args...) =
 delete_all_shapes(b::Radiance) =
   begin
     delete_all_shapes(autocad)
-    (empty!(b.shapes); empty!(b.materials); b.count = 0; nothing)
+    (empty!(b.shapes); empty!(b.materials); empty!(b.shape_material); b.count = 0; nothing)
   end
 
 realize(b::Radiance, s::Sphere) =
