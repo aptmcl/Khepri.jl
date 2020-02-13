@@ -248,7 +248,7 @@ radiance_utah_sky(;
     longitude::Real=150,
     meridian::Real=135) =
   let _2d(n) = lpad(n, 2, '0')
-    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) -y $(year) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
+    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
     "\n" *
     radiance_extra_sky_rad_contents
   end
