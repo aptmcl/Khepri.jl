@@ -271,7 +271,7 @@ const povray_concrete =
     dents .5 scale .5 }}""")
 
 const default_povray_material = Parameter{POVRayMaterial}(povray_concrete)
-  
+
 ####################################################
 # Sky models
 
@@ -298,8 +298,29 @@ sky_sphere {
 }
 """
 
-set_normal_sky(b::POVRay) =
-  b.sky = povray_normal_sky
+# This needs to be fine tuned!!!
+povray_cie_overcast_sky(;
+    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
+    latitude::Real=61,
+    longitude::Real=150,
+    meridian::Real=135,
+    altitude::Union{Missing,Real}=missing,
+    azimuth::Union{Missing,Real}=missing,
+    withsun::Bool=true) =
+  ismissing(altitude) ? """
+#include "sunpos.inc"
+light_source {
+  SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude))
+  rgb 1
+}
+$(povray_normal_sky)
+""" : """
+light_source {
+  vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)
+  rgb 1
+}
+$(povray_normal_sky)
+"""
 
 write_povray_sky(io::IO, altitude::Real, azimuth::Real) =
   write(io, """
@@ -354,7 +375,7 @@ const povray =
   POVRay(Shape[],
          Dict{Shape,POVRayMaterial}(),
          Dict{POVRayMaterial,POVRayMaterial}(),
-         "",
+         povray_cie_overcast_sky(),
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
          xyz(0,0,0),
@@ -386,6 +407,9 @@ set_sun(altitude, azimuth, b::POVRay) =
     b.altitude = altitude
     b.azimuth = azimuth
   end
+
+set_normal_sky(b::POVRay) =
+  b.sky = povray_normal_sky
 
 delete_all_shapes(b::POVRay) =
   begin
