@@ -120,10 +120,10 @@ collinear_segments(p1, p2, q1, q2) =
 
 collinear_vertices_indexes(pts1, pts2) =
   for (i1, p1) in enumerate(pts1)
-    let i2 = (i1+1)%length(pts1),
+    let i2 = i1%length(pts1)+1,
         p2 = pts1[i2]
       for (j1, q1) in enumerate(pts2)
-        let j2 = (j1+1)%length(pts2),
+        let j2 = j1%length(pts2)+1,
             q2 = pts2[j2]
           if collinear_segments(p1, p2, q1, q2)
             return (i1, j1)
