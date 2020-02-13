@@ -270,10 +270,8 @@ const povray_concrete =
   normal {
     dents .5 scale .5 }}""")
 
-const default_povray_material =
-  #Parameter(povray_include("stones.inc", "texture", "T_Grnt25"))
-  Parameter{POVRayMaterial}(povray_texture_concrete)
-
+const default_povray_material = Parameter{POVRayMaterial}(povray_concrete)
+  
 ####################################################
 # Sky models
 
