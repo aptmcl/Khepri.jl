@@ -606,10 +606,11 @@ create_ground_plane(shapes, material=default_povray_ground_material()) =
 #FIXME define the family parameters for beams
 realize(b::POVRay, s::Beam) =
     ref(right_cuboid(s.p0, 0.2, 0.2, s.p1, 0))
-
-realize(b::POVRay, w::Window) = nothing
-realize(b::POVRay, w::Door) = nothing
 =#
+realize(b::POVRay, s::Union{Door, Window}) =
+  nothing
+
+
 
 add_ground_plane(b::POVRay) =
   @warn "Not generating ground plane"

@@ -473,9 +473,6 @@ closed_path_for_height(path, h) =
 realize_polygon(b::LazyBackend, mat, path::Path, acw=true) =
   realize_polygon(b, mat, path_vertices(path), acw)
 
-realize(b::LazyBackend, s::Union{Door, Window}) =
-  nothing
-
 #=
 Walls can be joined. That is very important because the wall needs to have
 uniform thickness along the entire path.
