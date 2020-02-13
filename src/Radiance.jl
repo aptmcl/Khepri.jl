@@ -958,7 +958,7 @@ realize(b::Radiance, w::Wall) =
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_pyramid_fustrum(b, matleft, matright, matright, c_l_w_path, c_r_w_path, false)
+        realize_fustrum(b, matleft, matright, matright, c_l_w_path, c_r_w_path, false)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -979,7 +979,7 @@ realize(b::Radiance, w::Wall) =
                 c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
                 c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
                 idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              realize_pyramid_fustrum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
+              realize_fustrum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
               c_r_w_path =
                 closed_polygonal_path(
                   inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
