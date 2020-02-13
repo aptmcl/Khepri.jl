@@ -521,7 +521,7 @@ realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
   # PathSets require a different approach
   let buf = buffer(b),
       bot_vss = map(path_vertices, path.paths),
-      top_vss = map(path_vertices, translate(path, vz(5h)).paths)
+      top_vss = map(path_vertices, translate(path, vz(h)).paths)
     write_povray_polygons(buf, bot, map(reverse, bot_vss))
     write_povray_polygons(buf, top, top_vss)
     for (bot_vs, top_vs) in zip(bot_vss, top_vss)
