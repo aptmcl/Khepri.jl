@@ -31,9 +31,10 @@ export open_path,
        path_start,
        path_end,
        subpath,
+       subpaths,
        join_paths,
-       subpaths
-
+       subtract_paths,
+       path_vertices
 
 path_tolerance = Parameter(1e-10)
 coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
@@ -500,9 +501,6 @@ path_sequence(paths...) =
 
 ensure_connected_paths(paths) = # AML: Finish this
     paths
-
-translate(path::T, v::Vec) where T<:PathSequence =
-  T(translate.(path.paths, v))
 path_length(path::PathSequence) =
   sum(map(path_length, path.paths))
 location_at_length(path::PathSequence, d::Real) =
@@ -568,7 +566,6 @@ convert_to_path_ops(path::RectangularPath) =
   end
 
 # A path set is a set of independent paths.
-
 struct PathSet <: Path
   paths::Vector{<:Path}
 end
@@ -576,6 +573,10 @@ end
 # Should we just use tuples instead of arrays?
 path_set(paths...) =
   PathSet([paths...])
+
+# Operations on path containers
+translate(path::T, v::Vec) where T<:Union{PathSequence,PathSet} =
+  T(translate.(path.paths, v))
 
 # Convertions from/to paths
 import Base.convert
@@ -686,12 +687,13 @@ convert(::Type{OpenPolygonalPath}, path::OpenPathSequence) =
     open_polygonal_path(vertices)
   end
 
-
-
+# It is possible to convert a PathSet to a singleton path
+# by considering the first path as the outer path and all the
+# others as inner paths
+convert(::Type{ClosedPath}, pset::PathSet) =
+  foldl(subtract_paths, pset.paths)
 
 #### Utilities
-export path_vertices, subpaths, subtract_paths
-
 path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
 path_vertices(path::OpenSplinePath) = path.vertices
@@ -708,7 +710,8 @@ subpaths(path::ClosedPolygonalPath) =
   end
 subpaths(path::Path) = subpaths(convert(OpenPolygonalPath, path))
 
-
+subtract_paths(path1::Path, path2::Path) =
+  subtract_paths(convert(ClosedPolygonalPath, path1), convert(ClosedPolygonalPath, path2))
 subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
   closed_polygonal_path(
     subtract_polygon_vertices(

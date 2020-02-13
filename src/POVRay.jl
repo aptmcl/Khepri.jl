@@ -259,7 +259,7 @@ export povray_definition, povray_include
 const povray_definition = POVRayDefinition
 const povray_include = POVRayInclude
 
-const povray_texture_concrete =
+const povray_concrete =
   povray_definition("Concrete", "texture", """{
    pigment {
      granite turbulence 1.5 color_map {
@@ -276,6 +276,43 @@ const default_povray_material =
 
 ####################################################
 # Sky models
+
+const povray_normal_sky = """
+sky_sphere{
+ pigment{ gradient <0,1,0>
+          color_map{
+          [0.0 color rgb<1,1,1>        ]
+          [0.8 color rgb<0.1,0.25,0.75>]
+          [1.0 color rgb<0.1,0.25,0.75>]}
+        } // end pigment
+ }
+ """
+
+const povray_freecad_sky = """
+sky_sphere {
+    pigment {
+        gradient y
+        color_map {
+            [0.0 color Gray50]
+            [0.7 color White]
+        }
+    }
+}
+"""
+
+set_normal_sky(b::POVRay) =
+  b.sky = povray_normal_sky
+
+write_povray_sky(io::IO, altitude::Real, azimuth::Real) =
+  write(io, """
+#include "sunpos.inc"
+light_source {
+  vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)
+  rgb 1
+}
+$(povray_normal_sky)
+""")
+
 
 ####################################################
 
@@ -331,36 +368,6 @@ buffer(b::POVRay) = b.buffer()
 get_material(b::POVRay, key) = get!(b.materials, key, key)
 get_material(b::POVRay, s::Shape) = get_material(b, get(b.shape_material, s, default_povray_material()))
 
-# Sky
-
-const povray_normal_sky = """
-sky_sphere{
- pigment{ gradient <0,1,0>
-          color_map{
-          [0.0 color rgb<1,1,1>        ]
-          [0.8 color rgb<0.1,0.25,0.75>]
-          [1.0 color rgb<0.1,0.25,0.75>]}
-        } // end pigment
- }
- """
-
-const povray_freecad_sky = """
-sky_sphere {
-    pigment {
-        gradient y
-        color_map {
-            [0.0 color Gray50]
-            [0.7 color White]
-        }
-    }
-}
-"""
-
-set_normal_sky(b::POVRay) =
-  b.sky = povray_normal_sky
-
-
-
 #
 
 set_view(camera::Loc, target::Loc, lens::Real, b::POVRay) =
@@ -373,6 +380,8 @@ set_view(camera::Loc, target::Loc, lens::Real, b::POVRay) =
 
 get_view(b::POVRay) =
   b.camera, b.target, b.lens
+
+###################################
 
 set_sun(altitude, azimuth, b::POVRay) =
   begin
@@ -486,6 +495,19 @@ realize(b::POVRay, s::Rotate) =
 =#
 =#
 # BIM
+realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
+  # PathSets require a different approach
+  let buf = buffer(b),
+      bot_vss = map(path_vertices, path.paths),
+      top_vss = map(path_vertices, translate(path, vz(5h)).paths)
+    write_povray_polygons(buf, bot, map(reverse, bot_vss))
+    write_povray_polygons(buf, top, top_vss)
+    for (bot_vs, top_vs) in zip(bot_vss, top_vss)
+      for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
+        write_povray_polygon(buf, side, vs)
+      end
+    end
+  end
 
 realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
   let buf = buffer(b)
@@ -505,8 +527,12 @@ realize_polygon(b::POVRay, mat, vs::Locs, acw=true) =
   end
 
 write_povray_polygon(io::IO, mat, vs) =
-  write_povray_object(io, "polygon", mat, length(vs), vs...)
+  write_povray_object(io, "polygon", mat, length(vs)+1, vs..., vs[1])
 
+write_povray_polygons(io::IO, mat, vss) =
+  write_povray_object(io, "polygon", mat,
+    mapreduce(length, +, vss) + length(vss),
+    mapreduce(vs->[vs..., vs[1]], vcat, vss)...)
 
 #=
 POVRay families need to know the different kinds of materials
@@ -541,9 +567,10 @@ povray_stone = povray_include("stones2.inc", "texture", "T_Stone35")
 povray_metal = povray_include("textures.inc", "texture", "Chrome_Metal")
 povray_wood = povray_include("textures.inc", "texture", "DMFWood1")
 povray_glass = povray_include("textures.inc", "texture", "NBglass")
+
 export povray_stone, povray_metal, povray_wood, povray_glass
 set_backend_family(default_wall_family(), povray, povray_wall_family(povray_stone))
-set_backend_family(default_slab_family(), povray, povray_slab_family(povray_stone))
+set_backend_family(default_slab_family(), povray, povray_slab_family(povray_concrete))
 set_backend_family(default_roof_family(), povray, povray_roof_family(povray_stone))
 set_backend_family(default_beam_family(), povray, povray_material_family(povray_metal))
 set_backend_family(default_column_family(), povray, povray_material_family(povray_metal))
@@ -606,7 +633,7 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
         write_povray_definition(out, k)
       end
       # write sky
-      write(out, b.sky, "\n")
+      write_povray_sky(out, b.sun_altitude, b.sun_azimuth)
       # write the objects
       write(out, String(take!(buf)))
       # write the view

@@ -277,11 +277,15 @@ set_backend_family(family::Family, backend::Backend, backend_family::Family) =
 # Finally, we can implement a generic backend caching mechanism for families
 
 realize(b::Backend, f::Family) =
+  f.ref(backend_get_family_ref(b, f, backend_family(b, f)))
+#=
+realize(b::Backend, f::Family) =
   if f.ref() == nothing
     f.ref(backend_get_family_ref(b, f, backend_family(b, f)))
   else
     f.ref()
   end
+=#
 
 export backend_family, set_backend_family
 
@@ -313,16 +317,16 @@ backend_slab(b::Backend, profile, openings, thickness, family) =
   let backfamily = realize(b, family),
       mattop = get_material(b, backfamily.top_material),
       matbot = get_material(b, backfamily.bottom_material),
-      matside = get_material(b, backfamily.side_material),
-      path = profile
-    for op in openings
-      path = subtract_paths(path, op)
-    end
-    realize_pyramid_fustrum(b, mattop, matbot, matside, path, translate(path, vz(thickness)))
+      matside = get_material(b, backfamily.side_material)
+    realize_prism(b, mattop, matbot, matside, path_set(profile, openings...), thickness)
   end
 
+# Delegate on the lower-level pyramid fustrum
+realize_prism(b::Backend, top, bot, side, path::Path, h::Real) =
+  realize_fustrum(b,  top, bot, side, path, translate(path, vz(h)))
+
 # If we don't know how to process a path, we convert it to a sequence of vertices
-realize_pyramid_fustrum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
+realize_fustrum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
   realize_pyramid_fustrum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
 
 #
@@ -468,6 +472,9 @@ closed_path_for_height(path, h) =
 
 realize_polygon(b::LazyBackend, mat, path::Path, acw=true) =
   realize_polygon(b, mat, path_vertices(path), acw)
+
+realize(b::LazyBackend, s::Union{Door, Window}) =
+  nothing
 
 #=
 Walls can be joined. That is very important because the wall needs to have
