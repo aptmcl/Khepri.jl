@@ -1001,12 +1001,6 @@ realize(b::Radiance, w::Wall) =
     void_ref(b)
   end
 
-closed_path_for_height(path, h) =
-  let ps = path_vertices(path)
-    closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
-  end
-
-
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
 
