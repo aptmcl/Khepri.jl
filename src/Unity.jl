@@ -587,13 +587,14 @@ realize(b::Unity, s::UnionMirror) =
 =#
 
 realize(b::Unity, s::SurfaceGrid) =
-    @remote(b, SurfaceFromGrid(
-        size(s.points,1),
-        size(s.points,2),
-        reshape(s.points,:),
-        s.closed_u,
-        s.closed_v,
-        2))
+  # we create two surfaces to have normals on both sides
+  let ptss = s.points,
+      s1 = size(ptss,1),
+      s2 = size(ptss,2),
+      sstp = reverse(ptss, dims=1)
+    @remote(b, SurfaceFromGrid(s2, s1, reshape(sstp,:), s.closed_u, s.closed_v, 2))
+    @remote(b, SurfaceFromGrid(s2, s1, reshape(ptss,:), s.closed_u, s.closed_v, 2))
+  end
 #=
 realize(b::Unity, s::Thicken) =
   and_delete_shape(
