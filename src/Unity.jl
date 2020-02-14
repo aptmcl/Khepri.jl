@@ -1152,6 +1152,8 @@ render_view(path::String, b::Unity) =
       @remote(b, SetResolution(render_width(), render_height()))
       interrupt_processing(c)
       @remote(b, ScreenShot(path))
+      interrupt_processing(c)
+      path
     end
 
 
