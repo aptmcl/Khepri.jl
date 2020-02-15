@@ -47,11 +47,13 @@ write_povray_object(f::Function, io::IO, type, material, args...) =
       show(io, mime, arg)
     end
     write(io, '\n')
-    f()
-    if ! isnothing(material)
-      write_povray_material(io, material)
+    let res = f()
+      if ! isnothing(material)
+        write_povray_material(io, material)
+      end
+      write(io, "}\n")
+      res
     end
-    write(io, "}\n")
   end
 
 write_povray_object(io::IO, type, material, args...) =
