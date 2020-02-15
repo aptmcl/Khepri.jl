@@ -736,8 +736,9 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
 #      ref(s)
 #    end
     i = 1
-    while i < length(b.shapes)
+    while i <= length(b.shapes)
       ref(b.shapes[i])
+      i += 1
     end
     open(path, "w") do out
       # write materials
