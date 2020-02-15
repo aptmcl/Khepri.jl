@@ -3,6 +3,7 @@ A backend for POVRay
 =#
 export POVRay,
        povray,
+       povray_material,
        default_povray_material
 
 # We will use MIME types to encode for POVRay
@@ -272,6 +273,16 @@ const povray_concrete =
 
 const default_povray_material = Parameter{POVRayMaterial}(povray_concrete)
 
+povray_material(name::String;
+                gray::Real=0.3,
+                red::Real=gray, green::Real=gray, blue::Real=gray,
+                specularity=nothing, roughness=nothing,
+                transmissivity=nothing, transmitted_specular=nothing) =
+  povray_definition(name, "texture", """{
+  pigment { rgb<$(red),$(green),$(blue)> }
+  finish { specular $(specularity) roughness $(roughness) }
+}""")
+
 ####################################################
 # Sky models
 
@@ -358,9 +369,9 @@ end
 const POVRay = POVRayBackend{POVRayKey, POVRayId}
 
 # In POVRay, everytime we save a shape, we attach the default_povray_material
-save_shape!(b::POVRayBackend, s::Shape) =
+save_shape!(b::POVRay, s::Shape) =
   begin
-    push!(b.shapes, s)
+    prepend!(b.shapes, [s])
     b.shape_material[s] = default_povray_material()
     s
   end
@@ -415,6 +426,12 @@ delete_all_shapes(b::POVRay) =
   begin
     delete_all_shapes(autocad)
     (empty!(b.shapes); empty!(b.materials); empty!(b.shape_material); nothing)
+  end
+
+backend_delete_shapes(b::POVRay, shapes::Shapes) =
+  begin
+    b.shapes = filter(s->s in shapes, b.shapes)
+    for s in shapes delete!(b.shape_material, s) end
   end
 
 realize(b::POVRay, s::Sphere) =
@@ -480,7 +497,7 @@ realize(b::POVRay, s::Cylinder) =
     write_povray_object(buf, "cylinder", mat, bot, top, s.r)
     void_ref(b)
   end
-#=
+
 #=
 realize(b::POVRay, s::EmptyShape) =
     EmptyRef{POVRayId}()
@@ -515,7 +532,37 @@ realize(b::POVRay, s::Rotate) =
     end
 
 =#
-=#
+
+realize(b::POVRay, s::UnionShape) =
+  write_povray_object(buffer(b), "union", get_material(b, s)) do
+    for ss in s.shapes
+      realize(b, ss)
+      delete_shape(ss)
+    end
+    void_ref(b)
+  end
+
+
+realize(b::POVRay, s::IntersectionShape) =
+  write_povray_object(buffer(b), "intersection", get_material(b, s)) do
+    for ss in s.shapes
+      ref(ss)
+      delete_shape(ss)
+    end
+    void_ref(b)
+  end
+
+realize(b::POVRay, s::SubtractionShape3D) =
+  write_povray_object(buffer(b), "difference", get_material(b, s)) do
+    ref(s.shape)
+    delete_shape(s.shape)
+    for ss in s.shapes
+      ref(ss)
+      delete_shape(ss)
+    end
+    void_ref(b)
+  end
+
 # BIM
 realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
   # PathSets require a different approach
@@ -542,6 +589,11 @@ realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, c
     end
   end
 
+realize_polygon(b::POVRay, mat, path::PathSet, acw=true) =
+  acw ?
+    write_povray_polygons(buffer(b), mat, map(path_vertices, path.paths)) :
+    write_povray_polygons(buffer(b), mat, map(reverse ∘ path_vertices, path.paths))
+
 realize_polygon(b::POVRay, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
     polygon(vs, backend=autocad)
@@ -555,6 +607,17 @@ write_povray_polygons(io::IO, mat, vss) =
   write_povray_object(io, "polygon", mat,
     mapreduce(length, +, vss) + length(vss),
     mapreduce(vs->[vs..., vs[1]], vcat, vss)...)
+
+# Polygons with holes need a PathSets in POVRay
+
+subtract_paths(b::POVRay, c_r_w_path::PathSet, c_l_w_path::PathSet, c_r_op_path, c_l_op_path) =
+  path_set(c_r_w_path.paths..., c_r_op_path),
+  path_set(c_l_w_path.paths..., c_l_op_path)
+
+subtract_paths(b::POVRay, c_r_w_path::Path, c_l_w_path::Path, c_r_op_path, c_l_op_path) =
+  path_set(c_r_w_path, c_r_op_path),
+  path_set(c_l_w_path, c_l_op_path)
+
 
 #=
 POVRay families need to know the different kinds of materials
@@ -642,16 +705,43 @@ used_materials(b::POVRay) =
 
 ####################################################
 
+write_povray_defaults(io::IO) =
+  write(io, """
+#version 3.7;
+#include "colors.inc"
+global_settings {
+assumed_gamma 1
+radiosity {
+  pretrace_start 0.08
+  pretrace_end   0.01
+  count 150
+  nearest_count 10
+  error_bound 0.5
+  recursion_limit 3
+  low_error_factor 0.5
+  gray_threshold 0.0
+  minimum_reuse 0.005
+  maximum_reuse 0.2
+  brightness 1
+  adc_bailout 0.005
+}}
+""")
+
 export_to_povray(path::String, b::POVRay=current_backend()) =
   let buf = b.buffer()
     # First pass, to fill material dictionary
     take!(buf)
-    for s in b.shapes
-      realize(b, s)
+    # We cannot do this because the array might be updated during the iteration
+#    for s in b.shapes
+#      ref(s)
+#    end
+    i = 1
+    while i < length(b.shapes)
+      ref(b.shapes[i])
     end
     open(path, "w") do out
       # write materials
-      write_povray_definition(out, povray_include("colors.inc", "dummy", "dummy"))
+      write_povray_defaults(out)
       for (k,v) in b.materials
         write_povray_definition(out, k)
       end
