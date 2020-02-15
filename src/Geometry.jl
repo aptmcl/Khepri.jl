@@ -74,14 +74,12 @@ closest_vertices_indexes(pts1, pts2) =
   let min_dist = Inf,
       min_i = nothing,
       min_j = nothing
-    for (i, pt1) in enumerate(pts1)
-      for (j, pt2) in enumerate(pts2)
-        let dist = distance(pt1, pt2)
-          if dist < min_dist
-            min_dist = dist
-            min_i = i
-            min_j = j
-          end
+    for (i, pt1) in enumerate(pts1), (j, pt2) in enumerate(pts2)
+      let dist = distance(pt1, pt2)
+        if dist < min_dist
+          min_dist = dist
+          min_i = i
+          min_j = j
         end
       end
     end
