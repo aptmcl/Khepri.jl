@@ -441,15 +441,9 @@ realize(b::LazyBackend, w::Wall) =
                   open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
                                        path_end(op_at_end ? l_w_path : l_op_path)]),
                 c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
-                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
-                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
+                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height)
               realize_fustrum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
-              c_r_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
-              c_l_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
+              c_r_w_path, c_l_w_path = subtract_paths(b, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path)
               # preserve if not totally contained
               ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
             end
@@ -468,6 +462,14 @@ realize(b::LazyBackend, w::Wall) =
 closed_path_for_height(path, h) =
   let ps = path_vertices(path)
     closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
+  end
+
+subtract_paths(b::LazyBackend, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path) =
+  let idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
+    closed_polygonal_path(
+      inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs)),
+    closed_polygonal_path(
+      inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
   end
 
 realize_polygon(b::LazyBackend, mat, path::Path, acw=true) =
