@@ -342,12 +342,6 @@ povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, with
     turbidity,
     "SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude))")
 
-backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity, withsun) =
-  b.sky = povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
-
-backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
-  b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
-
 ####################################################
 
 abstract type POVRayKey end
@@ -423,9 +417,13 @@ set_sun(altitude, azimuth, b::POVRay) =
     b.azimuth = azimuth
   end
 
-set_normal_sky(b::POVRay) =
-  b.sky = povray_normal_sky
+backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity, withsun) =
+  b.sky = povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
 
+backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
+  b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
+
+#
 delete_all_shapes(b::POVRay) =
   begin
     delete_all_shapes(autocad)

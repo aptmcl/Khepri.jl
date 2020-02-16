@@ -252,12 +252,6 @@ radiance_cie_sky_string(altitude, azimuth, turbidity, withsun) =
     radiance_extra_sky_rad_contents
   end
 
-backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidity, withsun) =
-  b.sky = radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
-
-backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
-  b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
-
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
 simulations running at the same time.
@@ -608,17 +602,13 @@ set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
 get_view(b::Radiance) =
   b.camera, b.target, b.lens
 
-export empty_sky,
-       cie_overcast_sky,
-       utah_sky
-empty_sky(backend::Backend=radiance) =
-  backend.sky = ""
-cie_overcast_sky(backend::Backend=radiance; args...) =
-  backend.sky = radiance_cie_overcast_sky(; args...)
-utah_sky(backend::Backend=radiance; args...) =
-  backend.sky = radiance_utah_sky(; args...)
-#current_backend(radiance)
+backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidity, withsun) =
+  b.sky = radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
 
+backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
+  b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
+
+#
 delete_all_shapes(b::Radiance) =
   begin
     delete_all_shapes(autocad)
