@@ -1213,3 +1213,21 @@ render_view(name::String) =
     render_view(path, current_backend())
     path
   end
+
+export realistic_sky
+realistic_sky(;
+    date::DateTime=DateTime(2020, 9, 21, 10, 0, 0),
+    latitude::Real=39,
+    longitude::Real=9,
+    meridian::Real=0,
+    altitude::Union{Missing,Real}=missing,
+    azimuth::Union{Missing,Real}=missing,
+    turbidity::Real=5,
+    withsun::Bool=true) =
+  ismissing(altitude) ?
+    backend_realistic_sky(
+      current_backend(),
+      date, latitude, longitude, meridian, turbidity, withsun) :
+    backend_realistic_sky(
+      current_backend(),
+      altitude, azimuth, turbidity, withsun)

@@ -1,5 +1,9 @@
 #=
 A backend for POVRay
+
+WARNING: Install POVRay and then install http://www.ignorancia.org/index.php/technical/lightsys/
+so that realistic skies can be used
+
 =#
 export POVRay,
        povray,
@@ -278,73 +282,71 @@ const default_povray_material = Parameter{POVRayMaterial}(povray_concrete)
 povray_material(name::String;
                 gray::Real=0.3,
                 red::Real=gray, green::Real=gray, blue::Real=gray,
-                specularity=nothing, roughness=nothing,
+                specularity=0, roughness=0,
                 transmissivity=nothing, transmitted_specular=nothing) =
   povray_definition(name, "texture", """{
   pigment { rgb<$(red),$(green),$(blue)> }
   finish { specular $(specularity) roughness $(roughness) }
 }""")
 
+povray_glass_material(name::String; args...) =
+  povray_definition(name, "material", """{
+  texture { NBglass } interior { ior 1.5 fade_distance 1.0 fade_power 2}}
+  }""")
+
 ####################################################
 # Sky models
 
-const povray_normal_sky = """
-sky_sphere{
- pigment{ gradient <0,1,0>
-          color_map{
-          [0.0 color rgb<1,1,1>        ]
-          [0.8 color rgb<0.1,0.25,0.75>]
-          [1.0 color rgb<0.1,0.25,0.75>]}
-        } // end pigment
- }
- """
-
-const povray_freecad_sky = """
-sky_sphere {
-    pigment {
-        gradient y
-        color_map {
-            [0.0 color Gray50]
-            [0.7 color White]
-        }
-    }
-}
-"""
-
-# This needs to be fine tuned!!!
-povray_cie_overcast_sky(;
-    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
-    latitude::Real=61,
-    longitude::Real=150,
-    meridian::Real=135,
-    altitude::Union{Missing,Real}=missing,
-    azimuth::Union{Missing,Real}=missing,
-    withsun::Bool=true) =
-  ismissing(altitude) ? """
-#include "sunpos.inc"
-light_source {
-  SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude))
-  rgb 1
-}
-$(povray_normal_sky)
-""" : """
-light_source {
-  vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)
-  rgb 1
-}
-$(povray_normal_sky)
-"""
-
-write_povray_sky(io::IO, altitude::Real, azimuth::Real) =
+write_povray_defaults(io::IO) =
   write(io, """
-#include "sunpos.inc"
-light_source {
-  vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)
-  rgb 1
+#version 3.5;
+#include "colors.inc"
+global_settings {
+  assumed_gamma 1.0
+  radiosity {
+  }
 }
-$(povray_normal_sky)
 """)
 
+povray_realistic_sky_string(turbidity, inner) =
+"""
+#include "CIE.inc"
+#include "lightsys.inc"
+#include "lightsys_constants.inc"
+#include "sunpos.inc"
+//#default {finish {ambient 0 diffuse 1}}
+// -----------------------------------------------------
+//CIE_ColorSystemWhitepoint(Beta_ColSys, Daylight2Whitepoint(Kt_Daylight_Film))
+//CIE_GamutMapping(off)
+// -----------------------------------------------------
+//#declare Lightsys_Brightness = 1.0;
+//#declare Lightsys_Filter = <1,1,1>;
+// -----------------------------------------------------
+//#declare DomeSize=1e5;
+#declare Current_Turbidity = $(turbidity);
+//#declare Intensity_Mult = 0.7;
+#include "CIE_Skylight.inc"
+light_source{
+  $(inner)
+  Light_Color(SunColor,5)
+}
+"""
+
+povray_realistic_sky_string(altitude, azimuth, turbidity, withsun) =
+  povray_realistic_sky_string(
+    turbidity,
+    "vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)")
+
+povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
+  povray_realistic_sky_string(
+    turbidity,
+    "SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude))")
+
+backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity, withsun) =
+  b.sky = povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
+
+backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
+  b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
 
 ####################################################
 
@@ -388,7 +390,7 @@ const povray =
   POVRay(Shape[],
          Dict{Shape,POVRayMaterial}(),
          Dict{POVRayMaterial,POVRayMaterial}(),
-         povray_cie_overcast_sky(),
+         povray_realistic_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
          xyz(0,0,0),
@@ -432,7 +434,7 @@ delete_all_shapes(b::POVRay) =
 
 backend_delete_shapes(b::POVRay, shapes::Shapes) =
   begin
-    b.shapes = filter(s->s in shapes, b.shapes)
+    b.shapes = filter(s->isnothing(findfirst(s1->s1===s, shapes)), b.shapes)
     for s in shapes delete!(b.shape_material, s) end
   end
 
@@ -578,6 +580,7 @@ realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
         write_povray_polygon(buf, side, vs)
       end
     end
+    void_ref(b)
   end
 
 realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
@@ -589,6 +592,7 @@ realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, c
     for vs in zip(bot_vs, circshift(bot_vs, 1), circshift(top_vs, 1), top_vs)
       write_povray_polygon(buf, side, vs)
     end
+    void_ref(b)
   end
 
 realize_polygon(b::POVRay, mat, path::PathSet, acw=true) =
@@ -653,12 +657,15 @@ export povray_material_family,
 povray_stone = povray_include("stones2.inc", "texture", "T_Stone35")
 povray_metal = povray_include("textures.inc", "texture", "Chrome_Metal")
 povray_wood = povray_include("textures.inc", "texture", "DMFWood1")
-povray_glass = povray_include("textures.inc", "texture", "NBglass")
+povray_glass = povray_include("textures.inc", "material", "M_Glass")
 
 export povray_stone, povray_metal, povray_wood, povray_glass
-set_backend_family(default_wall_family(), povray, povray_wall_family(povray_stone))
-set_backend_family(default_slab_family(), povray, povray_slab_family(povray_concrete))
-set_backend_family(default_roof_family(), povray, povray_roof_family(povray_stone))
+set_backend_family(default_wall_family(), povray,
+  povray_wall_family(povray_material("InteriorWall70", gray=0.7)))
+set_backend_family(default_slab_family(), povray,
+  povray_slab_family(povray_material("GenericFloor20", gray=0.2), povray_material("GenericCeiling80", gray=0.8)))
+set_backend_family(default_roof_family(), povray,
+  povray_roof_family(povray_material("GenericFloor20", gray=0.2), povray_material("GenericCeiling30", gray=0.3)))
 set_backend_family(default_beam_family(), povray, povray_material_family(povray_metal))
 set_backend_family(default_column_family(), povray, povray_material_family(povray_metal))
 set_backend_family(default_door_family(), povray, povray_material_family(povray_wood))
@@ -695,7 +702,8 @@ realize(b::POVRay, s::Beam) =
     ref(right_cuboid(s.p0, 0.2, 0.2, s.p1, 0))
 =#
 realize(b::POVRay, s::Union{Door, Window}) =
-  nothing
+  void_ref(b)
+
 
 
 
@@ -706,28 +714,6 @@ used_materials(b::POVRay) =
   unique(map(f -> realize(s.family, b), b.shapes))
 
 ####################################################
-
-write_povray_defaults(io::IO) =
-  write(io, """
-#version 3.7;
-#include "colors.inc"
-global_settings {
-assumed_gamma 1
-radiosity {
-  pretrace_start 0.08
-  pretrace_end   0.01
-  count 150
-  nearest_count 10
-  error_bound 0.5
-  recursion_limit 3
-  low_error_factor 0.5
-  gray_threshold 0.0
-  minimum_reuse 0.005
-  maximum_reuse 0.2
-  brightness 1
-  adc_bailout 0.005
-}}
-""")
 
 export_to_povray(path::String, b::POVRay=current_backend()) =
   let buf = b.buffer()
@@ -749,7 +735,8 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
         write_povray_definition(out, k)
       end
       # write sky
-      write_povray_sky(out, b.sun_altitude, b.sun_azimuth)
+      write(out, b.sky)
+      #write_povray_sky(out, b.sun_altitude, b.sun_azimuth)
       # write the objects
       write(out, String(take!(buf)))
       # write the view
@@ -780,7 +767,5 @@ export povray_render
 povray_render() =
   let path = povray_simulation_path()
     export_to_povray(path)
-    #run(`$(povray_cmd()) +w +h $path`)
-    run(`$(povray_cmd()) Width=$(render_width()) Height=$(render_height()) /RENDER $path`, wait=false)
-    #run(`$(povray_cmd("wxFalseColor")) $picpath`, wait=false)
+    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $path`, wait=false)
   end

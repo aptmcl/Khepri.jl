@@ -225,33 +225,38 @@ ground_glow source ground
 4 0 0 -1 180
 """
 
-radiance_cie_overcast_sky(;
-    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
-    latitude::Real=61,
-    longitude::Real=150,
-    meridian::Real=135,
-    altitude::Union{Missing,Real}=missing,
-    azimuth::Union{Missing,Real}=missing,
-    withsun::Bool=true) =
+radiance_utah_sky_string(
+    date=DateTime(2020, 9, 21, 10, 0, 0),
+    latitude=39,
+    longitude=9,
+    meridian=0,
+    turbidity=5,
+    withsun=true) =
   let _2d(n) = lpad(n, 2, '0')
-    "!gensky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) $(withsun ? "+s" : "-s") -a $(latitude) -o $(longitude) -m $(meridian)" *
-    (ismissing(azimuth) ? "" : " -ang $(altitude) $(azimuth)") *
+    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date)+minute(date)/60)) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
     "\n" *
     radiance_extra_sky_rad_contents
   end
 
-#
-radiance_utah_sky(;
-    date::DateTime=DateTime(2020, 9, 21, 9, 0, 0),
-    turbidity::Real=5.0,
-    latitude::Real=61,
-    longitude::Real=150,
-    meridian::Real=135) =
+radiance_cie_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   let _2d(n) = lpad(n, 2, '0')
-    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
-    "\n" *
+    "!gensky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) " *
+    "$(withsun ? "+s" : "-s") -a $(latitude) -o $(longitude) -m $(meridian) -t $(turbidity)\n" *
     radiance_extra_sky_rad_contents
   end
+
+radiance_cie_sky_string(altitude, azimuth, turbidity, withsun) =
+  let _2d(n) = lpad(n, 2, '0')
+    "!gensky -ang $(altitude) $(azimuth) " *
+    "$(withsun ? "+s" : "-s") -t $(turbidity)\n" *
+    radiance_extra_sky_rad_contents
+  end
+
+backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidity, withsun) =
+  b.sky = radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
+
+backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
+  b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
 
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
@@ -557,7 +562,7 @@ const radiance =
   Radiance{500}(Shape[],
                 Dict{Shape,RadianceMaterial}(),
                 Dict(),
-                radiance_utah_sky(),
+                radiance_utah_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
                 LazyParameter(IOBuffer, IOBuffer),
                 xyz(10,10,10),
                 xyz(0,0,0),
