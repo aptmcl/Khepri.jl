@@ -603,7 +603,7 @@ get_view(b::Radiance) =
   b.camera, b.target, b.lens
 
 backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidity, withsun) =
-  b.sky = radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
+  b.sky = radiance_cie_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
 
 backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
   b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
@@ -997,9 +997,8 @@ radiance_visualization(b::Radiance=radiance; light=(1,1,1)) =
   end
 
 export radiance_render
-radiance_render(b::Radiance=radiance) =
-  let path = radiance_simulation_path(),
-      radpath = export_geometry(b, path),
+render_view(path::String, b::Radiance) =
+  let radpath = export_geometry(b, path),
       matpath = export_materials(b, path),
       skypath = export_sky(b, path),
       octpath = radiance_oconv(radpath, matpath, skypath)
@@ -1009,7 +1008,6 @@ radiance_render(b::Radiance=radiance) =
     #radiance_rpict(octpath, b.camera, b.target, b.lens)
     diva_render(octpath, b.camera, b.target, b.lens)
   end
-
 
 struct DaysimAnalysis <: LightingAnalysis
 end

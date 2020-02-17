@@ -17,6 +17,8 @@ import Base.show
 # First, basic types
 show(io::IO, ::MIMEPOVRay, s::String) =
   show(io, s)
+show(io::IO, ::MIMEPOVRay, s::Symbol) =
+  print(io, s)
 show(io::IO, ::MIMEPOVRay, r::Real) =
   show(io, r)
 show(io::IO, mime::MIMEPOVRay, v::Vector) =
@@ -82,6 +84,7 @@ write_povray_camera(io::IO, camera, target, lens) =
   write_povray_object(io, "camera", nothing) do
     write_povray_param(io, "location", camera)
     write_povray_param(io, "look_at", target)
+    write_povray_param(io, "right", Symbol("x*image_width/image_height"))
     write_povray_param(io, "angle", view_angles(lens)[1])
   end
 
@@ -335,12 +338,15 @@ light_source{
 povray_realistic_sky_string(altitude, azimuth, turbidity, withsun) =
   povray_realistic_sky_string(
     turbidity,
-    "vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth),0>)")
+    "vrotate(<0,0,1000000000>,<-$(altitude),$(azimuth+180),0>)")
 
 povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   povray_realistic_sky_string(
     turbidity,
-    "SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude))")
+    """
+#local xpto = SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude));
+vrotate(<0,0,1000000000>,<-Al,Az+180,0>)
+""")
 
 ####################################################
 
@@ -718,9 +724,9 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
     # First pass, to fill material dictionary
     take!(buf)
     # We cannot do this because the array might be updated during the iteration
-#    for s in b.shapes
-#      ref(s)
-#    end
+    for s in b.shapes
+      mark_deleted(s)
+    end
     i = 1
     while i <= length(b.shapes)
       ref(b.shapes[i])
@@ -761,9 +767,9 @@ povray_cmd(cmd::AbstractString="pvengine64") = povray_folder() * cmd
 
 ##########################################
 
-export povray_render
-povray_render() =
-  let path = povray_simulation_path()
-    export_to_povray(path)
-    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $path`, wait=false)
+render_view(path::String, b::POVRay) =
+  let povpath = path_replace_suffix(path, ".pov")
+    @info povpath
+    export_to_povray(povpath)
+    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
   end
