@@ -225,23 +225,19 @@ ground_glow source ground
 4 0 0 -1 180
 """
 
-radiance_utah_sky_string(
-    date=DateTime(2020, 9, 21, 10, 0, 0),
-    latitude=39,
-    longitude=9,
-    meridian=0,
-    turbidity=5,
-    withsun=true) =
+radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   let _2d(n) = lpad(n, 2, '0')
-    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date)+minute(date)/60)) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(longitude) -m $(meridian)" *
+    # Positive longitude is east, negative is west. genutahsky considers the opposite
+    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date)+minute(date)/60)) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(-longitude) -m $(-meridian)" *
     "\n" *
     radiance_extra_sky_rad_contents
   end
 
 radiance_cie_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   let _2d(n) = lpad(n, 2, '0')
+    # Positive longitude is east, negative is west. gensky considers the opposite
     "!gensky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) " *
-    "$(withsun ? "+s" : "-s") -a $(latitude) -o $(longitude) -m $(meridian) -t $(turbidity)\n" *
+    "$(withsun ? "+s" : "-s") -a $(latitude) -o $(-longitude) -m $(-meridian) -t $(turbidity)\n" *
     radiance_extra_sky_rad_contents
   end
 
@@ -603,7 +599,7 @@ get_view(b::Radiance) =
   b.camera, b.target, b.lens
 
 backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidity, withsun) =
-  b.sky = radiance_cie_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
+  b.sky = radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun)
 
 backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
   b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
