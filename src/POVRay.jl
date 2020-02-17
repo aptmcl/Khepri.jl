@@ -345,7 +345,7 @@ povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, with
     turbidity,
     """
 #local xpto = SunPos($(year(date)), $(month(date)), $(day(date)), $(hour(date)), $(minute(date)), $(meridian), $(latitude), $(longitude));
-vrotate(<0,0,1000000000>,<-Al,Az+180,0>)
+vrotate(<0,0,1000000000>,<-Al,Az,0>)
 """)
 
 ####################################################
@@ -406,7 +406,6 @@ get_material(b::POVRay, s::Shape) = get_material(b, get(b.shape_material, s, def
 
 set_view(camera::Loc, target::Loc, lens::Real, b::POVRay) =
   begin
-    set_view(camera, target, lens, autocad)
     b.camera = camera
     b.target = target
     b.lens = lens
@@ -432,7 +431,6 @@ backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
 #
 delete_all_shapes(b::POVRay) =
   begin
-    delete_all_shapes(autocad)
     (empty!(b.shapes); empty!(b.materials); empty!(b.shape_material); nothing)
   end
 
@@ -606,7 +604,6 @@ realize_polygon(b::POVRay, mat, path::PathSet, acw=true) =
 
 realize_polygon(b::POVRay, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
-    polygon(vs, backend=autocad)
     write_povray_polygon(buf, mat, acw ? vs : reverse(vs))
   end
 

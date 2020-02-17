@@ -42,10 +42,10 @@ write_rad_primitive(io::IO, modifier, typ, identifier, strings, ints, reals) =
 
 write_rad_polygon(io::IO, modifier, id, vertices) =
   begin
-    with(current_backend, autocad) do
-      polygon(vertices)
-      #surface_polygon(vertices)
-    end
+#    with(current_backend, autocad) do
+#      polygon(vertices)
+#      #surface_polygon(vertices)
+#    end
     println(io, modifier, " ", "polygon", " ", id)
     println(io, 0) #0 strings
     println(io, 0) #0 ints
@@ -593,7 +593,7 @@ end
 
 set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
   begin
-    set_view(camera, target, lens, autocad)
+#    set_view(camera, target, lens, autocad)
     b.camera = camera
     b.target = target
     b.lens = lens
@@ -611,7 +611,7 @@ backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
 #
 delete_all_shapes(b::Radiance) =
   begin
-    delete_all_shapes(autocad)
+#    delete_all_shapes(autocad)
     (empty!(b.shapes); empty!(b.materials); empty!(b.shape_material); b.count = 0; nothing)
   end
 
@@ -769,7 +769,7 @@ realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs,
 
 realize_polygon(b::Radiance, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
-    polygon(vs, backend=autocad)
+#    polygon(vs, backend=autocad)
     write_rad_polygon(buf, mat, next_id(b), acw ? vs : reverse(vs))
   end
 
