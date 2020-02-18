@@ -843,7 +843,7 @@ zoom_extents(b::ACAD) = @remote(b, ZoomExtents())
 
 view_top(b::ACAD) = @remote(b, ViewTop())
 
-backend_realistic_sky(b::AVAD, date, latitude, longitude, meridian, turbidity, withsun) =
+backend_realistic_sky(b::ACAD, date, latitude, longitude, meridian, turbidity, withsun) =
   @remote(b, SetSkyFromDateLocation(year(date), month(date), day(date),
                                     hour(date), minute(date),
                                     latitude, longitude, meridian))
