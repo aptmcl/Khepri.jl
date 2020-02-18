@@ -96,6 +96,7 @@ public void ViewTop()
 public Point3d ViewCamera()
 public Point3d ViewTarget()
 public double ViewLens()
+public void SetSkyFromDateLocation(int year, int month, int day, int hour, int minute, double latitude, double longitude, double meridian)
 public byte Sync()
 public byte Disconnect()
 public ObjectId Copy(ObjectId id)
@@ -842,6 +843,10 @@ zoom_extents(b::ACAD) = @remote(b, ZoomExtents())
 
 view_top(b::ACAD) = @remote(b, ViewTop())
 
+backend_realistic_sky(b::AVAD, date, latitude, longitude, meridian, turbidity, withsun) =
+  @remote(b, SetSkyFromDateLocation(year(date), month(date), day(date),
+                                    hour(date), minute(date),
+                                    latitude, longitude, meridian))
 
 
 backend_delete_shapes(b::ACAD, shapes::Shapes) =
