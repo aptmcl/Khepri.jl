@@ -610,7 +610,7 @@ backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
   b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
 
 
-backend_ground(b::POVRay) =
+backend_ground(b::Radiance) =
   b.ground = radiance_ground_string()
 
 #
