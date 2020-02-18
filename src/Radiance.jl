@@ -557,6 +557,7 @@ const radiance =
                 Dict{Shape,RadianceMaterial}(),
                 Dict(),
                 radiance_utah_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
+                radiance_ground_string(),
                 LazyParameter(IOBuffer, IOBuffer),
                 xyz(10,10,10),
                 xyz(0,0,0),
