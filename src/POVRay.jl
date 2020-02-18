@@ -352,7 +352,7 @@ vrotate(<0,0,1000000000>,<-Al,Az,0>)
 # Ground models
 
 povray_ground_string() =
-  "plane { y, -.25 pigment { rgb 1 } }\n"
+  "plane { y, -.25 pigment { rgb 0.25 } }\n"
 ####################################################
 
 abstract type POVRayKey end
@@ -377,6 +377,9 @@ mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
 end
 
 const POVRay = POVRayBackend{POVRayKey, POVRayId}
+# Traits
+has_boolean_ops(::Type{POVRay}) = HasBooleanOps{false}()
+
 
 # In POVRay, everytime we save a shape, we attach the default_povray_material
 save_shape!(b::POVRay, s::Shape) =
@@ -768,12 +771,11 @@ const povray_folder = Parameter("C:/Program Files/POV-Ray/v3.7/bin/")
 povray_cmd(cmd::AbstractString="pvengine64") = povray_folder() * cmd
 
 ##########################################
-export wait_for_render
-wait_for_render = Parameter(true)
-
 render_view(path::String, b::POVRay) =
   let povpath = path_replace_suffix(path, ".pov")
     @info povpath
     export_to_povray(povpath)
-    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=wait_for_render())
+    film_active() ?
+      run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
+      run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
   end

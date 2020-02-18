@@ -227,15 +227,15 @@ ground_glow source ground
 
 radiance_utah_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   let _2d(n) = lpad(n, 2, '0')
-    # Positive longitude is east, negative is west. genutahsky considers the opposite
-    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date)+minute(date)/60)) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(-longitude) -m $(-meridian)" *
+    # Positive longitude is east, negative is west but genutahsky considers the opposite
+    "!genutahsky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date)+minute(date)/60)) -y $(year(date)) -t $(turbidity) -a $(latitude) -o $(360+longitude) -m $(360+meridian)" *
     "\n" *
     radiance_extra_sky_rad_contents
   end
 
 radiance_cie_sky_string(date, latitude, longitude, meridian, turbidity, withsun) =
   let _2d(n) = lpad(n, 2, '0')
-    # Positive longitude is east, negative is west. gensky considers the opposite
+    # Positive longitude is east, negative is west but gensky considers the opposite
     "!gensky $(_2d(month(date))) $(_2d(day(date))) $(_2d(hour(date))):$(_2d(minute(date))) " *
     "$(withsun ? "+s" : "-s") -a $(latitude) -o $(-longitude) -m $(-meridian) -t $(turbidity)\n" *
     radiance_extra_sky_rad_contents
@@ -248,9 +248,6 @@ radiance_cie_sky_string(altitude, azimuth, turbidity, withsun) =
     radiance_extra_sky_rad_contents
   end
 
-############################################
-# Ground models
-radiance_ground_string() = ""
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
 simulations running at the same time.
@@ -527,7 +524,6 @@ mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   shape_material::Dict{Shape,RadianceMaterial}
   materials::Dict
   sky::String
-  ground::String
   buffer::LazyParameter{IOBuffer}
   camera::Loc
   target::Loc
@@ -538,6 +534,10 @@ mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
 end
 
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
+# Traits
+has_boolean_ops(::Type{Radiance}) = HasBooleanOps{false}()
+
+
 
 save_shape!(b::Radiance, s::Shape) =
   begin
@@ -557,7 +557,6 @@ const radiance =
                 Dict{Shape,RadianceMaterial}(),
                 Dict(),
                 radiance_utah_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
-                radiance_ground_string(),
                 LazyParameter(IOBuffer, IOBuffer),
                 xyz(10,10,10),
                 xyz(0,0,0),
@@ -608,10 +607,6 @@ backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidit
 
 backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
   b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
-
-
-backend_ground(b::Radiance) =
-  b.ground = radiance_ground_string()
 
 #
 delete_all_shapes(b::Radiance) =
@@ -943,9 +938,6 @@ realize(b::Radiance, s::Beam) =
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
 
-
-
-
 #=
 
 Sensors are need on the surfaces that are intended for analysis.
@@ -1060,14 +1052,15 @@ export_geometry(b::Radiance, path::AbstractString) =
     for s in b.shapes
       realize(b, s)
     end
-    # write the ground
-    write(buf, b.ground)
-    # write the objects
+    add_ground_plane(b)
     open(radpath, "w") do out
       write(out, String(take!(buf)))
     end
     radpath
   end
+
+add_ground_plane(b::Radiance) =
+  @warn "Not generating ground plane"
 
 used_materials(b::Radiance) =
   let materials = unique(map(f -> realize(s.family, b), b.shapes))

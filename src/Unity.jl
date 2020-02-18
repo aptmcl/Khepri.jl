@@ -776,66 +776,6 @@ backend_wall(b::Unity, w_path, w_height, l_thickness, r_thickness, family) =
       refs
     end
 
-realize(b::Unity, w::Wall) =
-  let w_base_height = w.bottom_level.height,
-      w_height = (w.top_level.height - w_base_height)*wall_z_fighting_factor,
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w),
-      w_path = translate(w.path, vz(w_base_height)),
-      w_paths = subpaths(w_path),
-      r_w_paths = subpaths(offset(w_path, -r_thickness)),
-      l_w_paths = subpaths(offset(w_path, l_thickness)),
-      openings = [w.doors..., w.windows...],
-      prevlength = 0,
-      material = realize(b, w.family),
-      refs = UnityNativeRef[]
-    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-      let currlength = prevlength + path_length(w_seg_path),
-          c_r_w_path = closed_path_for_height(r_w_path, w_height),
-          c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        push!(refs, realize_pyramid_fustrum(b, c_l_w_path, c_r_w_path, material))
-        openings = filter(openings) do op
-          if prevlength <= op.loc.x < currlength ||
-             prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
-            let op_height = op.family.height,
-                op_at_start = op.loc.x <= prevlength,
-                op_at_end = op.loc.x + op.family.width >= currlength,
-                op_path = subpath(w_path,
-                                  max(prevlength, op.loc.x),
-                                  min(currlength, op.loc.x + op.family.width)),
-                r_op_path = offset(op_path, -r_thickness),
-                l_op_path = offset(op_path, l_thickness),
-                fixed_r_op_path =
-                  open_polygonal_path([path_start(op_at_start ? r_w_path : r_op_path),
-                                       path_end(op_at_end ? r_w_path : r_op_path)]),
-                fixed_l_op_path =
-                  open_polygonal_path([path_start(op_at_start ? l_w_path : l_op_path),
-                                       path_end(op_at_end ? l_w_path : l_op_path)]),
-                c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
-                c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height),
-                idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
-              push!(refs, realize_pyramid_fustrum(b, c_r_op_path, c_l_op_path, material))
-              c_r_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs))
-              c_l_w_path =
-                closed_polygonal_path(
-                  inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
-              # preserve if not totally contained
-              ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
-            end
-          else
-            true
-          end
-        end
-        prevlength = currlength
-        #realize_polygon(b, modleft, modright, modright, c_l_w_path, false)
-        #realize_polygon(b, modleft, modright, modright, c_r_w_path, true)
-      end
-    end
-    refs
-  end
-
 realize_pyramid_fustrum(b::Unity, bot_path::Path, top_path::Path, material) =
   realize_pyramid_fustrum(b, path_vertices(bot_path), path_vertices(top_path), material)
 
