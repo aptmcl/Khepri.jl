@@ -1231,3 +1231,7 @@ realistic_sky(;
     backend_realistic_sky(
       current_backend(),
       altitude, azimuth, turbidity, withsun)
+
+export ground
+ground() =
+  backend_ground(current_backend())

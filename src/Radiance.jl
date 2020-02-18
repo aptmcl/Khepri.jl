@@ -248,6 +248,9 @@ radiance_cie_sky_string(altitude, azimuth, turbidity, withsun) =
     radiance_extra_sky_rad_contents
   end
 
+############################################
+# Ground models
+radiance_ground_string() = ""
 #=
 Simulations need to be done on a temporary folder, so that we can have multiple
 simulations running at the same time.
@@ -524,6 +527,7 @@ mutable struct RadianceBackend{K,T,LOD} <: LazyBackend{K,T}
   shape_material::Dict{Shape,RadianceMaterial}
   materials::Dict
   sky::String
+  ground::String
   buffer::LazyParameter{IOBuffer}
   camera::Loc
   target::Loc
@@ -603,6 +607,10 @@ backend_realistic_sky(b::Radiance, date, latitude, longitude, meridian, turbidit
 
 backend_realistic_sky(b::Radiance, altitude, azimuth, turbidity, withsun) =
   b.sky = radiance_cie_sky_string(altitude, azimuth, turbidity, withsun)
+
+
+backend_ground(b::POVRay) =
+  b.ground = radiance_ground_string()
 
 #
 delete_all_shapes(b::Radiance) =
@@ -934,6 +942,9 @@ realize(b::Radiance, s::Beam) =
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
 
+
+
+
 #=
 
 Sensors are need on the surfaces that are intended for analysis.
@@ -1048,15 +1059,14 @@ export_geometry(b::Radiance, path::AbstractString) =
     for s in b.shapes
       realize(b, s)
     end
-    add_ground_plane(b)
+    # write the ground
+    write(buf, b.ground)
+    # write the objects
     open(radpath, "w") do out
       write(out, String(take!(buf)))
     end
     radpath
   end
-
-add_ground_plane(b::Radiance) =
-  @warn "Not generating ground plane"
 
 used_materials(b::Radiance) =
   let materials = unique(map(f -> realize(s.family, b), b.shapes))

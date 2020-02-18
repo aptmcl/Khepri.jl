@@ -348,6 +348,11 @@ povray_realistic_sky_string(date, latitude, longitude, meridian, turbidity, with
 vrotate(<0,0,1000000000>,<-Al,Az,0>)
 """)
 
+############################################
+# Ground models
+
+povray_ground_string() =
+  "plane { y, -.25 pigment { rgb 1 } }\n"
 ####################################################
 
 abstract type POVRayKey end
@@ -362,6 +367,7 @@ mutable struct POVRayBackend{K,T} <: LazyBackend{K,T}
   shape_material::Dict{Shape,POVRayMaterial}
   materials::Dict{POVRayMaterial,POVRayMaterial}
   sky::String
+  ground::String
   buffer::LazyParameter{IOBuffer}
   camera::Loc
   target::Loc
@@ -427,6 +433,9 @@ backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity,
 
 backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
   b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
+
+backend_ground(b::POVRay) =
+  b.ground = povray_ground_string()
 
 #
 delete_all_shapes(b::POVRay) =
@@ -705,12 +714,6 @@ realize(b::POVRay, s::Beam) =
 realize(b::POVRay, s::Union{Door, Window}) =
   void_ref(b)
 
-
-
-
-add_ground_plane(b::POVRay) =
-  @warn "Not generating ground plane"
-
 used_materials(b::POVRay) =
   unique(map(f -> realize(s.family, b), b.shapes))
 
@@ -735,9 +738,10 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
       for (k,v) in b.materials
         write_povray_definition(out, k)
       end
-      # write sky
+      # write the sky
       write(out, b.sky)
-      #write_povray_sky(out, b.sun_altitude, b.sun_azimuth)
+      # write the ground
+      write(out, b.ground)
       # write the objects
       write(out, String(take!(buf)))
       # write the view
@@ -763,10 +767,12 @@ const povray_folder = Parameter("C:/Program Files/POV-Ray/v3.7/bin/")
 povray_cmd(cmd::AbstractString="pvengine64") = povray_folder() * cmd
 
 ##########################################
+export wait_for_render
+wait_for_render = Parameter(true)
 
 render_view(path::String, b::POVRay) =
   let povpath = path_replace_suffix(path, ".pov")
     @info povpath
     export_to_povray(povpath)
-    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
+    run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=wait_for_render())
   end
