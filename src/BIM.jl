@@ -405,7 +405,55 @@ A wall contains doors and windows
           offset::Real=is_closed_path(path) ? 1/2 : 0, # offset is relative to the thickness
           doors::Shapes=Shape[], windows::Shapes=Shape[])
 
-realize(b::LazyBackend, w::Wall) =
+# The protocol starts by identifying the approach to use. It can be either
+# based on Boolean operations or on the construction of polygonal elements.
+# Then, for each approach, the appropriate implementation is selected.
+
+struct HasBooleanOps{T} end
+# By default, we rely on boolean operations
+has_boolean_ops(::Type{<:Backend}) = HasBooleanOps{true}()
+
+realize(b::B, w::Wall) where B<:Backend =
+  realize(has_boolean_ops(B), b, w)
+
+realize(::HasBooleanOps{true}, b::Backend, w::Wall) =
+  with_family_in_layer(b, w.family) do
+    realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
+  end
+
+realize_wall_no_openings(b::Backend, w::Wall) =
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      w_path = translate(w.path, vz(w_base_height)),
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w)
+    ensure_ref(b, backend_wall(b, w_path, w_height, l_thickness, r_thickness, w.family))
+  end
+
+realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
+  let w_base_height = w.bottom_level.height,
+      w_height = w.top_level.height - w_base_height,
+      w_path = translate(w.path, vz(w_base_height)),
+      r_thickness = r_thickness(w),
+      l_thickness = l_thickness(w)
+    for opening in openings
+      w_ref = realize_wall_opening(b, w_ref, w_path, l_thickness, r_thickness, opening, w.family)
+      ref(opening)
+    end
+    w_ref
+  end
+
+realize_wall_opening(b::Backend, w_ref, w_path, l_thickness, r_thickness, op, family) =
+  let op_base_height = op.loc.y,
+      op_height = op.family.height,
+      op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
+      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, l_thickness, r_thickness, family))
+    ensure_ref(b, subtract_ref(b, w_ref, op_ref))
+  end
+
+# For backends that do not support boolean operations, we use a different approach
+
+realize(::HasBooleanOps{false}, b::Backend, w::Wall) =
   let w_base_height = w.bottom_level.height,
       w_height = w.top_level.height - w_base_height,
       r_thickness = r_thickness(w),
@@ -543,42 +591,6 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
   thickness::Real=0.05)
 
 @defproxy(window, Shape3D, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
-
-# Default implementation
-realize(b::Backend, w::Wall) =
-  with_family_in_layer(b, w.family) do
-    realize_wall_openings(b, w, realize_wall_no_openings(b, w), [w.doors..., w.windows...])
-  end
-
-realize_wall_no_openings(b::Backend, w::Wall) =
-  let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
-      w_path = translate(w.path, vz(w_base_height)),
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w)
-    ensure_ref(b, backend_wall(b, w_path, w_height, l_thickness, r_thickness, w.family))
-  end
-
-realize_wall_openings(b::Backend, w::Wall, w_ref, openings) =
-  let w_base_height = w.bottom_level.height,
-      w_height = w.top_level.height - w_base_height,
-      w_path = translate(w.path, vz(w_base_height)),
-      r_thickness = r_thickness(w),
-      l_thickness = l_thickness(w)
-    for opening in openings
-      w_ref = realize_wall_opening(b, w_ref, w_path, l_thickness, r_thickness, opening, w.family)
-      ref(opening)
-    end
-    w_ref
-  end
-
-realize_wall_opening(b::Backend, w_ref, w_path, l_thickness, r_thickness, op, family) =
-  let op_base_height = op.loc.y,
-      op_height = op.family.height,
-      op_path = translate(subpath(w_path, op.loc.x, op.loc.x + op.family.width), vz(op_base_height)),
-      op_ref = ensure_ref(b, backend_wall(b, op_path, op_height, l_thickness, r_thickness, family))
-    ensure_ref(b, subtract_ref(b, w_ref, op_ref))
-  end
 
 realize(b::Backend, s::Union{Door, Window}) =
   with_family_in_layer(b, s.family) do
