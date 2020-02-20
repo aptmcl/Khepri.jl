@@ -1309,7 +1309,7 @@ create_cladding(id, pts) =
     end
   end
 
-
+#=
 mypts = [xyz(-4.0,2.0,0.0), xyz(1.0,-3.0,0.0), xyz(1.0,2.0,4.0)]
 rpts = create_component(CmpntFactory(application()), I_CT_POINTS_ARRAY)
 objserver = objects(structure(project(application())))
@@ -1326,7 +1326,7 @@ Meshed(Attribs(Main(contour)))
 initialize(contour)
 set_label(contour, I_LT_CLADDING, "Two-way")
 update(contour)
-
+=#
 
 new_case(number, name, nature, analize_type, setup, process_results) =
   let case = create_simple(cases(structure(project(application()))),
