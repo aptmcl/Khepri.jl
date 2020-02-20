@@ -1374,10 +1374,18 @@ bar_max_stress(results, id, case_id) =
 
 
 #
-struct COM_Backend{K,T} <: Backend{K,T}
+struct RobotBackend{K,T} <: LazyBackend{K,T}
   com::Any
+  nodes::TrussNodes[]
+  bars::TrussBars[]
 end
-connection(backend::COM_Backend) = backend.com
+
+# We save the shapes in different buckets
+save_shape!(b::RobotBackend, s::TrussNode) = (push!(b.nodes, s); s)
+save_shape!(b::RobotBackend, s::TrussBar) = (push!(b.bars, s); s)
+
+
+connection(backend::RobotBackend) = backend.com
 
 abstract type ROBOTKey end
 const ROBOTId = Any

@@ -3,7 +3,7 @@ using Base.Iterators
 using Sockets
 using Dates
 using ColorTypes
-#using PyCall
+using PyCall
 
 include("Parameters.jl")
 include("Utils.jl")
@@ -25,7 +25,6 @@ include("POVRay.jl")
 include("Unity.jl")
 include("Unreal.jl")
 include("Camera.jl")
-#const com = PyNULL()
-
-#include("Robot.jl")
+const com = PyNULL()
+include("Robot.jl")
 end
