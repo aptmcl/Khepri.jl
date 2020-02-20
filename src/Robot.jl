@@ -1405,7 +1405,9 @@ project_kind = Parameter(I_PT_SHELL)
 
 create_ROBOT_connection() = new_project!(project_kind())
 
-const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection))
+const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection),
+                    TrussNode[],
+                    TrussBar[])
 
 # Robot does not need layers
 with_family_in_layer(f::Function, backend::ROBOT, family::Family) = f()
