@@ -1235,3 +1235,11 @@ realistic_sky(;
 export ground
 ground() =
   backend_ground(current_backend())
+
+
+############################################################
+# Analysis
+
+abstract type Analysis end
+abstract type StructuralAnalysis <: Analysis end
+abstract type LightingAnalysis <: Analysis end

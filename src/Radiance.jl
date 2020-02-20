@@ -536,7 +536,7 @@ end
 const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
 # Traits
 has_boolean_ops(::Type{Radiance}) = HasBooleanOps{false}()
-
+#eager_realize(::Type{Radiance}) = EagerRealize{false}()
 
 
 save_shape!(b::Radiance, s::Shape) =
@@ -975,10 +975,6 @@ sensors_locations(s::Slab, b::Radiance) =
       in_ptss = map(path_vertices, s.openings),
       p_ns = Main.plane_surface_sensor_locations(out_pts, in_ptss)
   end
-
-abstract type Analysis end
-abstract type StructuralAnalysis <: Analysis end
-abstract type LightingAnalysis <: Analysis end
 
 struct RadianceVisualization <: LightingAnalysis
 end
