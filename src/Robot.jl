@@ -1397,7 +1397,7 @@ const ROBOTUniversalRef = UniversalRef{ROBOTKey, ROBOTId}
 const ROBOTNativeRef = NativeRef{ROBOTKey, ROBOTId}
 const ROBOTUnionRef = UnionRef{ROBOTKey, ROBOTId}
 const ROBOTSubtractionRef = SubtractionRef{ROBOTKey, ROBOTId}
-const ROBOT = COM_Backend{ROBOTKey, ROBOTId}
+const ROBOT = RobotBackend{ROBOTKey, ROBOTId}
 
 void_ref(b::ROBOT) = ROBOTNativeRef(-1)
 
