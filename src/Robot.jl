@@ -1009,7 +1009,7 @@ create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
   end)
 
 # Nodes
-mutable struct node_support
+Base.@kwdef mutable struct NodeSupport
     name::String
     ux::Bool
     uy::Bool
@@ -1020,29 +1020,177 @@ mutable struct node_support
     created::Bool
 end
 
-create_node_support(
-    name::String;
-    ux::Bool=false,
-    uy::Bool=false,
-    uz::Bool=false,
-    rx::Bool=false,
-    ry::Bool=false,
-    rz::Bool=false) = node_support(name, ux, uy, uz, rx, ry, rz, false)
+node_support(name::String;
+             ux::Bool=false,
+             uy::Bool=false,
+             uz::Bool=false,
+             rx::Bool=false,
+             ry::Bool=false,
+             rz::Bool=false) =
+  NodeSupport(name, ux, uy, uz, rx, ry, rz, false)
 
-struct truss_node_data
+ensure_node_support_label(support) =
+  if ! support.created
+    create_node_support_label(support.name,
+                              support.ux, support.uy, support.uz,
+                              support.rx, support.ry, support.rz)
+    support.created = true
+  end
+
+struct TrussNodeData
     id::Int
     loc::Loc
     family::Any
     load::Any
 end
 
-node_counter = Parameter(0)
-added_nodes = Parameter(Dict())
-case_counter = Parameter(0)
-bar_counter = Parameter(0)
-added_bars = Parameter(Dict())
-cladding_counter = Parameter(0)
-added_claddings = Parameter(Dict())
+truss_node_data(id::Int, loc::Loc, family::Any, load::Vec) =
+  TrussNodeData(id, loc, family, load)
+
+process_nodes(nodes, load) =
+  # We need to merge coincident nodes
+  let processed_nodes = Vector{Tuple{TrussNode, TrussNodeData}}(),
+      epsilon = coincident_truss_nodes_distance(),
+      node_data_near(loc) =
+        for (n, nd) in processed_nodes
+          distance(loc, nd.loc) < epsilon && return nd
+        end
+    for node in nodes
+      let loc = in_world(node.p),
+          data = node_data_near(loc)
+        push!(processed_nodes,
+              (node, isnothing(data) ?
+                       truss_node_data(length(processed_nodes) + 1, loc, node.family, load) :
+                       data))
+      end
+    end
+    processed_nodes
+  end
+
+#
+struct TrussBarData
+    id::Int
+    node1::TrussNodeData
+    node2::TrussNodeData
+    rotation::Double
+    family::Any
+end
+
+truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Double, family::Any) =
+  TrussBarData(id, node0, node1, rotation, family)
+
+process_bars(bars, processed_nodes) =
+  # We need to merge coincident bars
+  let processed_bars = Vector{Tuple{TrussBar, TrussBarData}}(),
+      epsilon = coincident_truss_nodes_distance(),
+      node_data_near(loc) =
+        for (n, nd) in processed_nodes
+          distance(loc, nd.loc) < epsilon && return nd
+        end
+      bar_data_near(loc1, loc2) =
+        for (b, bd) in processed_bars
+          ((distance(loc1, bd.node1.loc) < epsilon && distance(loc2, bd.node2.loc) < epsilon) ||
+           (distance(loc1, bd.node2.loc) < epsilon && distance(loc2, bd.node1.loc) < epsilon)) &&
+          return bd
+        end
+    for bar in bars
+      let loc1 = in_world(bar.p0),
+          loc2 = in_world(bar.p1),
+          data = bar_data_near(loc1, loc2)
+        push!(processed_bars,
+              (bar, isnothing(data) ?
+                       truss_bar_data(length(processed_bars) + 1,
+                                      node_data_near(loc1),
+                                      node_data_near(loc2),
+                                      bar.angle,
+                                      bar.family) :
+                       data))
+      end
+    end
+    processed_bars
+  end
+
+##################################################################
+# Robot analysis
+struct RobotAnalysis <: StructuralAnalysis
+    v::Vec
+    vs::Vecs
+end
+
+robot_analysis(; node_load, nodes_load) =
+  RobotAnalysis(node_load, nodes_load)
+
+
+add_node!(p, family, load=false, reuse=false) =
+  let p = in_world(p)
+    get!(added_nodes(), p) do
+      node_counter(node_counter()+1)
+      truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
+    end
+  end
+
+
+analyze(analysis::RobotAnalysis, b::ROBOT) =
+  let node_counter = 0,
+      added_nodes = Dict(),
+      bar_counter = 0,
+      added_bars = Dict(),
+      cladding_counter = 0,
+      added_claddings = Dict(),
+      case_counter = 0,
+      struc = structure(project(application())), # This should use the com object inside the backend
+      nds = nodes(struc),
+      brs = bars(struc),
+      node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, b.nodes)])
+        for node_data in values(added_nodes())
+          let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
+              create_node(nds, node_id, p.x, p.y, p.z)
+              support = node_family.support
+              if support != false
+                  ensure_node_support_label(support)
+                  set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
+              end
+              if node_load != false
+                  node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
+              end
+          end
+        end
+          family_bars = Dict()
+          for bar_data in values(added_bars())
+              let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
+                  create_bar(brs, bar_id, node_id0, node_id1)
+                  if abs(rotation) > 1e-16 #fix this
+                    Gamma(get_bar(brs, bar_id), rotation)
+                  end
+                  family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
+              end
+          end
+          for (bar_family, bars_ids) in family_bars
+              let robot_bar_family = realize(current_backend(), bar_family),
+                  selection = get_selection(selections(struc), I_OT_BAR),
+                  ids = IOBuffer()
+                for bar_id in bars_ids
+                    print(ids, bar_id, " ")
+                end
+                str = String(take!(ids))
+                from_text(selection, str)
+                let (name, material_name, wood, specs) = robot_bar_family.section
+                    set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+                end
+              end
+          end
+          for cladding_data in values(added_claddings())
+              create_cladding(cladding_data.id, cladding_data.pts)
+          end
+          case_counter(case_counter()+1)
+          new_case(case_counter(),
+                   "Test-$(case_counter())",
+                   I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
+                   I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
+                   records -> new_node_loads(records, node_loads, self_weight),
+                   process_results)
+    end
+
 
 add_node!(p, family, load=false, reuse=false) =
   let p = in_world(p)
@@ -1053,29 +1201,6 @@ add_node!(p, family, load=false, reuse=false) =
   end
 
 # Bars
-
-struct truss_bar_data
-    id::Int
-    node0::truss_node_data
-    node1::truss_node_data
-    rotation::Double
-    family::Any
-end
-
-add_bar!(p0, p1, rotation, family) =
-  let p0 = in_world(p0),
-      p1 = in_world(p1)
-    get(added_bars(), (p1, p0)) do
-        get!(added_bars(), (p0, p1)) do
-            bar_counter(bar_counter()+1)
-            truss_bar_data(bar_counter(),
-                           added_nodes()[p0],
-                           added_nodes()[p1],
-                           rotation,
-                           family)
-        end
-    end
-  end
 
 # Cladding
 
@@ -1371,21 +1496,16 @@ node_displacement_vector(displacements, id, case_id) =
 bar_max_stress(results, id, case_id) =
   Smax(bar_stress(Stresses(bars(results)), id, case_id, 0.0)) ##The position should be changeable
 
-
+const project_kind = Parameter(I_PT_SHELL)
+create_ROBOT_connection() = new_project!(project_kind())
 
 #
-struct RobotBackend{K,T} <: LazyBackend{K,T}
-  com::Any
-  nodes::Vector{<:TrussNode}
-  bars::Vector{<:TrussBar}
+Base.@kwdef struct RobotBackend{K,T} <: LazyBackend{K,T}
+  merge_coincident_nodes::Parameter{Bool}=Parameter(false)
+  com::Any=LazyParameter(Any, create_ROBOT_connection)
+  truss_nodes::Vector{<:TrussNode}=TrussNode[]
+  truss_bars::Vector{<:TrussBar}=TrussBar[]
 end
-
-# We save the shapes in different buckets
-save_shape!(b::RobotBackend, s::TrussNode) = (push!(b.nodes, s); s)
-save_shape!(b::RobotBackend, s::TrussBar) = (push!(b.bars, s); s)
-
-
-connection(backend::RobotBackend) = backend.com
 
 abstract type ROBOTKey end
 const ROBOTId = Any
@@ -1400,14 +1520,23 @@ const ROBOTSubtractionRef = SubtractionRef{ROBOTKey, ROBOTId}
 const ROBOT = RobotBackend{ROBOTKey, ROBOTId}
 
 void_ref(b::ROBOT) = ROBOTNativeRef(-1)
+const robot = ROBOT()
 
-project_kind = Parameter(I_PT_SHELL)
+# We save the shapes in different buckets
+save_shape!(b::ROBOT, s::TrussNode) = (push!(b.truss_nodes, s); s)
+save_shape!(b::ROBOT, s::TrussBar) = (push!(b.truss_bars, s); s)
+# This allows us to merge nodes
+find_truss_node(p::Loc, b::ROBOT, node::TrussNode) =
+  let epsilon = coincident_truss_nodes_distance()
+    for n in b.truss_nodes
+      if distance(n.p, p) < epsilon
+        return n
+      end
+    end
+    node
+  end
 
-create_ROBOT_connection() = new_project!(project_kind())
-
-const robot = ROBOT(LazyParameter(Any, create_ROBOT_connection),
-                    TrussNode[],
-                    TrussBar[])
+connection(backend::ROBOT) = backend.com
 
 # Robot does not need layers
 with_family_in_layer(f::Function, backend::ROBOT, family::Family) = f()
