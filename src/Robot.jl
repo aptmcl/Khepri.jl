@@ -1129,77 +1129,6 @@ add_node!(p, family, load=false, reuse=false) =
     end
   end
 
-
-analyze(analysis::RobotAnalysis, b::ROBOT) =
-  let node_counter = 0,
-      added_nodes = Dict(),
-      bar_counter = 0,
-      added_bars = Dict(),
-      cladding_counter = 0,
-      added_claddings = Dict(),
-      case_counter = 0,
-      struc = structure(project(application())), # This should use the com object inside the backend
-      nds = nodes(struc),
-      brs = bars(struc),
-      node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, b.nodes)])
-        for node_data in values(added_nodes())
-          let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
-              create_node(nds, node_id, p.x, p.y, p.z)
-              support = node_family.support
-              if support != false
-                  ensure_node_support_label(support)
-                  set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
-              end
-              if node_load != false
-                  node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
-              end
-          end
-        end
-          family_bars = Dict()
-          for bar_data in values(added_bars())
-              let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
-                  create_bar(brs, bar_id, node_id0, node_id1)
-                  if abs(rotation) > 1e-16 #fix this
-                    Gamma(get_bar(brs, bar_id), rotation)
-                  end
-                  family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
-              end
-          end
-          for (bar_family, bars_ids) in family_bars
-              let robot_bar_family = realize(current_backend(), bar_family),
-                  selection = get_selection(selections(struc), I_OT_BAR),
-                  ids = IOBuffer()
-                for bar_id in bars_ids
-                    print(ids, bar_id, " ")
-                end
-                str = String(take!(ids))
-                from_text(selection, str)
-                let (name, material_name, wood, specs) = robot_bar_family.section
-                    set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
-                end
-              end
-          end
-          for cladding_data in values(added_claddings())
-              create_cladding(cladding_data.id, cladding_data.pts)
-          end
-          case_counter(case_counter()+1)
-          new_case(case_counter(),
-                   "Test-$(case_counter())",
-                   I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
-                   I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
-                   records -> new_node_loads(records, node_loads, self_weight),
-                   process_results)
-    end
-
-
-add_node!(p, family, load=false, reuse=false) =
-  let p = in_world(p)
-    get!(added_nodes(), p) do
-      node_counter(node_counter()+1)
-      truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
-    end
-  end
-
 # Bars
 
 # Cladding
@@ -1630,3 +1559,65 @@ show_truss_deformation(results;
       end
     end
   end
+
+
+  analyze(analysis::RobotAnalysis, b::ROBOT) =
+    let node_counter = 0,
+        added_nodes = Dict(),
+        bar_counter = 0,
+        added_bars = Dict(),
+        cladding_counter = 0,
+        added_claddings = Dict(),
+        case_counter = 0,
+        struc = structure(project(application())), # This should use the com object inside the backend
+        nds = nodes(struc),
+        brs = bars(struc),
+        node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, b.nodes)])
+          for node_data in values(added_nodes())
+            let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
+                create_node(nds, node_id, p.x, p.y, p.z)
+                support = node_family.support
+                if support != false
+                    ensure_node_support_label(support)
+                    set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
+                end
+                if node_load != false
+                    node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
+                end
+            end
+          end
+            family_bars = Dict()
+            for bar_data in values(added_bars())
+                let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
+                    create_bar(brs, bar_id, node_id0, node_id1)
+                    if abs(rotation) > 1e-16 #fix this
+                      Gamma(get_bar(brs, bar_id), rotation)
+                    end
+                    family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
+                end
+            end
+            for (bar_family, bars_ids) in family_bars
+                let robot_bar_family = realize(current_backend(), bar_family),
+                    selection = get_selection(selections(struc), I_OT_BAR),
+                    ids = IOBuffer()
+                  for bar_id in bars_ids
+                      print(ids, bar_id, " ")
+                  end
+                  str = String(take!(ids))
+                  from_text(selection, str)
+                  let (name, material_name, wood, specs) = robot_bar_family.section
+                      set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+                  end
+                end
+            end
+            for cladding_data in values(added_claddings())
+                create_cladding(cladding_data.id, cladding_data.pts)
+            end
+            case_counter(case_counter()+1)
+            new_case(case_counter(),
+                     "Test-$(case_counter())",
+                     I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
+                     I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
+                     records -> new_node_loads(records, node_loads, self_weight),
+                     process_results)
+      end
