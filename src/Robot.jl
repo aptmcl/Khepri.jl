@@ -1009,32 +1009,28 @@ create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
   end)
 
 # Nodes
-Base.@kwdef mutable struct NodeSupport
-    name::String
-    ux::Bool
-    uy::Bool
-    uz::Bool
-    rx::Bool
-    ry::Bool
-    rz::Bool
-    created::Bool
+Base.@kwdef struct TrussNodeSupport
+    ux::Bool=false
+    uy::Bool=false
+    uz::Bool=false
+    rx::Bool=false
+    ry::Bool=false
+    rz::Bool=false
+    created::Parameter{Bool}=Parameter(false)
 end
 
-node_support(name::String;
-             ux::Bool=false,
-             uy::Bool=false,
-             uz::Bool=false,
-             rx::Bool=false,
-             ry::Bool=false,
-             rz::Bool=false) =
-  NodeSupport(name, ux, uy, uz, rx, ry, rz, false)
+truss_node_support = TrussNodeSupport
+truss_node_support_label(s) =
+  let k(v) = v ? "|" : "_"
+    "Support$(k(s.ux))$(k(s.uy))$(k(s.uz))$(k(s.rx))$(k(s.ry))$(k(s.rz))"
+  end
 
 ensure_node_support_label(support) =
-  if ! support.created
-    create_node_support_label(support.name,
+  if ! support.created()
+    create_node_support_label(truss_node_support_label(support),
                               support.ux, support.uy, support.uz,
                               support.rx, support.ry, support.rz)
-    support.created = true
+    support.created(true)
   end
 
 struct TrussNodeData
@@ -1056,7 +1052,7 @@ struct TrussBarData
     family::Any
 end
 
-truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Double, family::Any) =
+truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Real, family::Any) =
   TrussBarData(id, node0, node1, rotation, family)
 
 # Cladding
@@ -1365,6 +1361,16 @@ backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
     rf
   end
 
+# We need a few families by default
+export free_truss_node_family, fixed_truss_node_family
+
+free_truss_node_family =
+  truss_node_family_element(default_truss_node_family(),
+                            support=truss_node_support())
+fixed_truss_node_family =
+  truss_node_family_element(default_truss_node_family(),
+                            support=truss_node_support(ux=true, uy=true, uz=true))
+
 set_backend_family(
   default_truss_bar_family(),
   robot,
@@ -1408,14 +1414,14 @@ realize(b::ROBOT, s::TrussBar) =
 realize(b::ROBOT, s::Panel) =
   error("BUM")
 
-process_nodes(nodes, load) =
-  [truss_node_data(i, in_world(node.p), node.family, load)
+process_nodes(nodes) =
+  [truss_node_data(i, in_world(node.p), node.family, vz(0))
    for (i, node) in enumerate(nodes)]
 
 process_bars(bars, processed_nodes) =
   let epsilon = coincident_truss_nodes_distance(),
       node_data_near(loc) =
-        for (n, nd) in processed_nodes
+        for nd in processed_nodes
           distance(loc, nd.loc) < epsilon && return nd
         end
     [truss_bar_data(
@@ -1424,7 +1430,7 @@ process_bars(bars, processed_nodes) =
       node_data_near(in_world(bar.p1)),
       bar.angle,
       bar.family)
-     for (i, bar) in b.truss_bars]
+     for (i, bar) in enumerate(bars)]
   end
 
 ##################################################################
@@ -1444,33 +1450,35 @@ ensure_realized_structure(b::ROBOT) =
   end
 
 realize_structure(b::ROBOT) =
-  let nodes = process_nodes(b.truss_nodes),
-      bars = process_bars(b.truss_bars, nodes),
+  let ns = process_nodes(b.truss_nodes),
+      bs = process_bars(b.truss_bars, ns),
       struc = structure(project(application())),
       nds = nodes(struc),
       brs = bars(struc),
       family_bars = Dict()
-    b.truss_node_data = nodes
-    b.truss_node_data = bars
-    for node in nodes
+    empty!(b.truss_node_data)
+    append!(b.truss_node_data, ns)
+    empty!(b.truss_bar_data)
+    append!(b.truss_bar_data, bs)
+    for node in ns
       let p = node.loc,
           support = node.family.support
         create_node(nds, node.id, p.x, p.y, p.z)
         if support != false
           ensure_node_support_label(support)
-          set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
+          set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, truss_node_support_label(support))
         end
       end
     end
-    for bar in bars
-      create_bar(brs, bar.id, bar.node0.id, bar.node1.id)
-      if abs(rotation) > 1e-16 #fix this
-        Gamma(get_bar(brs, bar.id), rotation)
+    for bar in bs
+      create_bar(brs, bar.id, bar.node1.id, bar.node2.id)
+      if abs(bar.rotation) > 1e-16 #fix this
+        Gamma(get_bar(brs, bar.id), bar.rotation)
       end
-      family_bars[bar.family] = [bar_id, get(family_bars, bar.family, [])...]
+      family_bars[bar.family] = [bar.id, get(family_bars, bar.family, [])...]
     end
     for (bar_family, bars_ids) in family_bars
-      let robot_bar_family = realize(backend, bar_family),
+      let robot_bar_family = realize(b, bar_family),
           selection = get_selection(selections(struc), I_OT_BAR),
           ids = IOBuffer()
         for bar_id in bars_ids
@@ -1488,9 +1496,9 @@ realize_structure(b::ROBOT) =
 new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
   let node_loads = Dict(v==nothing ? [] : [v => collect(1:length(nodes))])
     ensure_realized_structure(backend)
-    case_counter(case_counter()+1)
-    analyze_case(case_counter(),
-                 "Test-$(case_counter())",
+    #case_counter(case_counter()+1)
+    analyze_case(1, #case_counter(),
+                 "KhepriTest", #"Test-$(case_counter())",
                  I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
                  I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
                  records -> new_node_loads(records, node_loads, self_weight))
@@ -1498,7 +1506,7 @@ new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
 
 #
 show_truss_deformation(results;
-    backend=robot,
+    backend=autocad,
     node_radius=0.08, bar_radius=0.02, factor=100,
     deformation_name="Deformation",
     deformation_color=rgb(1, 0, 0),
@@ -1508,7 +1516,7 @@ show_truss_deformation(results;
       no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
       disps = displacements(nodes(results)),
       disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-    for node in backend.truss_node_data
+    for node in robot.truss_node_data
       d = disp(node)*factor
       p = node.loc
       with(current_layer, no_deformation_layer) do
@@ -1518,15 +1526,15 @@ show_truss_deformation(results;
         sphere(p+d, node_radius)
       end
     end
-    for bar in backend.truss_bar_data
-      let (node0, node1) = (bar.node0, bar.node1)
-        let (p0, p1) = (node0.loc, node1.loc)
+    for bar in robot.truss_bar_data
+      let (node1, node2) = (bar.node1, bar.node2)
+        let (p1, p2) = (node1.loc, node2.loc)
           with(current_layer, no_deformation_layer) do
-            cylinder(p0, bar_radius, p1)
+            cylinder(p1, bar_radius, p2)
           end
-          let (d0, d1) = (disp(node0)*factor, disp(node1)*factor)
+          let (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
             with(current_layer, deformation_layer) do
-              cylinder(p0+d0, bar_radius, p1+d1)
+              cylinder(p1+d1, bar_radius, p2+d2)
             end
           end
         end
