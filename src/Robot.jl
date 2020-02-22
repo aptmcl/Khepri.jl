@@ -1508,7 +1508,7 @@ show_truss_deformation(results;
       no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
       disps = displacements(nodes(results)),
       disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-    for node in backend.truss_node_data)
+    for node in backend.truss_node_data
       d = disp(node)*factor
       p = node.loc
       with(current_layer, no_deformation_layer) do
