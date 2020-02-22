@@ -910,7 +910,7 @@ end
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
 @def_com (create_component, Create) IRobotComponentFactory typ::IRobotComponentType IRobotComponent
 @def_com is_available IRobotLabelServer typ::IRobotLabelType name::String Boolean
-@def_com (delete_label Delete) IRobotLabelServer typ::IRobotLabelType name::String Void
+@def_com (delete_label, Delete) IRobotLabelServer typ::IRobotLabelType name::String Void
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
@@ -989,7 +989,7 @@ new_project!(typ::IRobotProjectType) =
 new_label(typ, name, fn) =
   let labels = labels(structure(project(application())))
     if is_available(labels, typ, name)
-      delete(labels, typ, name)
+      delete_label(labels, typ, name)
     end
     label = create_label(labels, typ, name)
     fn(data(label))
@@ -1508,7 +1508,10 @@ realize_structure(b::ROBOT) =
 case_counter = Parameter(0)
 
 new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
-  let node_loads = Dict(v==nothing ? [] : [v => collect(1:length(backend.truss_nodes))])
+  let node_loads = Dict(v==nothing ?
+                    [] :
+                    [v => findall(n->n.family.support != false,
+                                  backend.truss_nodes)])
     ensure_realized_structure(backend)
     case_counter(case_counter()+1)
     analyze_case(case_counter(),
