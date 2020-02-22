@@ -1047,26 +1047,6 @@ end
 truss_node_data(id::Int, loc::Loc, family::Any, load::Vec) =
   TrussNodeData(id, loc, family, load)
 
-process_nodes(nodes, load) =
-  # We need to merge coincident nodes
-  let processed_nodes = Vector{Tuple{TrussNode, TrussNodeData}}(),
-      epsilon = coincident_truss_nodes_distance(),
-      node_data_near(loc) =
-        for (n, nd) in processed_nodes
-          distance(loc, nd.loc) < epsilon && return nd
-        end
-    for node in nodes
-      let loc = in_world(node.p),
-          data = node_data_near(loc)
-        push!(processed_nodes,
-              (node, isnothing(data) ?
-                       truss_node_data(length(processed_nodes) + 1, loc, node.family, load) :
-                       data))
-      end
-    end
-    processed_nodes
-  end
-
 #
 struct TrussBarData
     id::Int
@@ -1079,58 +1059,6 @@ end
 truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Double, family::Any) =
   TrussBarData(id, node0, node1, rotation, family)
 
-process_bars(bars, processed_nodes) =
-  # We need to merge coincident bars
-  let processed_bars = Vector{Tuple{TrussBar, TrussBarData}}(),
-      epsilon = coincident_truss_nodes_distance(),
-      node_data_near(loc) =
-        for (n, nd) in processed_nodes
-          distance(loc, nd.loc) < epsilon && return nd
-        end
-      bar_data_near(loc1, loc2) =
-        for (b, bd) in processed_bars
-          ((distance(loc1, bd.node1.loc) < epsilon && distance(loc2, bd.node2.loc) < epsilon) ||
-           (distance(loc1, bd.node2.loc) < epsilon && distance(loc2, bd.node1.loc) < epsilon)) &&
-          return bd
-        end
-    for bar in bars
-      let loc1 = in_world(bar.p0),
-          loc2 = in_world(bar.p1),
-          data = bar_data_near(loc1, loc2)
-        push!(processed_bars,
-              (bar, isnothing(data) ?
-                       truss_bar_data(length(processed_bars) + 1,
-                                      node_data_near(loc1),
-                                      node_data_near(loc2),
-                                      bar.angle,
-                                      bar.family) :
-                       data))
-      end
-    end
-    processed_bars
-  end
-
-##################################################################
-# Robot analysis
-struct RobotAnalysis <: StructuralAnalysis
-    v::Vec
-    vs::Vecs
-end
-
-robot_analysis(; node_load, nodes_load) =
-  RobotAnalysis(node_load, nodes_load)
-
-
-add_node!(p, family, load=false, reuse=false) =
-  let p = in_world(p)
-    get!(added_nodes(), p) do
-      node_counter(node_counter()+1)
-      truss_node_data(node_counter(), p, family, load) # Should we check for collisions here? (nodes at the same location);
-    end
-  end
-
-# Bars
-
 # Cladding
 
 struct cladding_data
@@ -1138,84 +1066,6 @@ struct cladding_data
     pts::Locs
     family::Any
 end
-
-add_cladding!(pts, family) =
-  let pts = map(in_world, pts)
-      println("Adding cladding!")
-    get!(added_claddings(), pts) do
-        cladding_counter(cladding_counter()+1)
-        cladding_data(cladding_counter(), pts, family)
-    end
-  end
-
-new_robot_analysis(process_results, create_truss, v=nothing; self_weight=false) =
-    with(node_counter, 0,
-         bar_counter, 0,
-         cladding_counter, 0,
-         added_nodes, Dict(),
-         added_bars, Dict(),
-         added_claddings, Dict(),
-         case_counter, 0) do
-        create_truss()
-        let struc = structure(project(application()))
-            nds = nodes(struc)
-            brs = bars(struc)
-            node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, values(added_nodes()))])
-          for node_data in values(added_nodes())
-            let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
-                create_node(nds, node_id, p.x, p.y, p.z)
-                support = node_family.support
-                if support != false
-                    if ! support.created
-                        create_node_support_label(support.name,
-                                                  support.ux, support.uy, support.uz,
-                                                  support.rx, support.ry, support.rz)
-                        support.created = true
-                    end
-                    set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
-                end
-                if node_load != false
-                    node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
-                end
-            end
-          end
-            family_bars = Dict()
-            for bar_data in values(added_bars())
-                let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
-                    create_bar(brs, bar_id, node_id0, node_id1)
-                    if abs(rotation) > 1e-16 #fix this
-                      Gamma(get_bar(brs, bar_id), rotation)
-                    end
-                    family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
-                end
-            end
-            for (bar_family, bars_ids) in family_bars
-                let robot_bar_family = realize(current_backend(), bar_family),
-                    selection = get_selection(selections(struc), I_OT_BAR),
-                    ids = IOBuffer()
-                  for bar_id in bars_ids
-                      print(ids, bar_id, " ")
-                  end
-                  str = String(take!(ids))
-                  from_text(selection, str)
-                  let (name, material_name, wood, specs) = robot_bar_family.section
-                      set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
-                  end
-                end
-            end
-            for cladding_data in values(added_claddings())
-                create_cladding(cladding_data.id, cladding_data.pts)
-            end
-            case_counter(case_counter()+1)
-            new_case(case_counter(),
-                     "Test-$(case_counter())",
-                     I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
-                     I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
-                     records -> new_node_loads(records, node_loads, self_weight),
-                     process_results)
-      end
-end
-#
 
 # Bar release
 
@@ -1382,7 +1232,7 @@ set_label(contour, I_LT_CLADDING, "Two-way")
 update(contour)
 =#
 
-new_case(number, name, nature, analize_type, setup, process_results) =
+analyze_case(number, name, nature, analize_type, setup) =
   let case = create_simple(cases(structure(project(application()))),
                           number,
                           name,
@@ -1390,7 +1240,7 @@ new_case(number, name, nature, analize_type, setup, process_results) =
                           analize_type)
     @time(setup(records(case)))
     @time(calculate(calc_engine(project(application()))))
-    process_results(results(structure(project(application()))))
+    results(structure(project(application())))
   end
 
 new_node_loads(records, loads, self_weight) =
@@ -1425,15 +1275,18 @@ node_displacement_vector(displacements, id, case_id) =
 bar_max_stress(results, id, case_id) =
   Smax(bar_stress(Stresses(bars(results)), id, case_id, 0.0)) ##The position should be changeable
 
+########################################################################
 const project_kind = Parameter(I_PT_SHELL)
 create_ROBOT_connection() = new_project!(project_kind())
 
 #
 Base.@kwdef struct RobotBackend{K,T} <: LazyBackend{K,T}
-  merge_coincident_nodes::Parameter{Bool}=Parameter(false)
+  realized::Parameter{Bool}=Parameter(false)
   com::Any=LazyParameter(Any, create_ROBOT_connection)
   truss_nodes::Vector{<:TrussNode}=TrussNode[]
   truss_bars::Vector{<:TrussBar}=TrussBar[]
+  truss_node_data::Vector{TrussNodeData}=TrussNodeData[]
+  truss_bar_data::Vector{TrussBarData}=TrussBarData[]
 end
 
 abstract type ROBOTKey end
@@ -1448,28 +1301,52 @@ const ROBOTUnionRef = UnionRef{ROBOTKey, ROBOTId}
 const ROBOTSubtractionRef = SubtractionRef{ROBOTKey, ROBOTId}
 const ROBOT = RobotBackend{ROBOTKey, ROBOTId}
 
+connection(b::ROBOT) = b.com
 void_ref(b::ROBOT) = ROBOTNativeRef(-1)
+
 const robot = ROBOT()
 
-# We save the shapes in different buckets
-save_shape!(b::ROBOT, s::TrussNode) = (push!(b.truss_nodes, s); s)
-save_shape!(b::ROBOT, s::TrussBar) = (push!(b.truss_bars, s); s)
-# This allows us to merge nodes
-find_truss_node(p::Loc, b::ROBOT, node::TrussNode) =
-  let epsilon = coincident_truss_nodes_distance()
+# Shoule we merge coincident nodes?
+const merge_coincident_truss_nodes = Parameter(true)
+const coincident_truss_nodes_distance = Parameter(1e-6)
+
+save_shape!(b::ROBOT, s::TrussNode) =
+  # We are allowed to replace a node that we just created with one that already exists
+  let epsilon = coincident_truss_nodes_distance(),
+      p = s.p
     for n in b.truss_nodes
       if distance(n.p, p) < epsilon
+        merge_coincident_truss_nodes() || error("Coincident nodes $(s) and $(n) at $(p)")
         return n
       end
     end
-    node
+    b.realized(false)
+    push!(b.truss_nodes, s)
+    s
   end
 
-connection(backend::ROBOT) = backend.com
+# Shoule we merge coincident nodes?
+const merge_coincident_truss_bars = Parameter(true)
+
+save_shape!(b::ROBOT, s::TrussBar) =
+  # We are allowed to replace a bar that we just created with one that already exists
+  let epsilon = coincident_truss_nodes_distance(),
+      p0 = s.p0,
+      p1 = s.p1
+    for b in b.truss_bars
+      if (distance(b.p0, p0) < epsilon && distance(b.p1, p1) < epsilon) ||
+         (distance(b.p0, p1) < epsilon && distance(b.p1, p0) < epsilon)
+        merge_coincident_truss_bars() || error("Coincident bars $(s) and $(n) at $(p0) and $(p1)")
+        return b
+      end
+    end
+    b.realized(false)
+    push!(b.truss_bars, s)
+    s
+  end
 
 # Robot does not need layers
 with_family_in_layer(f::Function, backend::ROBOT, family::Family) = f()
-
 
 # Robot Families
 abstract type RobotFamily <: Family end
@@ -1513,28 +1390,125 @@ set_backend_family(
       0.0213,             #diameter
       0.0026)]]))         #thickness
 
-delete_all_shapes(b::ROBOT) = new_project!(project_kind())
+delete_all_shapes(b::ROBOT) =
+  begin
+    empty!(b.truss_nodes)
+    empty!(b.truss_bars)
+    b.realized(false)
+    new_project!(project_kind())
+    b
+  end
 
 realize(b::ROBOT, s::TrussNode) =
-    add_node!(s.p, s.family)
+  error("BUM")
 
 realize(b::ROBOT, s::TrussBar) =
-    add_bar!(s.p0, s.p1, s.angle, s.family)
+  error("BUM")
 
 realize(b::ROBOT, s::Panel) =
-  add_cladding!(s.vertices, s.family)
+  error("BUM")
 
+process_nodes(nodes, load) =
+  [truss_node_data(i, in_world(node.p), node.family, load)
+   for (i, node) in enumerate(nodes)]
+
+process_bars(bars, processed_nodes) =
+  let epsilon = coincident_truss_nodes_distance(),
+      node_data_near(loc) =
+        for (n, nd) in processed_nodes
+          distance(loc, nd.loc) < epsilon && return nd
+        end
+    [truss_bar_data(
+      i,
+      node_data_near(in_world(bar.p0)),
+      node_data_near(in_world(bar.p1)),
+      bar.angle,
+      bar.family)
+     for (i, bar) in b.truss_bars]
+  end
+
+##################################################################
+# Robot analysis
+struct RobotAnalysis <: StructuralAnalysis
+  v::Vec
+  vs::Vecs
+end
+
+robot_analysis(; node_load, nodes_load) =
+  RobotAnalysis(node_load, nodes_load)
+
+ensure_realized_structure(b::ROBOT) =
+  if ! b.realized()
+    realize_structure(b)
+    b.realized(true)
+  end
+
+realize_structure(b::ROBOT) =
+  let nodes = process_nodes(b.truss_nodes),
+      bars = process_bars(b.truss_bars, nodes),
+      struc = structure(project(application())),
+      nds = nodes(struc),
+      brs = bars(struc),
+      family_bars = Dict()
+    b.truss_node_data = nodes
+    b.truss_node_data = bars
+    for node in nodes
+      let p = node.loc,
+          support = node.family.support
+        create_node(nds, node.id, p.x, p.y, p.z)
+        if support != false
+          ensure_node_support_label(support)
+          set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
+        end
+      end
+    end
+    for bar in bars
+      create_bar(brs, bar.id, bar.node0.id, bar.node1.id)
+      if abs(rotation) > 1e-16 #fix this
+        Gamma(get_bar(brs, bar.id), rotation)
+      end
+      family_bars[bar.family] = [bar_id, get(family_bars, bar.family, [])...]
+    end
+    for (bar_family, bars_ids) in family_bars
+      let robot_bar_family = realize(backend, bar_family),
+          selection = get_selection(selections(struc), I_OT_BAR),
+          ids = IOBuffer()
+        for bar_id in bars_ids
+          print(ids, bar_id, " ")
+        end
+        str = String(take!(ids))
+        from_text(selection, str)
+        let (name, material_name, wood, specs) = robot_bar_family.section
+          set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
+        end
+      end
+    end
+  end
+
+new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
+  let node_loads = Dict(v==nothing ? [] : [v => collect(1:length(nodes))])
+    ensure_realized_structure(backend)
+    case_counter(case_counter()+1)
+    analyze_case(case_counter(),
+                 "Test-$(case_counter())",
+                 I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
+                 I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
+                 records -> new_node_loads(records, node_loads, self_weight))
+  end
+
+#
 show_truss_deformation(results;
+    backend=robot,
     node_radius=0.08, bar_radius=0.02, factor=100,
     deformation_name="Deformation",
     deformation_color=rgb(1, 0, 0),
     no_deformation_name="No deformation",
     no_deformation_color=rgb(0, 1, 0)) =
-  let deformation_layer = create_layer(deformation_name, deformation_color)
-      no_deformation_layer = create_layer(no_deformation_name, no_deformation_color)
-      disps = displacements(nodes(results))
-      disp = (node) -> node_displacement_vector(disps, node.id, I_LRT_NODE_DISPLACEMENT)
-    for node in values(added_nodes())
+  let deformation_layer = create_layer(deformation_name, deformation_color),
+      no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
+      disps = displacements(nodes(results)),
+      disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
+    for node in backend.truss_node_data)
       d = disp(node)*factor
       p = node.loc
       with(current_layer, no_deformation_layer) do
@@ -1544,7 +1518,7 @@ show_truss_deformation(results;
         sphere(p+d, node_radius)
       end
     end
-    for bar in values(added_bars())
+    for bar in backend.truss_bar_data
       let (node0, node1) = (bar.node0, bar.node1)
         let (p0, p1) = (node0.loc, node1.loc)
           with(current_layer, no_deformation_layer) do
@@ -1559,65 +1533,3 @@ show_truss_deformation(results;
       end
     end
   end
-
-
-  analyze(analysis::RobotAnalysis, b::ROBOT) =
-    let node_counter = 0,
-        added_nodes = Dict(),
-        bar_counter = 0,
-        added_bars = Dict(),
-        cladding_counter = 0,
-        added_claddings = Dict(),
-        case_counter = 0,
-        struc = structure(project(application())), # This should use the com object inside the backend
-        nds = nodes(struc),
-        brs = bars(struc),
-        node_loads = Dict(v==nothing ? [] : [v => map(n -> n.id, b.nodes)])
-          for node_data in values(added_nodes())
-            let (node_id, p, node_family, node_load) = (node_data.id, node_data.loc, node_data.family, node_data.load)
-                create_node(nds, node_id, p.x, p.y, p.z)
-                support = node_family.support
-                if support != false
-                    ensure_node_support_label(support)
-                    set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, support.name)
-                end
-                if node_load != false
-                    node_loads[node_load] = [node_id, get_node(node_loads, node_load, [])...]
-                end
-            end
-          end
-            family_bars = Dict()
-            for bar_data in values(added_bars())
-                let (bar_id, node_id0, node_id1, rotation, bar_family) = (bar_data.id, bar_data.node0.id, bar_data.node1.id, bar_data.rotation, bar_data.family)
-                    create_bar(brs, bar_id, node_id0, node_id1)
-                    if abs(rotation) > 1e-16 #fix this
-                      Gamma(get_bar(brs, bar_id), rotation)
-                    end
-                    family_bars[bar_family] = [bar_id, get(family_bars, bar_family, [])...]
-                end
-            end
-            for (bar_family, bars_ids) in family_bars
-                let robot_bar_family = realize(current_backend(), bar_family),
-                    selection = get_selection(selections(struc), I_OT_BAR),
-                    ids = IOBuffer()
-                  for bar_id in bars_ids
-                      print(ids, bar_id, " ")
-                  end
-                  str = String(take!(ids))
-                  from_text(selection, str)
-                  let (name, material_name, wood, specs) = robot_bar_family.section
-                      set_selection_label(brs, selection, I_LT_BAR_SECTION, name)
-                  end
-                end
-            end
-            for cladding_data in values(added_claddings())
-                create_cladding(cladding_data.id, cladding_data.pts)
-            end
-            case_counter(case_counter()+1)
-            new_case(case_counter(),
-                     "Test-$(case_counter())",
-                     I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
-                     I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
-                     records -> new_node_loads(records, node_loads, self_weight),
-                     process_results)
-      end
