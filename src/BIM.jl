@@ -863,18 +863,6 @@ realize(b::Backend, s::Ieslight) =
 @defproxy(truss_node, Shape3D, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, Shape3D, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
 
-# We avoid coincident nodes
-const merge_coincident_truss_nodes = Parameter(true)
-const coincident_truss_nodes_distance = Parameter(1e-6)
-
-maybe_replace(s::TrussNode) =
-  merge_coincident_truss_nodes() ?
-    find_truss_node(s.p, backend(s), s) :
-    s
-
-# By default, we cannot find nodes because the backend does not store them...
-find_truss_node(p::Loc, b::Backend, node::TrussNode) = node
-
 realize(b::Backend, s::TrussNode) =
   with_family_in_layer(b, s.family) do
     sphere(s.p, s.family.radius)
