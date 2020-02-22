@@ -2,7 +2,6 @@ export robot,
        project_kind,
        new_project!,
        new_3d_project!,
-       create_node_support,
        new_robot_analysis,
        node_displacement,
        node_displacement_vector,
@@ -911,7 +910,7 @@ end
 @def_com (create_label, Create) IRobotLabelServer typ::IRobotLabelType name::String IRobotLabel
 @def_com (create_component, Create) IRobotComponentFactory typ::IRobotComponentType IRobotComponent
 @def_com is_available IRobotLabelServer typ::IRobotLabelType name::String Boolean
-@def_com delete IRobotLabelServer typ::IRobotLabelType name::String Void
+@def_com (delete_label Delete) IRobotLabelServer typ::IRobotLabelType name::String Void
 @def_com store IRobotLabelServer label::IRobotLabel Void
 @def_com (get_node, Get) IRobotNodeServer idx::Int IRobotNode
 @def_com (get_bar, Get) IRobotBarServer idx::Int IRobotBar
@@ -934,6 +933,8 @@ end
 @def_com CreateNonstd IRobotBarSectionData rel_pos::Double IRobotBarSectionNonstdData
 @def_com CalcNonstdGeometry IRobotBarSectionData Void
 @def_com create_simple IRobotCaseServer number::Int name::String nature::IRobotCaseNature analize_type::IRobotCaseAnalizeType IRobotSimpleCase
+@def_com (delete_case, Delete) IRobotCaseServer number::Int Void
+@def_com (get_case, Get) IRobotCaseServer idx::Int IRobotSimpleCase
 @def_com SaveToDBase IRobotMaterialData Void
 @def_com LoadFromDBase IRobotMaterialData name::String Boolean
 @def_com add_one IRobotSelection id::Int Void
@@ -1021,17 +1022,22 @@ end
 
 truss_node_support = TrussNodeSupport
 truss_node_support_label(s) =
-  let k(v) = v ? "|" : "_"
+  let k(v) = v ? "x" : "f"
     "Support$(k(s.ux))$(k(s.uy))$(k(s.uz))$(k(s.rx))$(k(s.ry))$(k(s.rz))"
   end
 
+reset_node_support_label(support) =
+  support.created(false)
 ensure_node_support_label(support) =
   if ! support.created()
-    create_node_support_label(truss_node_support_label(support),
-                              support.ux, support.uy, support.uz,
-                              support.rx, support.ry, support.rz)
+    create_node_support(support)
     support.created(true)
   end
+
+create_node_support(s) =
+  create_node_support_label(truss_node_support_label(s),
+                            s.ux, s.uy, s.uz,
+                            s.rx, s.ry, s.rz)
 
 struct TrussNodeData
     id::Int
@@ -1229,14 +1235,17 @@ update(contour)
 =#
 
 analyze_case(number, name, nature, analize_type, setup) =
-  let case = create_simple(cases(structure(project(application()))),
-                          number,
-                          name,
-                          nature,
-                          analize_type)
-    @time(setup(records(case)))
-    @time(calculate(calc_engine(project(application()))))
-    results(structure(project(application())))
+  let cases = cases(structure(project(application())))
+    delete_case(cases, 1)
+    let case = create_simple(cases,
+                             1, "KhepriTest", #number,
+                             #name,
+                             nature,
+                             analize_type)
+      @time(setup(records(case)))
+      @time(calculate(calc_engine(project(application()))))
+      results(structure(project(application())))
+    end
   end
 
 new_node_loads(records, loads, self_weight) =
@@ -1455,18 +1464,21 @@ realize_structure(b::ROBOT) =
       struc = structure(project(application())),
       nds = nodes(struc),
       brs = bars(struc),
+      supports = unique(filter(s -> s != false, map(n -> n.family.support, ns))),
       family_bars = Dict()
     empty!(b.truss_node_data)
     append!(b.truss_node_data, ns)
     empty!(b.truss_bar_data)
     append!(b.truss_bar_data, bs)
+    for support in supports
+      create_node_support(support)
+    end
     for node in ns
       let p = node.loc,
           support = node.family.support
         create_node(nds, node.id, p.x, p.y, p.z)
         if support != false
-          ensure_node_support_label(support)
-          set_label(get_node(nds, node_id), I_LT_NODE_SUPPORT, truss_node_support_label(support))
+          set_label(get_node(nds, node.id), I_LT_NODE_SUPPORT, truss_node_support_label(support))
         end
       end
     end
@@ -1493,12 +1505,14 @@ realize_structure(b::ROBOT) =
     end
   end
 
+case_counter = Parameter(0)
+
 new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
-  let node_loads = Dict(v==nothing ? [] : [v => collect(1:length(nodes))])
+  let node_loads = Dict(v==nothing ? [] : [v => collect(1:length(backend.truss_nodes))])
     ensure_realized_structure(backend)
-    #case_counter(case_counter()+1)
-    analyze_case(1, #case_counter(),
-                 "KhepriTest", #"Test-$(case_counter())",
+    case_counter(case_counter()+1)
+    analyze_case(case_counter(),
+                 "KhepriTest-$(case_counter())",
                  I_CN_PERMANENT, # I_CN_EXPLOATATION I_CN_WIND I_CN_SNOW I_CN_TEMPERATURE I_CN_ACCIDENTAL I_CN_SEISMIC,
                  I_CAT_STATIC_LINEAR, #I_CAT_STATIC_NONLINEAR I_CAT_STATIC_FLAMBEMENT,
                  records -> new_node_loads(records, node_loads, self_weight))
@@ -1512,29 +1526,32 @@ show_truss_deformation(results;
     deformation_color=rgb(1, 0, 0),
     no_deformation_name="No deformation",
     no_deformation_color=rgb(0, 1, 0)) =
-  let deformation_layer = create_layer(deformation_name, deformation_color),
-      no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
-      disps = displacements(nodes(results)),
-      disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-    for node in robot.truss_node_data
-      d = disp(node)*factor
-      p = node.loc
-      with(current_layer, no_deformation_layer) do
-        sphere(p, node_radius)
+  with(current_backend, autocad) do
+    delete_all_shapes()
+    let deformation_layer = create_layer(deformation_name, deformation_color),
+        no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
+        disps = displacements(nodes(results)),
+        disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
+      for node in robot.truss_node_data
+        d = disp(node)*factor
+        p = node.loc
+        with(current_layer, no_deformation_layer) do
+          sphere(p, node_radius)
+        end
+        with(current_layer, deformation_layer) do
+          sphere(p+d, node_radius)
+        end
       end
-      with(current_layer, deformation_layer) do
-        sphere(p+d, node_radius)
-      end
-    end
-    for bar in robot.truss_bar_data
-      let (node1, node2) = (bar.node1, bar.node2)
-        let (p1, p2) = (node1.loc, node2.loc)
-          with(current_layer, no_deformation_layer) do
-            cylinder(p1, bar_radius, p2)
-          end
-          let (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
-            with(current_layer, deformation_layer) do
-              cylinder(p1+d1, bar_radius, p2+d2)
+      for bar in robot.truss_bar_data
+        let (node1, node2) = (bar.node1, bar.node2)
+          let (p1, p2) = (node1.loc, node2.loc)
+            with(current_layer, no_deformation_layer) do
+              cylinder(p1, bar_radius, p2)
+            end
+            let (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
+              with(current_layer, deformation_layer) do
+                cylinder(p1+d1, bar_radius, p2+d2)
+              end
             end
           end
         end
