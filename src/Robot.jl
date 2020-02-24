@@ -813,6 +813,7 @@ Boolean = Bool
 @def_ro_property cases IRobotStructure IRobotCaseServer
 #ERROR @def_ro_property selections IRobotStructure IRobotSelection
 @def_ro_property selections IRobotStructure IRobotSelectionFactory
+@def_rw_property results_freeze IRobotStructure Boolean
 @def_ro_property records IRobotSimpleCase IRobotLoadRecordMngr
 @def_ro_property objects IRobotLoadRecord IRobotSelection
 @def_ro_property data IRobotLabel IRobotNodeSuportData
@@ -1238,6 +1239,7 @@ analyze_case(number, name, nature, analize_type, setup) =
   let project = project(application()),
       structure = structure(project),
       cases = cases(structure)
+    results_freeze(structure, false)
     delete_case(cases, 1)
     let case = create_simple(cases,
                              1, "KhepriTest", #number,
