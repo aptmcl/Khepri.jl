@@ -1539,27 +1539,29 @@ show_truss_deformation(results;
         no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
         disps = displacements(nodes(results)),
         disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-      for node in robot.truss_node_data
-        d = disp(node)*factor
-        p = node.loc
-        with(current_layer, no_deformation_layer) do
+      with(current_layer, no_deformation_layer) do
+        for node in robot.truss_node_data
+          p = node.loc
           sphere(p, node_radius)
         end
-        with(current_layer, deformation_layer) do
-          sphere(p+d, node_radius)
+        for bar in robot.truss_bar_data
+          let (node1, node2) = (bar.node1, bar.node2),
+              (p1, p2) = (node1.loc, node2.loc)
+            cylinder(p1, bar_radius, p2)
+          end
         end
       end
-      for bar in robot.truss_bar_data
-        let (node1, node2) = (bar.node1, bar.node2)
-          let (p1, p2) = (node1.loc, node2.loc)
-            with(current_layer, no_deformation_layer) do
-              cylinder(p1, bar_radius, p2)
-            end
-            let (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
-              with(current_layer, deformation_layer) do
-                cylinder(p1+d1, bar_radius, p2+d2)
-              end
-            end
+      with(current_layer, deformation_layer) do
+        for node in robot.truss_node_data
+          d = disp(node)*factor
+          p = node.loc
+          sphere(p+d, node_radius)
+        end
+        for bar in robot.truss_bar_data
+          let (node1, node2) = (bar.node1, bar.node2),
+              (p1, p2) = (node1.loc, node2.loc),
+              (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
+            cylinder(p1+d1, bar_radius, p2+d2)
           end
         end
       end
