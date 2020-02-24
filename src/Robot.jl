@@ -1235,7 +1235,9 @@ update(contour)
 =#
 
 analyze_case(number, name, nature, analize_type, setup) =
-  let cases = cases(structure(project(application())))
+  let project = project(application()),
+      structure = structure(project),
+      cases = cases(structure)
     delete_case(cases, 1)
     let case = create_simple(cases,
                              1, "KhepriTest", #number,
@@ -1243,8 +1245,8 @@ analyze_case(number, name, nature, analize_type, setup) =
                              nature,
                              analize_type)
       @time(setup(records(case)))
-      @time(calculate(calc_engine(project(application()))))
-      results(structure(project(application())))
+      @time(calculate(calc_engine(project)))
+      results(structure)
     end
   end
 
@@ -1371,7 +1373,7 @@ backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
   end
 
 # We need a few families by default
-export free_truss_node_family, fixed_truss_node_family
+export free_truss_node_family, fixed_truss_node_family, truss_node_support
 
 free_truss_node_family =
   truss_node_family_element(default_truss_node_family(),
@@ -1510,7 +1512,7 @@ case_counter = Parameter(0)
 new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
   let node_loads = Dict(v==nothing ?
                     [] :
-                    [v => findall(n->n.family.support != false,
+                    [v => findall(n->n.family.support == false,
                                   backend.truss_nodes)])
     ensure_realized_structure(backend)
     case_counter(case_counter()+1)
