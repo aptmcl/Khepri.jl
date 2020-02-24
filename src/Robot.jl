@@ -1533,7 +1533,7 @@ show_truss_deformation(results;
     deformation_color=rgb(1, 0, 0),
     no_deformation_name="No deformation",
     no_deformation_color=rgb(0, 1, 0)) =
-  with(current_backend, autocad) do
+  with(current_backend, backend) do
     delete_all_shapes()
     let deformation_layer = create_layer(deformation_name, deformation_color),
         no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
