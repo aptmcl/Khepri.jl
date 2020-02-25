@@ -887,7 +887,7 @@ current_layer(b::ACAD)::ACADLayer =
 current_layer(layer::ACADLayer, b::ACAD) =
   @remote(b, SetCurrentLayer(layer))
 
-@named_params create_layer(name::String="Layer", active::Bool=true, color::RGB=rgb(1,1,1), b::ACAD=current_backend()) =
+backend_create_layer(b::ACAD, name::String, active::Bool, color::RGB) =
   let to255(x) = round(UInt8, x*255)
     @remote(b, CreateLayer(name, true, to255(red(color)), to255(green(color)), to255(blue(color))))
   end

@@ -232,19 +232,23 @@ showit(s, a) = begin
 end
 
 #
-macro named_params(def)
+function process_named_params(def)
   call, body = def.args[1], def.args[2]
-  name, fields = call.args[1], call.args[2:end]
-  field_names = map(field -> field.args[1].args[1], fields)
-  field_types = map(field -> esc(field.args[1].args[2]), fields)
-  field_inits = map(field -> field.args[2], fields)
-  field_renames = map(Symbol ∘ string, field_names)
-  field_replacements = Dict(zip(field_names, field_renames))
+  name, params = call.args[1], call.args[2:end]
+  idx = findfirst(p->p.head==:(::), params)
+  mand, opts = isnothing(idx) ? ([], params) : (esc.(params[1:idx]), params[idx+1:end])
+  opt_names = map(opt -> opt.args[1].args[1], opts)
+  opt_types = map(opt -> esc(opt.args[1].args[2]), opts)
+  opt_inits = map(opt -> opt.args[2], opts)
+  opt_renames = map(Symbol ∘ string, opt_names)
+  opt_replacements = Dict(zip(opt_names, opt_renames))
   mk_param(name,typ,init) = Expr(:kw, Expr(:(::), name, typ), init)
-  opt_params = map(mk_param, field_renames, field_types, map(init -> replace_in(init, field_replacements), field_inits))
-  key_params = map(mk_param, field_names, field_types, field_renames)
+  opt_params = map(mk_param, opt_renames, opt_types, map(init -> replace_in(init, opt_replacements), opt_inits))
+  key_params = map(mk_param, opt_names, opt_types, opt_renames)
   func_name = esc(name)
-  quote
-    $(func_name)($(opt_params...); $(key_params...)) = $(esc(body))
-  end
+  :($(func_name)($(mand...), $(opt_params...); $(key_params...)) = $(esc(body)))
+end
+
+macro named_params(def)
+  process_named_params(def)
 end

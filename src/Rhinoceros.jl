@@ -683,11 +683,8 @@ current_layer(b::RH)::RHLayer =
 current_layer(layer::RHLayer, b::RH) =
   @remote(b, SetCurrentLayer(layer))
 
-create_layer(name::String, b::RH) =
-  @remote(b, CreateLayer(name))
-
-create_layer(name::String, color::RGB, b::RH) =
-  let layer = @remote(b, CreateLayer(name))
+backend_create_layer(b::RH, name::String, active::Bool, color::RGB) =
+  let layer = @remote(b, CreateLayer(name, active))
     @remote(b, SetLayerColor(layer, color.r, color.g, color.b))
     layer
   end

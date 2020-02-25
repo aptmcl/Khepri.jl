@@ -850,14 +850,8 @@ current_layer(b::Unity)::UnityLayer =
 current_layer(layer::UnityLayer, b::Unity) =
   @remote(b, SetCurrentParent(layer))
 
-create_layer(name::String, b::Unity) =
-  @remote(b, CreateParent(name, true))
-
-create_layer(name::String, active::Bool, b::Unity) =
-  @remote(b, CreateParent(name, active))
-
-create_layer(name::String, color::RGB, b::Unity) =
-  let layer = @remote(b, CreateParent(name, true))
+backend_create_layer(b::Unity, name::String, active::Bool, color::RGB) =
+  let layer = @remote(b, CreateParent(name, active))
     @warn "Ignoring color in create_layer for Unity"
     #@remote(b, SetLayerColor(layer, color.r, color.g, color.b))
     layer

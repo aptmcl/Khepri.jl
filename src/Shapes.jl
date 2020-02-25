@@ -349,10 +349,16 @@ end
 
 macro defopnamed(name_params)
     name, params = name_params.args[1], name_params.args[2:end]
+    par_names = map(par -> par.args[1].args[1], params)
+    par_types = map(par -> par.args[1].args[2], params)
+    par_inits = map(par -> par.args[2], params)
+    backend_call = Symbol("backend_", name)
     quote
         export $(name)
-        @named_params($(esc(name))($(params...), backend::Backend=current_backend()) =
-            throw(UndefinedBackendException()))
+        $(process_named_params(:($(name)($(params...), backend::Backend=current_backend()) =
+            $(backend_call)(backend, $(par_names...)))))
+        $(esc(:($(backend_call)(backend::Backend, $(map((name, typ)->Expr(:(::), name, typ), par_names, par_types)...)) =
+            UndefinedBackendException())))
     end
 end
 
@@ -364,7 +370,6 @@ macro defshapeop(name_params)
             throw(UndefinedBackendException())
     end
 end
-
 
 backend(backend::Backend) = switch_to_backend(current_backend(), backend)
 switch_to_backend(from::Backend, to::Backend) = current_backend(to)
@@ -1052,9 +1057,9 @@ end
 @defop delete_all_shapes_in_layer(layer)
 @defop disable_update()
 @defop enable_update()
-@defopnamed set_view(camera::Loc=xyz(10,10,10), target::Loc=u0(), lens::Real=50)
+@defop set_view(camera::Loc, target::Loc, lens::Real)
 @defop get_view()
-@defopnamed set_sun(altitude::Real=45, azimuth::Real=0)
+@defop set_sun(altitude::Real, azimuth::Real)
 @defop add_ground_plane()
 @defop zoom_extents()
 @defop view_top()
