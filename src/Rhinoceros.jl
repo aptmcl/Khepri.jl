@@ -480,7 +480,7 @@ unite_refs(b::RH, r::RHUnionRef) =
   r
 
 unite_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
-  (@remote(b, Unite(r0.value, r1.value); r0))
+  (@remote(b, Unite(r0.value, r1.value)); r0)
 
 intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
     let refs = @remote(b, Intersect(r0.value, r1.value))
