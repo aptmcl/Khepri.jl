@@ -110,7 +110,7 @@ public Vector3 ViewTarget()
 public float ViewLens()
 public void DeleteAll()
 public void DeleteMany(GameObject[] objs)
-public GameObject CreateParent(String name)
+public GameObject CreateParent(String name, bool active)
 public GameObject CurrentParent()
 public GameObject SetCurrentParent(GameObject newParent)
 public void SetActive(GameObject obj, bool state)
@@ -755,6 +755,10 @@ backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
     backend_wall_path(b, convert(OpenPolygonalPath, path), height, l_thickness, r_thickness)
 =#
 
+realize(b::Unity, w::Window) = void_ref(b)
+realize(b::Unity, w::Door) = void_ref(b)
+
+
 backend_wall(b::Unity, w_path, w_height, l_thickness, r_thickness, family) =
   path_length(w_path) < path_tolerance() ?
     UnityEmptyRef() :
@@ -838,12 +842,6 @@ dimension(p0::Loc, p1::Loc, sep::Real, scale::Real, style::Symbol, b::Unity=curr
 # Experiment for multiple, simultaneous, alternative layers
 # Layers
 
-
-
-
-
-
-
 UnityLayer = Int
 
 current_layer(b::Unity)::UnityLayer =
@@ -853,15 +851,17 @@ current_layer(layer::UnityLayer, b::Unity) =
   @remote(b, SetCurrentParent(layer))
 
 create_layer(name::String, b::Unity) =
-  @remote(b, CreateParent(name))
+  @remote(b, CreateParent(name, true))
+
+create_layer(name::String, active::Bool, b::Unity) =
+  @remote(b, CreateParent(name, active))
 
 create_layer(name::String, color::RGB, b::Unity) =
-  let layer = @remote(b, CreateParent(name))
+  let layer = @remote(b, CreateParent(name, true))
     @warn "Ignoring color in create_layer for Unity"
     #@remote(b, SetLayerColor(layer, color.r, color.g, color.b))
     layer
   end
-
 
 set_layer_active(layer::UnityLayer, status, b::Unity) =
   let c = connection(b)
@@ -904,9 +904,6 @@ get_material(name::String, b::Unity) =
 
 
 # Blocks
-
-
-
 
 realize(b::Unity, s::Block) =
   s.shapes == [] ?
