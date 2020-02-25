@@ -1535,8 +1535,8 @@ show_truss_deformation(results;
     no_deformation_color=rgb(0, 1, 0)) =
   with(current_backend, backend) do
     delete_all_shapes()
-    let deformation_layer = create_layer(deformation_name, deformation_color),
-        no_deformation_layer = create_layer(no_deformation_name, no_deformation_color),
+    let deformation_layer = create_layer(deformation_name, color=deformation_color),
+        no_deformation_layer = create_layer(no_deformation_name, color=no_deformation_color),
         disps = displacements(nodes(results)),
         disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
       with(current_layer, no_deformation_layer) do

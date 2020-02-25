@@ -158,7 +158,7 @@ public void Rotate(ObjectId id, Point3d p, Vector3d n, double a)
 public ObjectId Mirror(ObjectId id, Point3d p, Vector3d n, bool copy)
 public Point3d[] BoundingBox(ObjectId[] ids)
 public void ZoomExtents()
-public ObjectId CreateLayer(string name)
+public ObjectId CreateLayer(string name, bool active, byte r, byte g, byte b)
 public void SetLayerColor(ObjectId id, byte r, byte g, byte b)
 public void SetShapeColor(ObjectId id, byte r, byte g, byte b)
 public ObjectId CurrentLayer()
@@ -289,11 +289,17 @@ abstract type ACADFamily <: Family end
 
 struct ACADLayerFamily <: ACADFamily
   name::String
+  color::RGB
   ref::Parameter{Any}
 end
 
-acad_layer_family(name, pairs...) = ACADLayerFamily(name, Parameter{Any}(nothing))
-backend_get_family_ref(b::ACAD, f::Family, af::ACADLayerFamily) = @remote(b, CreateLayer(af.name))
+acad_layer_family(name, color::RGB=rgb(1,1,1)) =
+  ACADLayerFamily(name, color, Parameter{Any}(nothing))
+
+backend_get_family_ref(b::ACAD, f::Family, af::ACADLayerFamily) =
+  let to255(x) = round(UInt8, x*255)
+    @remote(b, CreateLayer(af.name, true, to255(red(af.color)), to255(green(af.color)), to255(blue(af.color))))
+  end
 
 set_backend_family(default_wall_family(), autocad, acad_layer_family("Wall"))
 set_backend_family(default_slab_family(), autocad, acad_layer_family("Slab"))
@@ -881,14 +887,9 @@ current_layer(b::ACAD)::ACADLayer =
 current_layer(layer::ACADLayer, b::ACAD) =
   @remote(b, SetCurrentLayer(layer))
 
-create_layer(name::String, b::ACAD) =
-  @remote(b, CreateLayer(name))
-
-create_layer(name::String, color::RGB, b::ACAD) =
-  let layer = @remote(b, CreateLayer(name)),
-      to255(x) = round(UInt8, x*255)
-    @remote(b, SetLayerColor(layer, to255(red(color)), to255(green(color)), to255(blue(color))))
-    layer
+@named_params create_layer(name::String="Layer", active::Bool=true, color::RGB=rgb(1,1,1), b::ACAD=current_backend()) =
+  let to255(x) = round(UInt8, x*255)
+    @remote(b, CreateLayer(name, true, to255(red(color)), to255(green(color)), to255(blue(color))))
   end
 
 delete_all_shapes_in_layer(layer::ACADLayer, b::ACAD) =
