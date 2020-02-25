@@ -1,5 +1,4 @@
-export rhino,
-       reset_rhino_connection
+export rhino
 
 macro rhino_str(str)
     rpc("RH", str)
@@ -31,153 +30,153 @@ decode_ChairFamily = decode_int
 encode_TableChairFamily = encode_int
 decode_TableChairFamily = decode_int
 
-rhino"public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)"
-rhino"public void View(Point3d position, Point3d target, double lens)"
-rhino"public void ViewTop()"
-rhino"public Point3d ViewCamera()"
-rhino"public Point3d ViewTarget()"
-rhino"public double ViewLens()"
+rhino_api = @remote_functions :CS """
+public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)
+public void View(Point3d position, Point3d target, double lens)
+public void ViewTop()
+public Point3d ViewCamera()
+public Point3d ViewTarget()
+public double ViewLens()
+public Guid Point(Point3d p)
+public Point3d PointPosition(Guid ent)
+public Guid PolyLine(Point3d[] pts)
+public Point3d[] LineVertices(RhinoObject id)
+public Guid Spline(Point3d[] pts)
+public Guid ClosedPolyLine(Point3d[] pts)
+public Guid ClosedSpline(Point3d[] pts)
+public Guid Circle(Point3d c, Vector3d n, double r)
+public Point3d CircleCenter(RhinoObject obj)
+public Vector3d CircleNormal(RhinoObject obj)
+public double CircleRadius(RhinoObject obj)
+public Guid Ellipse(Point3d c, Vector3d n, double radiusX, double radiusY)
+public Guid Arc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)
+public Guid JoinCurves(Guid[] objs)
+public Guid SurfaceCircle(Point3d c, Vector3d n, double r)
+public Guid SurfaceEllipse(Point3d c, Vector3d n, double radiusX, double radiusY)
+public Guid SurfaceArc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)
+public Guid SurfaceClosedPolyLine(Point3d[] pts)
+public Guid SurfaceFrom(Guid[] objs)
+public Guid Sphere(Point3d c, double r)
+public Guid Torus(Point3d c, Vector3d vz, double majorRadius, double minorRadius)
+public Brep Cylinder(Point3d bottom, double radius, Point3d top)
+public Brep Cone(Point3d bottom, double radius, Point3d top)
+public Brep ConeFrustum(Point3d bottom, double bottom_radius, Point3d top, double top_radius)
+public Brep Box(Point3d corner, Vector3d vx, Vector3d vy, double dx, double dy, double dz)
+public Brep XYCenteredBox(Point3d corner, Vector3d vx, Vector3d vy, double dx, double dy, double dz)
+public Brep IrregularPyramid(Point3d[] pts, Point3d apex)
+public Brep IrregularPyramidFrustum(Point3d[] bpts, Point3d[] tpts)
+#public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)
+public Guid SurfaceFromGrid(int nU, int nV, Point3d[] pts, bool closedU, bool closedV, int degreeU, int degreeV)
+public Brep[] Thicken(RhinoObject obj, double thickness)
+public double[] CurveDomain(RhinoObject obj)
+public double CurveLength(RhinoObject obj)
+public Plane CurveFrameAt(RhinoObject obj, double t)
+public Plane CurveFrameAtLength(RhinoObject obj, double l)
+public Brep Extrusion(RhinoObject obj, Vector3d dir)
+public Brep[] SweepPathProfile(RhinoObject path, RhinoObject profile, double rotation, double scale)
+public Guid[] Intersect(RhinoObject obj0, RhinoObject obj1)
+public Guid[] Subtract(RhinoObject obj0, RhinoObject obj1)
+public Guid Move(Guid id, Vector3d v)
+public Guid Scale(Guid id, Point3d p, double s)
+public Guid Rotate(Guid id, Point3d p, Vector3d n, double a)
+public Guid Mirror(Guid id, Point3d p, Vector3d n, bool copy)
+public void Render(int width, int height, string path)
+public bool IsPoint(RhinoObject e)
+public bool IsCircle(RhinoObject e)
+public bool IsPolyLine(RhinoObject e)
+public bool IsSpline(RhinoObject e)
+public bool IsInterpSpline(RhinoObject e)
+public bool IsClosedPolyLine(RhinoObject e)
+public bool IsClosedSpline(RhinoObject e)
+public bool IsInterpClosedSpline(RhinoObject e)
+public bool IsEllipse(RhinoObject e)
+public bool IsArc(RhinoObject e)
+public bool IsText(RhinoObject e)
+public byte ShapeCode(RhinoObject id)
+public Guid ClosedPathCurveArray(Point3d[] pts, double[] angles)
+public Brep[] PathWall(RhinoObject obj, double rThickness, double lThickness, double height)
+public Brep RectangularTable(Point3d c, double angle, double length, double width, double height, double top_thickness, double leg_thickness)
+public Brep[] BaseRectangularTable(double length, double width, double height, double top_thickness, double leg_thickness)
+public int CreateRectangularTableFamily(double length, double width, double height, double top_thickness, double leg_thickness)
+public Guid Table(Point3d c, double angle, int family)
+public Brep[] BaseChair(double length, double width, double height, double seat_height, double thickness)
+public int CreateChairFamily(double length, double width, double height, double seat_height, double thickness)
+public Guid Chair(Point3d c, double angle, int family)
+public GeometryBase[] BaseRectangularTableAndChairs(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)
+public int CreateRectangularTableAndChairsFamily(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)
+public Guid TableAndChairs(Point3d c, double angle, int family)
+public String CreateLayer(string name, bool active)
+public void SetLayerColor(ObjectId id, byte r, byte g, byte b)
+public void SetShapeColor(ObjectId id, byte r, byte g, byte b)
+public String CurrentLayer()
+public void SetCurrentLayer(String id)
+public void SetLayerActive(String name, bool active)
+public String ShapeLayer(RhinoObject objId)
+public void SetShapeLayer(RhinoObject objId, String layerId)
+public Point3d[] CurvePointsAt(RhinoObject obj, double[] ts)
+public Vector3d[] CurveTangentsAt(RhinoObject obj, double[] ts)
+public Vector3d[] CurveNormalsAt(RhinoObject obj, double[] ts)
+public int DeleteAll()
+public int DeleteAllInLayer(String name)
+public void Delete(Guid id)
+public void DeleteMany(Guid[] ids)
+public Guid Clone(RhinoObject e)
+public Point3d[] GetPosition(string prompt)
+public Guid[] GetPoint(string prompt)
+public Guid[] GetPoints(string prompt)
+public Guid[] GetCurve(string prompt)
+public Guid[] GetCurves(string prompt)
+public Guid[] GetSurface(string prompt)
+public Guid[] GetSurfaces(string prompt)
+public Guid[] GetSolid(string prompt)
+public Guid[] GetSolids(string prompt)
+public Guid[] GetShape(string prompt)
+public Guid[] GetShapes(string prompt)
+public Guid[] GetAllShapes()
+public Guid[] GetAllShapesInLayer(String name)
+"""
 #=
-rhino"public byte Sync()"
-rhino"public byte Disconnect()"
-=#
-rhino"public Guid Point(Point3d p)"
-rhino"public Point3d PointPosition(Guid ent)"
+public byte Sync()
+public byte Disconnect()
+public Entity InterpSpline(Point3d[] pts, Vector3d tan0, Vector3d tan1)
+public Entity InterpClosedSpline(Point3d[] pts)
+public Entity Text(string str, Point3d corner, Vector3d vx, Vector3d vy, double height)
+public Guid SurfaceFromCurve(Entity curve)
+public Guid IrregularPyramidMesh(Point3d[] pts, Point3d apex)
+public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)
+public Guid NurbSurfaceFrom(ObjectId id)
+public double[] SurfaceDomain(Entity ent)
+public Frame3d SurfaceFrameAt(Entity ent, double u, double v)
+public Guid Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)
+public Guid Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)
+public void Unite(ObjectId objId0, ObjectId objId1)
+public Guid Revolve(ObjectId profileId, Point3d p, Vector3d n, double startAngle, double amplitude)
+public Point3d[] GetPoint(string prompt)
+public Point3d[] BoundingBox(ObjectId[] ids)
+public void ZoomExtents()
+public void SetSystemVariableInt(string name, int value)
+public int Command(string cmd)
+public void DisableUpdate()
+public void EnableUpdate()
+public BIMLevel FindOrCreateLevelAtElevation(double elevation)
+public BIMLevel UpperLevel(BIMLevel currentLevel, double addedElevation)
+public double GetLevelElevation(BIMLevel level)
 
-rhino"public Guid PolyLine(Point3d[] pts)"
-rhino"public Point3d[] LineVertices(RhinoObject id)"
-rhino"public Guid Spline(Point3d[] pts)"
-#=
-rhino"public Entity InterpSpline(Point3d[] pts, Vector3d tan0, Vector3d tan1)"
-=#
-rhino"public Guid ClosedPolyLine(Point3d[] pts)"
-rhino"public Guid ClosedSpline(Point3d[] pts)"
-#=
-rhino"public Entity InterpClosedSpline(Point3d[] pts)"
-=#
-rhino"public Guid Circle(Point3d c, Vector3d n, double r)"
-rhino"public Point3d CircleCenter(RhinoObject obj)"
-rhino"public Vector3d CircleNormal(RhinoObject obj)"
-rhino"public double CircleRadius(RhinoObject obj)"
-rhino"public Guid Ellipse(Point3d c, Vector3d n, double radiusX, double radiusY)"
-rhino"public Guid Arc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)"
-rhino"public Guid JoinCurves(Guid[] objs)"
-#=
-
-rhino"public Entity Text(string str, Point3d corner, Vector3d vx, Vector3d vy, double height)"
-
-rhino"public Guid SurfaceFromCurve(Entity curve)"
-=#
-rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
-rhino"public Guid SurfaceEllipse(Point3d c, Vector3d n, double radiusX, double radiusY)"
-rhino"public Guid SurfaceArc(Point3d c, Vector3d n, double radius, double startAngle, double endAngle)"
-rhino"public Guid SurfaceClosedPolyLine(Point3d[] pts)"
-rhino"public Guid SurfaceFrom(Guid[] objs)"
-rhino"public Guid Sphere(Point3d c, double r)"
-rhino"public Guid Torus(Point3d c, Vector3d vz, double majorRadius, double minorRadius)"
-rhino"public Brep Cylinder(Point3d bottom, double radius, Point3d top)"
-rhino"public Brep Cone(Point3d bottom, double radius, Point3d top)"
-rhino"public Brep ConeFrustum(Point3d bottom, double bottom_radius, Point3d top, double top_radius)"
-rhino"public Brep Box(Point3d corner, Vector3d vx, Vector3d vy, double dx, double dy, double dz)"
-rhino"public Brep XYCenteredBox(Point3d corner, Vector3d vx, Vector3d vy, double dx, double dy, double dz)"
-#=
-rhino"public Guid IrregularPyramidMesh(Point3d[] pts, Point3d apex)"
-=#
-rhino"public Brep IrregularPyramid(Point3d[] pts, Point3d apex)"
-rhino"public Brep IrregularPyramidFrustum(Point3d[] bpts, Point3d[] tpts)"
-#rhino"public Entity MeshFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN)"
-rhino"public Guid SurfaceFromGrid(int nU, int nV, Point3d[] pts, bool closedU, bool closedV, int degreeU, int degreeV)"
-
-#=
-rhino"public Entity SolidFromGrid(int m, int n, Point3d[] pts, bool closedM, bool closedN, int level, double thickness)"
-=#
-rhino"public Brep[] Thicken(RhinoObject obj, double thickness)"
-rhino"public double[] CurveDomain(RhinoObject obj)"
-rhino"public double CurveLength(RhinoObject obj)"
-rhino"public Plane CurveFrameAt(RhinoObject obj, double t)"
-rhino"public Plane CurveFrameAtLength(RhinoObject obj, double l)"
-#=
-rhino"public Guid NurbSurfaceFrom(ObjectId id)"
-rhino"public double[] SurfaceDomain(Entity ent)"
-rhino"public Frame3d SurfaceFrameAt(Entity ent, double u, double v)"
-=#
-rhino"public Brep Extrusion(RhinoObject obj, Vector3d dir)"
-rhino"public Brep[] SweepPathProfile(RhinoObject path, RhinoObject profile, double rotation, double scale)"
-#=
-rhino"public Guid Sweep(ObjectId pathId, ObjectId profileId, double rotation, double scale)"
-rhino"public Guid Loft(ObjectId[] profilesIds, ObjectId[] guidesIds, bool ruled, bool closed)"
-rhino"public void Unite(ObjectId objId0, ObjectId objId1)"
-=#
-rhino"public Guid[] Intersect(RhinoObject obj0, RhinoObject obj1)"
-rhino"public Guid[] Subtract(RhinoObject obj0, RhinoObject obj1)"
-#=
-rhino"public Guid Revolve(ObjectId profileId, Point3d p, Vector3d n, double startAngle, double amplitude)"
-=#
-rhino"public Guid Move(Guid id, Vector3d v)"
-rhino"public Guid Scale(Guid id, Point3d p, double s)"
-rhino"public Guid Rotate(Guid id, Point3d p, Vector3d n, double a)"
-rhino"public Guid Mirror(Guid id, Point3d p, Vector3d n, bool copy)"
-#=
-rhino"public Point3d[] GetPoint(string prompt)"
-rhino"public Point3d[] BoundingBox(ObjectId[] ids)"
-rhino"public void ZoomExtents()"
-rhino"public void SetSystemVariableInt(string name, int value)"
+public FloorFamily FloorFamilyInstance(double totalThickness, double coatingThickness)
+public Entity LightweightPolyLine(Point2d[] pts, double[] angles, double elevation)
+public Entity SurfaceLightweightPolyLine(Point2d[] pts, double[] angles, double elevation)
+public ObjectId CreatePathFloor(Point2d[] pts, double[] angles, BIMLevel level, FloorFamily family)
+#public TableFamily FindOrCreateTableFamily(double length, double width, double height, double top_thickness, double leg_thickness)
+#public ChairFamily FindOrCreateChairFamily(double length, double width, double height, double seat_height, double thickness)
+#public TableChairFamily FindOrCreateTableChairFamily(TableFamily tableFamily, ChairFamily chairFamily, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)
+#public Brep RectangularTable(Point3d c, double angle, TableFamily family)
+#public Brep Chair(Point3d c, double angle, ChairFamily family)
+#public Guid InstanceChair(Point3d c, double angle, ChairFamily family)
+#public Brep[] RowOfChairs(Point3d c, double angle, int n, double spacing, ChairFamily family)
+#public Brep[] CenteredRowOfChairs(Point3d c, double angle, int n, double spacing, ChairFamily family)
+#public Brep[] RectangularTableAndChairs(Point3d c, double angle, TableChairFamily f)
 =#
 
-rhino"public void Render(int width, int height, string path)"
-
-#=
-rhino"public int Command(string cmd)"
-rhino"public void DisableUpdate()"
-rhino"public void EnableUpdate()"
-
-=#
-rhino"public bool IsPoint(RhinoObject e)"
-rhino"public bool IsCircle(RhinoObject e)"
-rhino"public bool IsPolyLine(RhinoObject e)"
-rhino"public bool IsSpline(RhinoObject e)"
-rhino"public bool IsInterpSpline(RhinoObject e)"
-rhino"public bool IsClosedPolyLine(RhinoObject e)"
-rhino"public bool IsClosedSpline(RhinoObject e)"
-rhino"public bool IsInterpClosedSpline(RhinoObject e)"
-rhino"public bool IsEllipse(RhinoObject e)"
-rhino"public bool IsArc(RhinoObject e)"
-rhino"public bool IsText(RhinoObject e)"
-rhino"public byte ShapeCode(RhinoObject id)"
-#=
-rhino"public BIMLevel FindOrCreateLevelAtElevation(double elevation)"
-rhino"public BIMLevel UpperLevel(BIMLevel currentLevel, double addedElevation)"
-rhino"public double GetLevelElevation(BIMLevel level)"
-
-rhino"public FloorFamily FloorFamilyInstance(double totalThickness, double coatingThickness)"
-rhino"public Entity LightweightPolyLine(Point2d[] pts, double[] angles, double elevation)"
-rhino"public Entity SurfaceLightweightPolyLine(Point2d[] pts, double[] angles, double elevation)"
-rhino"public ObjectId CreatePathFloor(Point2d[] pts, double[] angles, BIMLevel level, FloorFamily family)"
-=#
-rhino"public Guid ClosedPathCurveArray(Point3d[] pts, double[] angles)"
-rhino"public Brep[] PathWall(RhinoObject obj, double rThickness, double lThickness, double height)"
-rhino"public Brep RectangularTable(Point3d c, double angle, double length, double width, double height, double top_thickness, double leg_thickness)"
-
-
-#rhino"public TableFamily FindOrCreateTableFamily(double length, double width, double height, double top_thickness, double leg_thickness)"
-#rhino"public ChairFamily FindOrCreateChairFamily(double length, double width, double height, double seat_height, double thickness)"
-#rhino"public TableChairFamily FindOrCreateTableChairFamily(TableFamily tableFamily, ChairFamily chairFamily, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)"
-#rhino"public Brep RectangularTable(Point3d c, double angle, TableFamily family)"
-#rhino"public Brep Chair(Point3d c, double angle, ChairFamily family)"
-#rhino"public Guid InstanceChair(Point3d c, double angle, ChairFamily family)"
-#rhino"public Brep[] RowOfChairs(Point3d c, double angle, int n, double spacing, ChairFamily family)"
-#rhino"public Brep[] CenteredRowOfChairs(Point3d c, double angle, int n, double spacing, ChairFamily family)"
-#rhino"public Brep[] RectangularTableAndChairs(Point3d c, double angle, TableChairFamily f)"
-
-rhino"public Brep[] BaseRectangularTable(double length, double width, double height, double top_thickness, double leg_thickness)"
-rhino"public int CreateRectangularTableFamily(double length, double width, double height, double top_thickness, double leg_thickness)"
-rhino"public Guid Table(Point3d c, double angle, int family)"
-rhino"public Brep[] BaseChair(double length, double width, double height, double seat_height, double thickness)"
-rhino"public int CreateChairFamily(double length, double width, double height, double seat_height, double thickness)"
-rhino"public Guid Chair(Point3d c, double angle, int family)"
-rhino"public GeometryBase[] BaseRectangularTableAndChairs(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)"
-rhino"public int CreateRectangularTableAndChairsFamily(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)"
-rhino"public Guid TableAndChairs(Point3d c, double angle, int family)"
 
 abstract type RHKey end
 const RHId = Guid
@@ -193,8 +192,7 @@ void_ref(b::RH) = RHNativeRef(zeros(UInt8, 16))
 
 create_RH_connection() = create_backend_connection("Rhinoceros", 12000)
 
-const rhino = RH(LazyParameter(TCPSocket, create_RH_connection))
-reset_rhino_connection() = reset(rhino.connection)
+const rhino = RH(LazyParameter(TCPSocket, create_RH_connection), rhino_api)
 
 # This should not be done automatically
 backend_name(b::RH) = "Rhino"
@@ -205,49 +203,47 @@ realize(b::RH, s::UniversalShape) =
   RHUniversalRef()
 
 backend_stroke(b::RH, path::CircularPath) =
-    RHCircle(connection(b), path.center, vz(1, path.center.cs), path.radius)
+    @remote(b, Circle(connection(b), path.center, vz(1, path.center.cs), path.radius))
 backend_stroke(b::RH, path::RectangularPath) =
     let c = path.corner,
         dx = path.dx,
         dy = path.dy
-        RHClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
+        @remote(b, ClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)]))
     end
 backend_stroke(b::RH, path::ArcPath) =
   backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
 
 backend_stroke(b::RH, path::OpenPolygonalPath) =
-  	RHPolyLine(connection(b), path.vertices)
+  	@remote(b, PolyLine(path.vertices))
 backend_stroke(b::RH, path::ClosedPolygonalPath) =
-    RHClosedPolyLine(connection(b), path.vertices)
+    @remote(b, ClosedPolyLine(path.vertices))
 
 backend_stroke(b::RH, path::OpenSplinePath) =
   if (path.v0 == false) && (path.v1 == false)
     #ACADSpline(connection(b), path.vertices)
-    RHSpline(connection(b), path.vertices)
+    @remote(b, Spline(path.vertices))
   elseif (path.v0 != false) && (path.v1 != false)
-    RHInterpSpline(connection(b), path.vertices, path.v0, path.v1)
+    @remote(b, InterpSpline(path.vertices, path.v0, path.v1))
   else
-    RHInterpSpline(connection(b),
+    @remote(b, InterpSpline(connection(b),
                      path.vertices,
                      path.v0 == false ? path.vertices[2]-path.vertices[1] : path.v0,
-                     path.v1 == false ? path.vertices[end-1]-path.vertices[end] : path.v1)
+                     path.v1 == false ? path.vertices[end-1]-path.vertices[end] : path.v1))
   end
 backend_stroke(b::RH, path::ClosedSplinePath) =
-    RHInterpClosedSpline(connection(b), path.vertices)
+    @remote(b, InterpClosedSpline(path.vertices))
 backend_fill(b::RH, path::ClosedSplinePath) =
-    backend_fill_curves(b, RHInterpClosedSpline(connection(b), path.vertices))
+    backend_fill_curves(b, @remote(b, InterpClosedSpline(path.vertices)))
 
-
-
-backend_stroke_unite(b::RH, refs) = RHJoinCurves(connection(b), refs)
+backend_stroke_unite(b::RH, refs) = @remote(b, JoinCurves(refs))
 
 #=backend_fill(b::RH, path::ClosedPolygonalPath) =
-    RHSurfaceClosedPolyLine(connection(b), path.vertices)
+    @remote(b, SurfaceClosedPolyLine(path.vertices))
     backend_fill(b::RH, path::RectangularPath) =
         let c = path.corner,
             dx = path.dx,
             dy = path.dy
-            RHSurfaceClosedPolyLine(connection(b), [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)])
+            @remote(b, SurfaceClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)]))
         end
 backend_fill(b::RH, path::RectangularPath) =
     let c = path.corner,
@@ -257,201 +253,189 @@ backend_fill(b::RH, path::RectangularPath) =
     end
 =#
 
-backend_fill_curves(b::RH, gs::Guids) = RHSurfaceFrom(connection(b), gs)
-backend_fill_curves(b::RH, g::Guid) = RHSurfaceFrom(connection(b), [g])
+backend_fill_curves(b::RH, gs::Guids) = @remote(b, SurfaceFrom(gs))
+backend_fill_curves(b::RH, g::Guid) = @remote(b, SurfaceFrom([g]))
 
-backend_stroke_line(b::RH, vs) = RHPolyLine(connection(b), vs)
+backend_stroke_line(b::RH, vs) = @remote(b, PolyLine(vs))
 
 backend_stroke_arc(b::RH, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
     let end_angle = start_angle + amplitude
         if end_angle > start_angle
-            RHArc(connection(b), center, vz(1, center.cs), radius, start_angle, end_angle)
+            @remote(b, Arc(center, vz(1, center.cs), radius, start_angle, end_angle))
         else
-            RHArc(connection(b), center, vz(1, center.cs), radius, end_angle, start_angle)
+            @remote(b, Arc(center, vz(1, center.cs), radius, end_angle, start_angle))
         end
     end
 
 realize(b::RH, s::Point) =
-  RHPoint(connection(b), s.position)
+  @remote(b, Point(s.position))
 
 realize(b::RH, s::Line) =
-  RHPolyLine(connection(b), s.vertices)
+  @remote(b, PolyLine(s.vertices))
 
 realize(b::RH, s::Spline) =
   if (s.v0 == false) && (s.v1 == false)
-    RHSpline(connection(b), s.points)
+    @remote(b, Spline(s.points))
   elseif (s.v0 != false) && (s.v1 != false)
-    RHInterpSpline(connection(b), s.points, s.v0, s.v1)
+    @remote(b, InterpSpline(s.points, s.v0, s.v1))
   else
-    RHInterpSpline(connection(b),
+    @remote(b, InterpSpline(connection(b),
                      s.points,
                      s.v0 == false ? s.points[2]-s.points[1] : s.v0,
-                     s.v1 == false ? s.points[end-1]-s.points[end] : s.v1)
+                     s.v1 == false ? s.points[end-1]-s.points[end] : s.v1))
   end
 
 realize(b::RH, s::ClosedSpline) =
-  RHInterpClosedSpline(connection(b), s.points)
+  @remote(b, InterpClosedSpline(s.points))
 
 realize(b::RH, s::Circle) =
-  RHCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+  @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
 
 realize(b::RH, s::Arc) =
   if s.radius == 0
-    RHPoint(connection(b), s.center)
+    @remote(b, Point(s.center))
   elseif s.amplitude == 0
-    RHPoint(connection(b), s.center + vpol(s.radius, s.start_angle, s.center.cs))
+    @remote(b, Point(s.center + vpol(s.radius, s.start_angle, s.center.cs)))
   elseif abs(s.amplitude) >= 2*pi
-    RHCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+    @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
   else
     end_angle = s.start_angle + s.amplitude
     if end_angle > s.start_angle
-      RHArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)
+      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle))
     else
-      RHArc(connection(b), s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)
+      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle))
     end
   end
 
 realize(b::RH, s::Ellipse) =
-    RHEllipse(connection(b), s.center, vz(1, s.center.cs), s.radius_x, s.radius_y)
+    @remote(b, Ellipse(s.center, vz(1, s.center.cs), s.radius_x, s.radius_y))
 
 realize(b::RH, s::EllipticArc) =
   error("Finish this")
 
 realize(b::RH, s::Polygon) =
-  RHClosedPolyLine(connection(b), s.vertices)
+  @remote(b, ClosedPolyLine(s.vertices))
 
 realize(b::RH, s::RegularPolygon) =
-  RHClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
+  @remote(b, ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
 
 realize(b::RH, s::Rectangle) =
-  RHClosedPolyLine(connection(b), [s.corner, add_x(s.corner, s.dx), add_xy(s.corner, s.dx, s.dy), add_y(s.corner, s.dy)])
-#
-rhino"public Point3d[] CurvePointsAt(RhinoObject obj, double[] ts)"
-rhino"public Vector3d[] CurveTangentsAt(RhinoObject obj, double[] ts)"
-rhino"public Vector3d[] CurveNormalsAt(RhinoObject obj, double[] ts)"
+  @remote(b, ClosedPolyLine([s.corner, add_x(s.corner, s.dx), add_xy(s.corner, s.dx, s.dy), add_y(s.corner, s.dy)]))
 
 backend_map_division(b::RH, f::Function, s::Shape1D, n::Int) =
   let conn = connection(b),
       r = ref(s).value,
-      (t1, t2) = RHCurveDomain(conn, r),
+      (t1, t2) = @remote(b, CurveDomain(r)),
       ti = division(t1, t2, n),
-      ps = RHCurvePointsAt(conn, r, ti),
-      ts = RHCurveTangentsAt(conn, r, ti),
+      ps = @remote(b, CurvePointsAt(r, ti)),
+      ts = @remote(b, CurveTangentsAt(r, ti)),
       #ns = ACADCurveNormalsAt(conn, r, ti),
-      frames = rotation_minimizing_frames(RHCurveFrameAt(conn, r, t1), ps, ts)
+      frames = rotation_minimizing_frames(@remote(b, CurveFrameAt(r, t1)), ps, ts)
     map(f, frames)
   end
 
-
-rhino"public Guid SurfaceCircle(Point3d c, Vector3d n, double r)"
-
 realize(b::RH, s::SurfaceCircle) =
-  RHSurfaceCircle(connection(b), s.center, vz(1, s.center.cs), s.radius)
+  @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
 
 realize(b::RH, s::SurfaceArc) =
-  RHSurfaceArc(connection(b), s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude)
+  @remote(b, SurfaceArc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude))
 
 realize(b::RH, s::SurfaceEllipticArc) =
   error("Finish this")
 
 realize(b::RH, s::SurfaceEllipse) =
-    RHSurfaceEllipse(connection(b), s.center, vz(1, s.center.cs), s.radius_x, s.radius_y)
-
-rhino"public Guid SurfaceClosedPolyLine(Point3d[] pts)"
+  @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), s.radius_x, s.radius_y))
 
 realize(b::RH, s::SurfacePolygon) =
-  RHSurfaceClosedPolyLine(connection(b), s.vertices)
+  @remote(b, SurfaceClosedPolyLine(s.vertices))
 realize(b::RH, s::SurfaceRegularPolygon) =
-  RHSurfaceClosedPolyLine(connection(b), regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
+  @remote(b, SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
 realize(b::RH, s::SurfaceRectangle) =
   let c = s.corner
-    RHSurfaceClosedPolyLine(connection(b), [c, add_x(c, s.dx), add_xy(c, s.dx, s.dy), add_y(c, s.dy)])
+    @remote(b, SurfaceClosedPolyLine([c, add_x(c, s.dx), add_xy(c, s.dx, s.dy), add_y(c, s.dy)]))
   end
 #=
 realize(b::RH, s::Surface) =
-  let ids = RHSurfaceFromCurves(connection(b), collect_ref(s.frontier))
+  let ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
     foreach(mark_deleted, s.frontier)
     ids
   end
 realize(b::RH, s::Text) =
-  RHText(connection(b), s.str, s.c, vx(1, s.c.cs), vy(1, s.c.cs), s.h)
+  @remote(b, Text(s.str, s.c, vx(1, s.c.cs), vy(1, s.c.cs), s.h))
 =#
 
-rhino"public double[] SurfaceDomain(RhinoObject obj)"
-rhino"public Plane SurfaceFrameAt(RhinoObject obj, double u, double v)"
-
 backend_surface_domain(b::RH, s::Shape2D) =
-    tuple(RHSurfaceDomain(connection(b), ref(s).value)...)
+    tuple(@remote(b, SurfaceDomain(ref(s).value)...))
 
 backend_map_division(b::RH, f::Function, s::Shape2D, nu::Int, nv::Int) =
     let conn = connection(b)
         r = ref(s).value
-        (u1, u2, v1, v2) = RHSurfaceDomain(conn, r)
+        (u1, u2, v1, v2) = @remote(b, SurfaceDomain(r))
         map_division(u1, u2, nu) do u
             map_division(v1, v2, nv) do v
-                f(RHSurfaceFrameAt(conn, r, u, v))
+                f(@remote(b, SurfaceFrameAt(r, u, v)))
             end
         end
     end
 
 realize(b::RH, s::Sphere) =
-    RHSphere(connection(b), s.center, s.radius)
+    @remote(b, Sphere(s.center, s.radius))
 realize(b::RH, s::Torus) =
-    RHTorus(connection(b), s.center, vz(1, s.center.cs), s.re, s.ri)
+    @remote(b, Torus(s.center, vz(1, s.center.cs), s.re, s.ri))
 realize(b::RH, s::Cuboid) =
-    RHIrregularPyramidFrustum(connection(b), [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
+    @remote(b, IrregularPyramidFrustum([s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3]))
 realize(b::RH, s::RegularPyramidFrustum) =
-    RHIrregularPyramidFrustum(connection(b),
+    @remote(b, IrregularPyramidFrustum(connection(b),
                               regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                              regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed))
+                              regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed)))
 realize(b::RH, s::RegularPyramid) =
-    RHIrregularPyramid(connection(b),
+    @remote(b, IrregularPyramid(connection(b),
                        regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                       add_z(s.cb, s.h))
+                       add_z(s.cb, s.h)))
 realize(b::RH, s::IrregularPyramidFrustum) =
-  RHIrregularPyramidFrustum(connection(b), s.bs, s.ts)
+  @remote(b, IrregularPyramidFrustum(s.bs, s.ts))
 
 realize(b::RH, s::IrregularPyramid) =
-    RHIrregularPyramid(connection(b), s.bs, s.t)
+    @remote(b, IrregularPyramid(s.bs, s.t))
 realize(b::RH, s::RegularPrism) =
     let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-        RHIrregularPyramidFrustum(connection(b),
+        @remote(b, IrregularPyramidFrustum(connection(b),
                                   cbs,
-                                  map(p -> add_z(p, s.h), cbs))
+                                  map(p -> add_z(p, s.h), cbs)))
     end
 realize(b::RH, s::IrregularPrism) =
-    RHIrregularPyramidFrustum(connection(b),
+    @remote(b, IrregularPyramidFrustum(connection(b),
                               s.bs,
-                              map(p -> (p + s.v), s.bs))
+                              map(p -> (p + s.v), s.bs)))
 
 realize(b::RH, s::RightCuboid) =
-    RHXYCenteredBox(connection(b), s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.width, s.height, s.h)
+    @remote(b, XYCenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.width, s.height, s.h))
 
 realize(b::RH, s::Box) =
-    RHBox(connection(b), s.c, vx(1,s.c.cs), vy(1,s.c.cs), s.dx, s.dy, s.dz)
+    @remote(b, Box(s.c, vx(1,s.c.cs), vy(1,s.c.cs), s.dx, s.dy, s.dz))
 
 realize(b::RH, s::Cone) =
-  RHCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
+  @remote(b, Cone(add_z(s.cb, s.h), s.r, s.cb))
 
 realize(b::RH, s::ConeFrustum) =
-  RHConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
+  @remote(b, ConeFrustum(s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt))
 
 realize(b::RH, s::Cylinder) =
-  RHCylinder(connection(b), s.cb, s.r, s.cb + vz(s.h, s.cb.cs))
+  @remote(b, Cylinder(s.cb, s.r, s.cb + vz(s.h, s.cb.cs)))
 
 #realize(b::RH, s::Circle) = RHCircle(connection(b),
 
 backend_extrusion(b::RH, s::Shape, v::Vec) =
     and_mark_deleted(
         map_ref(s) do r
-            RHExtrusion(connection(b), r, v)
+            @remote(b, Extrusion(r, v))
         end,
         s)
 
 backend_sweep(b::RH, path::Shape, profile::Shape, rotation::Real, scale::Real) =
   map_ref(profile) do profile_r
     map_ref(path) do path_r
-      RHSweepPathProfile(connection(b), path_r, profile_r, rotation, scale)
+      @remote(b, SweepPathProfile(path_r, profile_r, rotation, scale))
     end
   end
 
@@ -459,7 +443,7 @@ backend_sweep(b::RH, path::Shape, profile::Shape, rotation::Real, scale::Real) =
 realize(b::RH, s::Revolve) =
   and_delete_shape(
     map_ref(s.profile) do r
-      RHRevolve(connection(b), r, s.p, s.n, s.start_angle, s.amplitude)
+      @remote(b, Revolve(r, s.p, s.n, s.start_angle, s.amplitude))
     end,
     s.profile)
 
@@ -496,10 +480,10 @@ unite_refs(b::RH, r::RHUnionRef) =
   r
 
 unite_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
-  (RHUnite(connection(b), r0.value, r1.value); r0)
+  (@remote(b, Unite(r0.value, r1.value); r0))
 
 intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
-    let refs = RHIntersect(connection(b), r0.value, r1.value)
+    let refs = @remote(b, Intersect(r0.value, r1.value))
         n = length(refs)
         if n == 0
             RHEmptyRef()
@@ -511,7 +495,7 @@ intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
     end
 
 subtract_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
-    let refs = RHSubtract(connection(b), r0.value, r1.value)
+    let refs = @remote(b, Subtract(r0.value, r1.value))
         n = length(refs)
         if n == 0
             RHEmptyRef()
@@ -531,7 +515,7 @@ subtract_ref(b::RH, r0::RHRef, r1::RHUnionRef) =
 
 #=
 slice_ref(b::RH, r::RHNativeRef, p::Loc, v::Vec) =
-  (RHSlice(connection(b), r.value, p, v); r)
+  (@remote(b, Slice(r.value, p, v); r))
 
 slice_ref(b::RH, r::RHUnionRef, p::Loc, v::Vec) =
   map(r->slice_ref(b, r, p, v), r.values)
@@ -548,7 +532,7 @@ realize(b::RH, s::Slice) =
 
 realize(b::RH, s::Move) =
   let r = map_ref(s.shape) do r
-            RHMove(connection(b), r, s.v)
+            @remote(b, Move(r, s.v))
             r
           end
     mark_deleted(s.shape)
@@ -557,7 +541,7 @@ realize(b::RH, s::Move) =
 
 realize(b::RH, s::Scale) =
   let r = map_ref(s.shape) do r
-            RHScale(connection(b), r, s.p, s.s)
+            @remote(b, Scale(r, s.p, s.s))
             r
           end
     mark_deleted(s.shape)
@@ -566,7 +550,7 @@ realize(b::RH, s::Scale) =
 
 realize(b::RH, s::Rotate) =
   let r = map_ref(s.shape) do r
-            RHRotate(connection(b), r, s.p, s.v, s.angle)
+            @remote(b, Rotate(r, s.p, s.v, s.angle))
             r
           end
     mark_deleted(s.shape)
@@ -575,28 +559,28 @@ realize(b::RH, s::Rotate) =
 
 realize(b::RH, s::Mirror) =
   and_delete_shape(map_ref(s.shape) do r
-                    RHMirror(connection(b), r, s.p, s.n, false)
+                    @remote(b, Mirror(r, s.p, s.n, false))
                    end,
                    s.shape)
 
 realize(b::RH, s::UnionMirror) =
   let r0 = ref(s.shape),
       r1 = map_ref(r0) do r
-            RHMirror(connection(b), r, s.p, s.n, true)
+            @remote(b, Mirror(r, s.p, s.n, true))
           end
     UnionRef((r0,r1))
   end
 
 realize(b::RH, s::SurfaceGrid) =
   let (nu, nv) = size(s.points)
-    RHSurfaceFromGrid(connection(b), nu, nv, reshape(permutedims(s.points),:), s.closed_u, s.closed_v,
+    @remote(b, SurfaceFromGrid(nu, nv, reshape(permutedims(s.points),:)), s.closed_u, s.closed_v,
       max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
   end
 
 realize(b::RH, s::Thicken) =
   and_delete_shape(
     map_ref(s.shape) do r
-      RHThicken(connection(b), r, s.thickness)
+      @remote(b, Thicken(r, s.thickness))
     end,
     s.shape)
 
@@ -605,28 +589,28 @@ realize(b::RH, s::Thicken) =
 # Families
 
 backend_get_family(b::RH, f::TableFamily) =
-    RHCreateRectangularTableFamily(connection(b), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
+    @remote(b, CreateRectangularTableFamily(f.length, f.width, f.height, f.top_thickness, f.leg_thickness))
 backend_get_family(b::RH, f::ChairFamily) =
-    RHCreateChairFamily(connection(b), f.length, f.width, f.height, f.seat_height, f.thickness)
+    @remote(b, CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness))
 backend_get_family(b::RH, f::TableChairFamily) =
-    RHCreateRectangularTableAndChairsFamily(connection(b),
+    @remote(b, CreateRectangularTableAndChairsFamily(connection(b),
         ref(f.table_family), ref(f.chair_family),
         f.table_family.length, f.table_family.width,
         f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
-        f.spacing)
+        f.spacing))
 
 backend_rectangular_table(b::RH, c, angle, family) =
-    RHTable(connection(b), c, angle, ref(family))
+    @remote(b, Table(c, angle, ref(family)))
 
 backend_chair(b::RH, c, angle, family) =
-    RHChair(connection(b), c, angle, ref(family))
+    @remote(b, Chair(c, angle, ref(family)))
 
 backend_rectangular_table_and_chairs(b::RH, c, angle, family) =
-    RHTableAndChairs(connection(b), c, angle, ref(family))
+    @remote(b, TableAndChairs(c, angle, ref(family)))
 
 backend_slab(b::RH, profile, holes, thickness, family) =
     map_ref(b,
-            r->RHExtrusion(connection(b), r, vz(thickness)),
+            r->@remote(b, Extrusion(r, vz(thickness))),
             ensure_ref(b, backend_fill(b, profile)))
 
 #Beams are aligned along the top axis.
@@ -636,7 +620,7 @@ realize(b::RH, s::Beam) =
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
       # need to test whether it is rotation on center or on axis
       o = add_y(loc_from_o_phi(s.cb, s.angle), -profile.dy/2)
-    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h)
+    @remote(b, XYCenteredBox(o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h))
   end
 
 #Columns are aligned along the center axis.
@@ -646,7 +630,7 @@ realize(b::RH, s::FreeColumn) =
       c = add_xy(s.cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2)
       # need to test whether it is rotation on center or on axis
       o = loc_from_o_phi(c, s.angle)
-    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h)
+    @remote(b, XYCenteredBox(o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, s.h))
   end
 
 realize(b::RH, s::Column) =
@@ -657,79 +641,62 @@ realize(b::RH, s::Column) =
       height = s.top_level.height - base_height,
       # need to test whether it is rotation on center or on axis
       o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
-    RHXYCenteredBox(connection(b), o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height)
+    @remote(b, XYCenteredBox(o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height))
   end
 
 backend_wall(b::RH, path, height, l_thickness, r_thickness, family) =
-    RHPathWall(connection(b), backend_stroke(b, path), l_thickness, r_thickness, height)
+    @remote(b, PathWall(backend_stroke(b, path), l_thickness, r_thickness, height))
 
 ############################################
 
 backend_bounding_box(b::RH, shapes::Shapes) =
-  RHBoundingBox(connection(b), collect_ref(shapes))
+  @remote(b, BoundingBox(collect_ref(shapes)))
 
 import Base.view
 set_view(camera::XYZ, target::XYZ, lens::Real, b::RH) =
-  RHView(connection(b), camera, target, lens)
+  @remote(b, View(camera, target, lens))
 
 get_view(b::RH) =
-  let c = connection(b)
-    RHViewCamera(c), RHViewTarget(c), RHViewLens(c)
-  end
+  @remote(b, ViewCamera()), @remote(b, ViewTarget()), @remote(b, ViewLens())
 
 zoom_extents(b::RH) =
-  RHZoomExtents(connection(b))
+  @remote(b, ZoomExtents()
 
 view_top(b::RH) =
-    RHViewTop(connection(b))
-
-rhino"public int DeleteAll()"
-rhino"public int DeleteAllInLayer(String name)"
-rhino"public void Delete(Guid id)"
-rhino"public void DeleteMany(Guid[] ids)"
+  @remote(b, ViewTop())
 
 backend_delete_shapes(b::RH, shapes::Shapes) =
-  RHDeleteMany(connection(b), collect_ref(shapes))
+  @remote(b, DeleteMany(collect_ref(shapes)))
 
 delete_all_shapes(b::RH) =
-  RHDeleteAll(connection(b))
+  @remote(b, DeleteAll())
 
 # Layers
-rhino"public String CreateLayer(string name)"
-rhino"public void SetLayerColor(ObjectId id, byte r, byte g, byte b)"
-rhino"public void SetShapeColor(ObjectId id, byte r, byte g, byte b)"
-rhino"public String CurrentLayer()"
-rhino"public void SetCurrentLayer(String id)"
-rhino"public String ShapeLayer(RhinoObject objId)"
-rhino"public void SetShapeLayer(RhinoObject objId, String layerId)"
-
 RHLayer = String
 
 current_layer(b::RH)::RHLayer =
   RHCurrentLayer(connection(b))
 
 current_layer(layer::RHLayer, b::RH) =
-  RHSetCurrentLayer(connection(b), layer)
+  @remote(b, SetCurrentLayer(layer))
 
 create_layer(name::String, b::RH) =
-  RHCreateLayer(connection(b), name)
+  @remote(b, CreateLayer(name))
 
 create_layer(name::String, color::RGB, b::RH) =
-  let layer = RHCreateLayer(connection(b), name)
-    RHSetLayerColor(connection(b), layer, color.r, color.g, color.b)
+  let layer = @remote(b, CreateLayer(name))
+    @remote(b, SetLayerColor(layer, color.r, color.g, color.b))
     layer
   end
 
 delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
-  RHDeleteAllInLayer(connection(b), layer)
-
-rhino"public Guid Clone(RhinoObject e)"
+  @remote(b, DeleteAllInLayer(layer))
 
 shape_from_ref(r, b::RH) =
   let c = connection(b)
     let code = RHShapeCode(c, r),
         ref = LazyRef(b, RHNativeRef(r))
-              #ref = LazyRef(b, RHNativeRef(RHClone(connection(b), r))) # HACK CLONING!!!!!
+              #ref = LazyRef(b, RHNativeRef(@remote(b, Clone(r)))) # HACK CLONING!!!!!
       if code == 1
         point(RHPointPosition(c, r),
               backend=b, ref=ref)
@@ -790,12 +757,11 @@ shape_from_ref(r, b::RH) =
                 """
 
 #
-rhino"public Point3d[] GetPosition(string prompt)"
 
 select_position(prompt::String, b::RH) =
   begin
     @info "$(prompt) on the $(b) backend."
-    let ans = RHGetPosition(connection(b), prompt)
+    let ans = @remote(b, GetPosition(prompt))
       length(ans) > 0 ? ans[1] : nothing
     end
   end
@@ -804,14 +770,11 @@ select_positions(prompt::String, b::RH) =
   let ps = Loc[]
       p = nothing
     @info "$(prompt) on the $(b) backend."
-    while ((p = RHGetPosition(connection(b), prompt)) |> length) > 0
+    while ((p = @remote(b, GetPosition(prompt)) |> length)) > 0
         push!(ps, p...)
     end
     ps
   end
-
-rhino"public Guid[] GetPoint(string prompt)"
-rhino"public Guid[] GetPoints(string prompt)"
 
 # HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
 
@@ -821,17 +784,12 @@ select_point(prompt::String, b::RH) =
 select_points(prompt::String, b::RH) =
   select_many_with_prompt(prompt, b, RHGetPoints)
 
-rhino"public Guid[] GetCurve(string prompt)"
-rhino"public Guid[] GetCurves(string prompt)"
-
 select_curve(prompt::String, b::RH) =
   select_one_with_prompt(prompt, b, RHGetCurve)
 
 select_curves(prompt::String, b::RH) =
   select_many_with_prompt(prompt, b, RHGetCurves)
 
-rhino"public Guid[] GetSurface(string prompt)"
-rhino"public Guid[] GetSurfaces(string prompt)"
 
 select_surface(prompt::String, b::RH) =
   select_one_with_prompt(prompt, b, RHGetSurface)
@@ -839,17 +797,12 @@ select_surface(prompt::String, b::RH) =
 select_surfaces(prompt::String, b::RH) =
   select_many_with_prompt(prompt, b, RHGetSurfaces)
 
-rhino"public Guid[] GetSolid(string prompt)"
-rhino"public Guid[] GetSolids(string prompt)"
 
 select_solid(prompt::String, b::RH) =
   select_one_with_prompt(prompt, b, RHGetSolid)
 
 select_solids(prompt::String, b::RH) =
   select_many_with_prompt(prompt, b, RHGetSolids)
-
-rhino"public Guid[] GetShape(string prompt)"
-rhino"public Guid[] GetShapes(string prompt)"
 
 select_shape(prompt::String, b::RH) =
   select_one_with_prompt(prompt, b, RHGetShape)
@@ -878,15 +831,11 @@ generate_captured_shapes(ss::Shapes, b::RH) =
     println("])")
   end
 
-
-rhino"public Guid[] GetAllShapes()"
-rhino"public Guid[] GetAllShapesInLayer(String name)"
-
 all_shapes(b::RH) =
   [shape_from_ref(r) for r in RHGetAllShapes(connection(b))]
 
 all_shapes_in_layer(layer, b::RH) =
-  [shape_from_ref(r) for r in RHGetAllShapesInLayer(connection(b), layer)]
+  [shape_from_ref(r) for r in @remote(b, GetAllShapesInLayer(layer))]
 
 render_view(path::String, b::RH) =
-  RHRender(connection(b), render_width(), render_height(), path)
+  @remote(b, Render(render_width(), render_height(), path))
