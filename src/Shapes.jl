@@ -344,6 +344,15 @@ macro defop(name_params)
     name, params = name_params.args[1], name_params.args[2:end]
     quote
         export $(esc(name))
+        $(esc(name))($(map(esc,params)...), backend::Backend=current_backend()) =
+          throw(UndefinedBackendException())
+    end
+end
+
+macro defopnamed(name_params)
+    name, params = name_params.args[1], name_params.args[2:end]
+    quote
+        export $(esc(name))
         @named_params($(esc(name))($(map(esc,params)...), backend::Backend=current_backend()) =
             throw(UndefinedBackendException()))
     end
@@ -1046,18 +1055,14 @@ end
 
 @defop disable_update()
 @defop enable_update()
-@defop set_view(camera::Loc, target::Loc, lens::Real)
+@defopnamed set_view(camera::Loc=xyz(10,10,10), target::Loc=u0(), lens::Real=50)
 @defop get_view()
-@defop set_sun(altitude, azimuth)
+@defopnamed set_sun(altitude=45, azimuth=0)
 @defop add_ground_plane()
 @defop zoom_extents()
 @defop view_top()
 @defop get_layer(name::String)
-# Hum, time to use named parameters?
-@defop create_layer(name::String)
-@defop create_layer(name::String, active::Bool)
-@defop create_layer(name::String, color::RGB)
-@defop create_layer(name::String, active::Bool, color::RGB)
+@defopnamed create_layer(name::String="Layer", active::Bool=true, color::RGB=rgb(1,1,1))
 @defop current_layer()
 @defop current_layer(layer)
 @defop set_layer_active(layer, status)
