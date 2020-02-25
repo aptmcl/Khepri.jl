@@ -663,7 +663,7 @@ get_view(b::RH) =
   @remote(b, ViewCamera()), @remote(b, ViewTarget()), @remote(b, ViewLens())
 
 zoom_extents(b::RH) =
-  @remote(b, ZoomExtents()
+  @remote(b, ZoomExtents())
 
 view_top(b::RH) =
   @remote(b, ViewTop())
