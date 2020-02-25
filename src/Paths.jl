@@ -1,5 +1,4 @@
 # Paths are an important concept for BIM (and other things)
-using IntervalSets
 export open_path,
        closed_path,
        open_path_ops,

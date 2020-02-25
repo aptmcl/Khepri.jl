@@ -3,7 +3,10 @@ using Base.Iterators
 using Sockets
 using Dates
 using ColorTypes
-using PyCall
+using StaticArrays
+using LinearAlgebra
+using IntervalSets
+using Interpolations
 
 include("Parameters.jl")
 include("Utils.jl")

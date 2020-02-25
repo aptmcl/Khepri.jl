@@ -1,6 +1,3 @@
-
-using StaticArrays
-using LinearAlgebra
 import LinearAlgebra.cross, LinearAlgebra.dot, LinearAlgebra.norm
 
 export Loc, Locs, LocOrZ,

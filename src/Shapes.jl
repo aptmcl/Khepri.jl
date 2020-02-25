@@ -1,5 +1,3 @@
-using Interpolations
-
 export Shape,
        Path,
        backend,
@@ -352,8 +350,8 @@ end
 macro defopnamed(name_params)
     name, params = name_params.args[1], name_params.args[2:end]
     quote
-        export $(esc(name))
-        @named_params($(esc(name))($(map(esc,params)...), backend::Backend=current_backend()) =
+        export $(name)
+        @named_params($(esc(name))($(params...), backend::Backend=current_backend()) =
             throw(UndefinedBackendException()))
     end
 end
@@ -1052,12 +1050,11 @@ end
 @defop all_shapes()
 @defop all_shapes_in_layer(layer)
 @defop delete_all_shapes_in_layer(layer)
-
 @defop disable_update()
 @defop enable_update()
 @defopnamed set_view(camera::Loc=xyz(10,10,10), target::Loc=u0(), lens::Real=50)
 @defop get_view()
-@defopnamed set_sun(altitude=45, azimuth=0)
+@defopnamed set_sun(altitude::Real=45, azimuth::Real=0)
 @defop add_ground_plane()
 @defop zoom_extents()
 @defop view_top()
