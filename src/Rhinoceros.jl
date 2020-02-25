@@ -572,9 +572,12 @@ realize(b::RH, s::UnionMirror) =
   end
 
 realize(b::RH, s::SurfaceGrid) =
-  let (nu, nv) = size(s.points)
-    @remote(b, SurfaceFromGrid(nu, nv, reshape(permutedims(s.points),:)), s.closed_u, s.closed_v,
-      max(2*floor(Int,nu/30)+1, 2), max(2*floor(Int, nv/30)+1, 2))
+  let (nu, nv) = size(s.points),
+      order(n) = max(2*floor(Int,n/30) + 1, 2)
+    @remote(b, SurfaceFromGrid(nu, nv,
+                               reshape(permutedims(s.points),:),
+                               s.closed_u, s.closed_v,
+                               order(nu), order(nv)))
   end
 
 realize(b::RH, s::Thicken) =
