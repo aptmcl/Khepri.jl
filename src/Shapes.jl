@@ -314,29 +314,6 @@ trace!(s) =
 maybe_trace(s) = (traceability() && trace!(s); s)
 
 ######################################################
-
-replace_in(expr::Expr, replacements) =
-    if expr.head == :.
-        Expr(expr.head,
-             replace_in(expr.args[1], replacements), expr.args[2])
-    elseif expr.head == :quote
-        expr
-    else
-        Expr(expr.head,
-             map(arg -> replace_in(arg, replacements), expr.args) ...)
-    end
-replace_in(expr::Symbol, replacements) =
-    get(replacements, expr, esc(expr))
-replace_in(expr::Any, replacements) =
-    expr
-
-showit(s, a) = begin
-    print(s)
-    print(":")
-    println(a)
-    a
-end
-
 # The undefined backend
 struct UndefinedBackend <: Backend{Int,Int} end
 connection(b::UndefinedBackend) = throw(UndefinedBackendException())
@@ -367,8 +344,8 @@ macro defop(name_params)
     name, params = name_params.args[1], name_params.args[2:end]
     quote
         export $(esc(name))
-        $(esc(name))($(map(esc,params)...), backend::Backend=current_backend()) =
-            throw(UndefinedBackendException())
+        @named_params($(esc(name))($(map(esc,params)...), backend::Backend=current_backend()) =
+            throw(UndefinedBackendException()))
     end
 end
 
@@ -1076,8 +1053,11 @@ end
 @defop zoom_extents()
 @defop view_top()
 @defop get_layer(name::String)
+# Hum, time to use named parameters?
 @defop create_layer(name::String)
+@defop create_layer(name::String, active::Bool)
 @defop create_layer(name::String, color::RGB)
+@defop create_layer(name::String, active::Bool, color::RGB)
 @defop current_layer()
 @defop current_layer(layer)
 @defop set_layer_active(layer, status)

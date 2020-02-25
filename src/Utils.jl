@@ -206,3 +206,45 @@ path_replace_suffix(path::String, suffix::String) =
   let (base, old_suffix) = splitext(path)
     base * suffix
   end
+
+#
+
+replace_in(expr::Expr, replacements) =
+    if expr.head == :.
+        Expr(expr.head,
+             replace_in(expr.args[1], replacements), expr.args[2])
+    elseif expr.head == :quote
+        expr
+    else
+        Expr(expr.head,
+             map(arg -> replace_in(arg, replacements), expr.args) ...)
+    end
+replace_in(expr::Symbol, replacements) =
+    get(replacements, expr, esc(expr))
+replace_in(expr::Any, replacements) =
+    expr
+
+showit(s, a) = begin
+    print(s)
+    print(":")
+    println(a)
+    a
+end
+
+#
+macro named_params(def)
+  call, body = def.args[1], def.args[2]
+  name, fields = call.args[1], call.args[2:end]
+  field_names = map(field -> field.args[1].args[1], fields)
+  field_types = map(field -> esc(field.args[1].args[2]), fields)
+  field_inits = map(field -> field.args[2], fields)
+  field_renames = map(Symbol ∘ string, field_names)
+  field_replacements = Dict(zip(field_names, field_renames))
+  mk_param(name,typ,init) = Expr(:kw, Expr(:(::), name, typ), init)
+  opt_params = map(mk_param, field_renames, field_types, map(init -> replace_in(init, field_replacements), field_inits))
+  key_params = map(mk_param, field_names, field_types, field_renames)
+  func_name = esc(name)
+  quote
+    $(func_name)($(opt_params...); $(key_params...)) = $(esc(body))
+  end
+end
