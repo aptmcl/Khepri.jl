@@ -104,7 +104,7 @@ public Guid Chair(Point3d c, double angle, int family)
 public GeometryBase[] BaseRectangularTableAndChairs(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)
 public int CreateRectangularTableAndChairsFamily(int tableFamily, int chairFamily, double tableLength, double tableWidth, int chairsOnTop, int chairsOnBottom, int chairsOnRight, int chairsOnLeft, double spacing)
 public Guid TableAndChairs(Point3d c, double angle, int family)
-public String CreateLayer(string name, bool active)
+public String CreateLayer(String name, bool active, byte r, byte g, byte b)
 public void SetLayerColor(ObjectId id, byte r, byte g, byte b)
 public void SetShapeColor(ObjectId id, byte r, byte g, byte b)
 public String CurrentLayer()
@@ -678,15 +678,14 @@ delete_all_shapes(b::RH) =
 RHLayer = String
 
 current_layer(b::RH)::RHLayer =
-  RHCurrentLayer(connection(b))
+  @remote(b, CurrentLayer())
 
 current_layer(layer::RHLayer, b::RH) =
   @remote(b, SetCurrentLayer(layer))
 
 backend_create_layer(b::RH, name::String, active::Bool, color::RGB) =
-  let layer = @remote(b, CreateLayer(name, active))
-    @remote(b, SetLayerColor(layer, color.r, color.g, color.b))
-    layer
+  let to255(x) = round(UInt8, x*255)
+    @remote(b, CreateLayer(name, true, to255(red(color)), to255(green(color)), to255(blue(color))))
   end
 
 delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
