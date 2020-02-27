@@ -221,8 +221,9 @@ macro deffamily(name, parent, fields...)
   default_name = esc(Symbol("default_", name_str))
   predicate_name = esc(Symbol("is_", name_str))
   selector_names = map(field_name -> esc(Symbol(name_str, "_", string(field_name))), field_names)
+  with_name = esc(Symbol("with_", name_str))
   quote
-    export $(constructor_name), $(instance_name), $(default_name), $(predicate_name), $(struct_name)
+    export $(constructor_name), $(instance_name), $(default_name), $(predicate_name), $(struct_name), $(with_name)
     struct $struct_name <: $parent
       $(struct_fields...)
       based_on::Union{Family, Nothing}
@@ -239,6 +240,8 @@ macro deffamily(name, parent, fields...)
     $(default_name) = Parameter($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
+    $(with_name)(f::Function; family :: $(struct_name) = $(default_name)(), $(instance_params...)) =
+      with(f, $(default_name), $(instance_name)(family; $([:($(esc(p))=$(esc(p))) for p in field_names]...)))
 #    $(map((selector_name, field_name) -> :($(selector_name)(v::$(struct_name)) = v.$(field_name)),
 #          selector_names, field_names)...)
     Khepri.meta_program(v::$(struct_name)) =
@@ -907,3 +910,18 @@ struct BackendWallFamily{Material} <: BackendFamily
 end
 
 backend_get_family_ref(b::Backend, f::Family, bf::BackendFamily) = bf
+
+
+#=
+The typical family change is:
+
+with(default_XPTO_family, XPTO_family_element(default_XPTO_family(), param=value)) do
+  ...
+end
+
+We will simplify this pattern by allowing the following syntax:
+
+with(XPTO_family, param=value) do
+  ...
+end
+=#
