@@ -630,3 +630,9 @@ raw_plane(v::XYZ) =
      float(vx.x), float(vx.y), float(vx.z),
      float(vy.x), float(vy.y), float(vy.z))
   end
+
+################################################################################
+export acw_vertices
+acw_vertices(vs) =
+  angle_between(vertices_normal(vs), vz()) < pi/4 ?
+    vs : reverse(vs)
