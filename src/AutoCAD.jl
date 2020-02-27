@@ -832,7 +832,11 @@ realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, 
   end
 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
-  @remote(b, Thicken(@remote(b, Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)), vz(height))), r_thickness + l_thickness))
+  @remote(b,
+    Thicken(@remote(b,
+      Extrude(backend_stroke(b, offset(path, (l_thickness - r_thickness)/2)),
+              vz(height))),
+      r_thickness + l_thickness))
 
 ############################################
 
