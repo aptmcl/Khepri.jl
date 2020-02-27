@@ -648,7 +648,9 @@ realize(b::RH, s::Column) =
   end
 
 backend_wall(b::RH, path, height, l_thickness, r_thickness, family) =
-    @remote(b, PathWall(backend_stroke(b, path), l_thickness, r_thickness, height))
+    @remote(b, PathWall(backend_stroke(b, offset(path, l_thickness - r_thickness)), #offset(path, (l_thickness - r_thickness)/2)),
+                        l_thickness, r_thickness,
+                        height))
 
 ############################################
 
