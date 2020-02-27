@@ -981,7 +981,10 @@ shape_from_ref(r, b::ACAD) =
         elseif code == 9
             let start_angle = mod(@remote(b, ArcStartAngle(r)), 2pi),
                 end_angle = mod(@remote(b, ArcEndAngle(r)), 2pi)
-                if end_angle > start_angle
+                arc(maybe_loc_from_o_vz(@remote(b, ArcCenter(r)), @remote(b, ArcNormal(r))),
+                    @remote(b, ArcRadius(r)), start_angle, mod(end_angle - start_angle, 2pi),
+                    backend=b, ref=ref)
+            #=    if end_angle > start_angle
                     arc(maybe_loc_from_o_vz(@remote(b, ArcCenter(r)), @remote(b, ArcNormal(r))),
                         @remote(b, ArcRadius(r)), start_angle, end_angle - start_angle,
                         backend=b, ref=ref)
@@ -989,7 +992,7 @@ shape_from_ref(r, b::ACAD) =
                     arc(maybe_loc_from_o_vz(@remote(b, ArcCenter(r)), @remote(b, ArcNormal(r))),
                         @remote(b, ArcRadius(r)), end_angle, start_angle - end_angle,
                         backend=b, ref=ref)
-                end
+                end=#
             end
         elseif code == 10
             let str = @remote(b, TextString(r)),
