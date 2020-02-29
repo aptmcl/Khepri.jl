@@ -417,7 +417,7 @@ const povray =
          Dict{Shape,POVRayMaterial}(),
          Dict{POVRayMaterial,POVRayMaterial}(),
          povray_realistic_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
-         povray_ground_string(z(0), rgb(1,1,1))
+         povray_ground_string(z(0), rgb(1,1,1)),
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
          xyz(0,0,0),
