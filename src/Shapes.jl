@@ -1220,8 +1220,8 @@ realistic_sky(;
       altitude, azimuth, turbidity, withsun)
 
 export ground
-ground() =
-  backend_ground(current_backend())
+ground(level::Real=z(0), color::RGB=rgb(0.25,0.25,0.25)) =
+  backend_ground(current_backend(), level, color)
 
 
 ############################################################

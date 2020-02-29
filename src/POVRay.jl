@@ -280,7 +280,11 @@ const povray_concrete =
   normal {
     dents .5 scale .5 }}""")
 
-const default_povray_material = Parameter{POVRayMaterial}(povray_concrete)
+const povray_neutral =
+  povray_definition("Material", "texture",
+    "{ pigment { color rgb 1 } finish { reflection 0 ambient 0 }}")
+
+const default_povray_material = Parameter{POVRayMaterial}(povray_neutral)
 
 povray_material(name::String;
                 gray::Real=0.3,
@@ -300,35 +304,21 @@ povray_glass_material(name::String; args...) =
 ####################################################
 # Sky models
 
-write_povray_defaults(io::IO) =
-  write(io, """
+povray_realistic_sky_string(turbidity, inner) =
+"""
 #version 3.5;
 #include "colors.inc"
+#include "CIE.inc"
+#include "lightsys.inc"
+#include "lightsys_constants.inc"
+#include "sunpos.inc"
+#declare Current_Turbidity = $(turbidity);
+#include "CIE_Skylight.inc"
 global_settings {
   assumed_gamma 1.0
   radiosity {
   }
 }
-""")
-
-povray_realistic_sky_string(turbidity, inner) =
-"""
-#include "CIE.inc"
-#include "lightsys.inc"
-#include "lightsys_constants.inc"
-#include "sunpos.inc"
-//#default {finish {ambient 0 diffuse 1}}
-// -----------------------------------------------------
-//CIE_ColorSystemWhitepoint(Beta_ColSys, Daylight2Whitepoint(Kt_Daylight_Film))
-//CIE_GamutMapping(off)
-// -----------------------------------------------------
-//#declare Lightsys_Brightness = 1.0;
-//#declare Lightsys_Filter = <1,1,1>;
-// -----------------------------------------------------
-//#declare DomeSize=1e5;
-#declare Current_Turbidity = $(turbidity);
-//#declare Intensity_Mult = 0.7;
-#include "CIE_Skylight.inc"
 light_source{
   $(inner)
   Light_Color(SunColor,5)
@@ -351,10 +341,37 @@ vrotate(<0,0,1000000000>,<-Al,Az,0>)
 ############################################
 # Ground models
 
-povray_ground_string() =
-  "plane { y, -.25 pigment { rgb 0.25 } }\n"
+povray_ground_string(level, color) =
+  "plane { y, $(cz(level)) pigment { rgb $(red(color)) $(green(color)) $(blue(color)) } }\n"
 ####################################################
+# Clay models
+povray_clay_settings_string() =
+"""
+#version 3.7;
+global_settings {
+  assumed_gamma 1.0
+  radiosity {
+      pretrace_start 0.04
+      pretrace_end   0.002
+      count 1000
+      nearest_count 10
+      error_bound 0.1
+      recursion_limit 1
+      low_error_factor 0.7
+      gray_threshold 0
+      minimum_reuse 0.01
+      brightness 1.2
+      adc_bailout 0.01/2
+  }
+}
+sky_sphere {
+    pigment {
+      color rgb 1
+    }
+  }
+""")
 
+####################################################
 abstract type POVRayKey end
 const POVRayId = Int
 const POVRayRef = GenericRef{POVRayKey, POVRayId}
@@ -400,7 +417,7 @@ const povray =
          Dict{Shape,POVRayMaterial}(),
          Dict{POVRayMaterial,POVRayMaterial}(),
          povray_realistic_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
-         povray_ground_string(),
+         povray_ground_string(z(0), rgb(1,1,1))
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
          xyz(0,0,0),
@@ -438,8 +455,8 @@ backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity,
 backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
   b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
 
-backend_ground(b::POVRay) =
-  b.ground = povray_ground_string()
+backend_ground(b::POVRay, level::Real, color::RGB) =
+  b.ground = povray_ground_string(level, color)
 
 #
 delete_all_shapes(b::POVRay) =
@@ -517,12 +534,9 @@ realize(b::POVRay, s::Cylinder) =
     void_ref(b)
   end
 
+realize(b::POVRay, s::EmptyShape) = void_ref(b)
+realize(b::POVRay, s::UniversalShape) = void_ref(b)
 #=
-realize(b::POVRay, s::EmptyShape) =
-    EmptyRef{POVRayId}()
-realize(b::POVRay, s::UniversalShape) =
-    UniversalRef{POVRayId}()
-
 realize(b::POVRay, s::Move) =
     let r = map_ref(s.shape) do r
                 POVRayMove(connection(b), r, s.v)
@@ -553,11 +567,15 @@ realize(b::POVRay, s::Rotate) =
 =#
 
 realize(b::POVRay, s::UnionShape) =
-  write_povray_object(buffer(b), "union", get_material(b, s)) do
-    for ss in s.shapes
-      realize(b, ss)
-      delete_shape(ss)
-    end
+  let shapes = filter(! is_empty_shape, s.shapes)
+    length(shapes) == 1 ?
+      (ref(shapes[1]); delete_shape(shapes[1])) :
+      write_povray_object(buffer(b), "union", get_material(b, s)) do
+        for ss in shapes
+          ref(ss)
+          delete_shape(ss)
+        end
+      end
     void_ref(b)
   end
 
@@ -737,15 +755,14 @@ export_to_povray(path::String, b::POVRay=current_backend()) =
       i += 1
     end
     open(path, "w") do out
-      # write materials
-      write_povray_defaults(out)
-      for (k,v) in b.materials
-        write_povray_definition(out, k)
-      end
       # write the sky
       write(out, b.sky)
       # write the ground
       write(out, b.ground)
+      # write materials
+      for (k,v) in b.materials
+        write_povray_definition(out, k)
+      end
       # write the objects
       write(out, String(take!(buf)))
       # write the view
@@ -778,4 +795,10 @@ render_view(path::String, b::POVRay) =
     film_active() ?
       run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
       run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
+  end
+
+clay_model(b::POVRay) =
+  begin
+    b.sky = povray_clay_settings_string()
+    b.ground = "plane { y, 0 texture{ pigment { color rgb 3 } finish { reflection 0 ambient 0 }}}"
   end
