@@ -369,7 +369,7 @@ sky_sphere {
       color rgb 1
     }
   }
-""")
+"""
 
 ####################################################
 abstract type POVRayKey end
