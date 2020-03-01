@@ -760,7 +760,8 @@ realize(b::ACAD, s::SurfaceGrid) =
         reshape(s.points,:),
         s.closed_u,
         s.closed_v,
-        2))
+        # Autocad does not allow us to distinguish smoothness along different dimensions
+        s.smooth_u && s.smooth_v ? 2 : 0))
 
 realize(b::ACAD, s::Thicken) =
   and_mark_deleted(
