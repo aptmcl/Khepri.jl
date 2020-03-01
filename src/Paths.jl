@@ -18,6 +18,7 @@ export open_path,
        polygonal_path,
        open_spline_path,
        closed_spline_path,
+       spline_path,
        path_set,
        open_path_sequence,
        closed_path_sequence,
@@ -72,6 +73,12 @@ struct CircularPath <: ClosedPath
     radius::Real
 end
 circular_path(Center::Loc=u0(), Radius::Real=1; center::Loc=Center, radius::Real=Radius) = CircularPath(center, radius)
+map_division(f::Function, path::CircularPath, n::Integer) =
+  map_division(ϕ->f(loc_from_o_vx_vy(add_pol(path.center, path.radius, ϕ),
+                                     vpol(1, ϕ+π, path.center.cs),
+                                     vz(1, path.center.cs))),
+               0, 2π, n)
+
 struct RectangularPath <: ClosedPath
     corner::Loc
     dx::Real
@@ -143,15 +150,22 @@ struct ClosedSplinePath <: ClosedPath
 end
 closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no_repeated_locations(vertices))
 
+spline_path(vertices::Locs) =
+  coincident_path_location(vertices[1], vertices[end]) ?
+    closed_spline_path(vertices[1:end-1]) :
+    open_spline_path(vertices)
+spline_path(vs...) = spline_path(vs)
+
+
 map_division(f::Function, path::OpenSplinePath, n::Integer) =
   let interpolator = curve_interpolator(path.vertices),
       ps = map_division(interpolator, 0.0, 1.0, n),
       vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
       #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
-    rotation_minimizing_frames(
-      path.vertices[1],
-      map(p->xyz(p[1], p[2], p[3], world_cs), ps),
-      map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts))
+    f.(rotation_minimizing_frames(
+         path.vertices[1],
+         map(p->xyz(p[1], p[2], p[3], world_cs), ps),
+         map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts)))
   end
 
 
