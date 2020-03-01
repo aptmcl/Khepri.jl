@@ -575,7 +575,11 @@ realize(b::POVRay, s::SurfaceGrid) =
     end
     write_povray_object(buf, "mesh2", mat) do
       write_povray_object(buf, "vertex_vectors", nothing, si*sj, reshape(permutedims(s.points), :)...)
+      # Must understand how to handle smoothness along one direction
+      #write_povray_object(buf, "normal_vectors", nothing, si*sj, reshape(permutedims(s.points), :)...)
       write_povray_object(buf, "face_indices", nothing, length(idxs), idxs...)
+      # Must understand how to handle smoothness along one direction
+      #write_povray_object(buf, "normal_indices", nothing, length(idxs), idxs...)
     end
     void_ref(b)
   end
