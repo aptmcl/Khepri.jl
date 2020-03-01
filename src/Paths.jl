@@ -145,11 +145,22 @@ closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no
 
 map_division(f::Function, path::OpenSplinePath, n::Integer) =
   let interpolator = curve_interpolator(path.vertices),
+      ps = map_division(interpolator, 0.0, 1.0, n),
+      vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
+      #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
+    rotation_minimizing_frames(
+      path.vertices[1],
+      map(p->xyz(p[1], p[2], p[3], world_cs), ps),
+      map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts))
+  end
+
+
+#=
       fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
     map_division(
       t-> let p = interpolator(t),
               vt = Interpolations.gradient(interpolator, t)[1],
-              vn = fixed_normal(Interpolations.hessian(interpolator, t)[1], vt)
+              vn = Interpolations.hessian(interpolator, t)[1],
               vy = cross(vt, vn)
             f(loc_from_o_vx_vy(
                 xyz(p[1], p[2], p[3], world_cs),
@@ -158,7 +169,7 @@ map_division(f::Function, path::OpenSplinePath, n::Integer) =
           end,
      0.0, 1.0, n)
  end
-
+=#
 
 # There is a set of operations over Paths:
 # 1. translate a path a given vector
@@ -628,6 +639,17 @@ path_interpolated_vertices(path, t0=0, t1=path_length(path), epsilon=collinearit
        path_interpolated_vertices(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
   end
 
+path_interpolated_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
+  let p0 = location_at_length(path, t0),
+      p1 = location_at_length(path, t1),
+      tm = (t0 + t1)/2.0,
+      pm = location_at_length(path, tm)
+    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
+      [t0, tm, t1] :
+      [path_interpolated_lengths(path, t0, tm, epsilon, min_recursion - 1)...,
+       path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
+  end
+
 convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
   closed_polygonal_path(path_interpolated_vertices(path))
 convert(::Type{OpenPolygonalPath}, path::CircularPath) =
@@ -716,3 +738,11 @@ subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
     subtract_polygon_vertices(
       path_vertices(path1),
       path_vertices(path2)))
+
+## Smoothnesss
+# A smooth curve means that the curve is differentiable up to an intended order
+# In practice, it means that it does not have "corners"
+is_smooth_path(path::Path) = false
+is_smooth_path(pts::Locs) = false
+
+is_smooth_path(path::Union{ArcPath, CircularPath, OpenSplinePath, ClosedSplinePath}) = true
