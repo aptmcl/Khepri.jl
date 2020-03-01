@@ -66,17 +66,20 @@ write_povray_object(io::IO, type, material, args...) =
   write_povray_object(io, type, material, args...) do
   end
 
+write_povray_value(io::IO, value::Any) =
+  show(io, MIMEPOVRay(), value)
+
 write_povray_param(io::IO, name::String, value::Any) =
   begin
     write(io, "  ", name, " ")
-    show(io, MIMEPOVRay(), value)
+    write_povray_value(io, value)
     write(io, '\n')
   end
 
 write_povray_material(io::IO, material) =
   begin
     write(io, "  ")
-    show(io, MIMEPOVRay(), material)
+    write_povray_value(io, material)
     write(io, '\n')
   end
 
@@ -550,22 +553,29 @@ realize(b::POVRay, s::SurfaceGrid) =
       mat = get_material(b, s),
       pts = in_world.(s.points),
       si = size(pts, 1),
-      sj = size(pts, 2)
+      sj = size(pts, 2),
+      idx(i,j) = (i-1)*sj+(j-1),
+      idxs = Vector{Int}[],
+      quad(a,b,c,d) = (push!(idxs, [a, b, d]); push!(idxs, [d, b, c]))
     for i in 1:si-1
       for j in 1:sj-1
-        write_povray_polygon(buf, mat, [pts[i,j], pts[i+1,j], pts[i+1,j+1], pts[i,j+1]])
+        quad(idx(i,j), idx(i+1,j), idx(i+1,j+1), idx(i,j+1))
       end
       if s.closed_v
-        write_povray_polygon(buf, mat, [pts[i,sj], pts[i+1,sj], pts[i+1,1], pts[i,1]])
+        quad(idx(i,sj), idx(i+1,sj), idx(i+1,1), idx(i,1))
       end
     end
     if s.closed_u
       for j in 1:sj-1
-        write_povray_polygon(buf, mat, [pts[si,j], pts[1,j], pts[si,j+1], pts[si,j+1]])
+        quad(idx(si,j), idx(1,j), idx(si,j+1), idx(si,j+1))
       end
       if s.closed_v
-        write_povray_polygon(buf, mat, [pts[si,sj], pts[1,sj], pts[1,1], pts[si,1]])
+        quad(idx(si,sj), idx(1,sj), idx(1,1), idx(si,1))
       end
+    end
+    write_povray_object(buf, "mesh2", mat) do
+      write_povray_object(buf, "vertex_vectors", nothing, si*sj, reshape(permutedims(s.points), :)...)
+      write_povray_object(buf, "face_indices", nothing, length(idxs), idxs...)
     end
     void_ref(b)
   end
