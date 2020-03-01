@@ -14,7 +14,8 @@ show_cs(p, scale=1) =
               cone(px, rcon, add_x(px, lcon)),
               cylinder(p, rcyl, py),
               cone(py, rcon, add_y(py, lcon)),
-              cylinder(p, rcyl, pz))
+              cylinder(p, rcyl, pz),
+              cone(pz, rcon, add_z(pz, lcon)))
     end
 
 project_to_world(surf) =
