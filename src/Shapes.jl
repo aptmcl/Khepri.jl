@@ -887,7 +887,9 @@ subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
 @defproxy(mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 @defproxy(union_mirror, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 
-@defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)), closed_u::Bool=false, closed_v::Bool=false,
+@defproxy(surface_grid, Shape2D, points::AbstractMatrix{<:Loc}=zeros(Loc,(2,2)),
+          closed_u::Bool=false, closed_v::Bool=false,
+          smooth_u::Bool=true, smooth_v::Bool=true,
           interpolator::Parameter{Any}=Parameter{Any}(missing))
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(pts) do p
@@ -1179,6 +1181,7 @@ to_render(f, name) =
   begin
     delete_all_shapes()
     f()
+    render_view(name)
   end
 
 # Seletion
@@ -1220,7 +1223,7 @@ realistic_sky(;
       altitude, azimuth, turbidity, withsun)
 
 export ground
-ground(level::Real=z(0), color::RGB=rgb(0.25,0.25,0.25)) =
+ground(level::Loc=z(0), color::RGB=rgb(0.25,0.25,0.25)) =
   backend_ground(current_backend(), level, color)
 
 
