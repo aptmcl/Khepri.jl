@@ -341,8 +341,8 @@ vrotate(<0,0,1000000000>,<-Al,Az,0>)
 ############################################
 # Ground models
 
-povray_ground_string(level, color) =
-  "plane { y, $(cz(level)) pigment { rgb $(red(color)) $(green(color)) $(blue(color)) } }\n"
+povray_ground_string(level, c) =
+  "plane { y, $(cz(level)) pigment { rgb <$(Float64(red(c))), $(Float64(green(c))), $(Float64(blue(c)))> } }\n"
 ####################################################
 # Clay models
 povray_clay_settings_string() =
@@ -455,7 +455,7 @@ backend_realistic_sky(b::POVRay, date, latitude, longitude, meridian, turbidity,
 backend_realistic_sky(b::POVRay, altitude, azimuth, turbidity, withsun) =
   b.sky = povray_realistic_sky_string(altitude, azimuth, turbidity, withsun)
 
-backend_ground(b::POVRay, level::Real, color::RGB) =
+backend_ground(b::POVRay, level::Loc, color::RGB) =
   b.ground = povray_ground_string(level, color)
 
 #
@@ -518,12 +518,23 @@ realize(b::POVRay, s::Box) =
     void_ref(b)
   end
 
-#=
-realize(b::ACAD, s::Cone) =
-  ACADCone(connection(b), add_z(s.cb, s.h), s.r, s.cb)
-realize(b::ACAD, s::ConeFrustum) =
-  ACADConeFrustum(connection(b), s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt)
-=#
+realize(b::POVRay, s::Cone) =
+  let buf = buffer(b),
+      bot = in_world(s.cb),
+      top = in_world(s.cb + vz(s.h, s.cb.cs)),
+      mat = get_material(b, s)
+    write_povray_object(buf, "cone", mat, bot, s.r, top, 0)
+    void_ref(b)
+  end
+
+realize(b::POVRay, s::ConeFrustum) =
+  let buf = buffer(b),
+      bot = in_world(s.cb),
+      top = in_world(s.cb + vz(s.h, s.cb.cs)),
+      mat = get_material(b, s)
+    write_povray_object(buf, "cone", mat, bot, s.rb, top, s.rt)
+    void_ref(b)
+  end
 
 realize(b::POVRay, s::Cylinder) =
   let buf = buffer(b),
@@ -797,8 +808,9 @@ render_view(path::String, b::POVRay) =
       run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
   end
 
-clay_model(b::POVRay) =
+export clay_model
+clay_model(level::Loc=z(0), b::POVRay=povray) =
   begin
     b.sky = povray_clay_settings_string()
-    b.ground = "plane { y, 0 texture{ pigment { color rgb 3 } finish { reflection 0 ambient 0 }}}"
+    b.ground = "plane { y, $(cz(level)) texture{ pigment { color rgb 3 } finish { reflection 0 ambient 0 }}}\n"
   end
