@@ -99,6 +99,24 @@ write_rad_quad(io::IO, modifier, id, sub_id, v0, v1, v2, v3) =
     println(io, " ", v3.x, " ", v3.y, " ", v3.z)
   end
 
+write_rad_divided_quad(io::IO, modifier, id, sub_id, v0, v1, v2, v3) =
+  begin
+    println(io, modifier, " ", "polygon", " ", id, sub_id, 0)
+    println(io, 0) #0 strings
+    println(io, 0) #0 ints
+    println(io, 9)
+    println(io, " ", v0.x, " ", v0.y, " ", v0.z)
+    println(io, " ", v1.x, " ", v1.y, " ", v1.z)
+    println(io, " ", v2.x, " ", v2.y, " ", v2.z)
+    println(io, modifier, " ", "polygon", " ", id, sub_id, 1)
+    println(io, 0) #0 strings
+    println(io, 0) #0 ints
+    println(io, 9)
+    println(io, " ", v0.x, " ", v0.y, " ", v0.z)
+    println(io, " ", v2.x, " ", v2.y, " ", v2.z)
+    println(io, " ", v3.x, " ", v3.y, " ", v3.z)
+  end
+
 #=
 Higher level primitives
 =#
@@ -672,6 +690,36 @@ realize(b::Radiance, s::Box) =
     id
   end
 
+realize(b::Radiance, s::SurfaceGrid) =
+  let buf = buffer(b),
+      mod = get_material(b, s),
+      pts = in_world.(s.points),
+      si = size(pts, 1),
+      sj = size(pts, 2),
+      id = next_id(b),
+      n = 0
+    for i in 1:si-1
+      for j in 1:sj-1
+        write_rad_divided_quad(buf, mod, id, n, pts[i,j], pts[i+1,j], pts[i+1,j+1], pts[i,j+1])
+        n += 1
+      end
+      if s.closed_v
+        write_rad_divided_quad(buf, mod, id, n, pts[i,sj], pts[i+1,sj], pts[i+1,1], pts[i,1])
+        n += 1
+      end
+    end
+    if s.closed_u
+      for j in 1:sj-1
+        write_rad_divided_quad(buf, mod, id, n, pts[si,j], pts[1,j], pts[si,j+1], pts[si,j+1])
+        n += 1
+      end
+      if s.closed_v
+        write_rad_divided_quad(buf, mod, id, n, pts[si,sj], pts[1,sj], pts[1,1], pts[si,1])
+        n += 1
+      end
+    end
+    void_ref(b)
+  end
 #=
 open(room_rad, "w") do out
   write_rad_material(out, radiance_light_material("bright", gray=100))

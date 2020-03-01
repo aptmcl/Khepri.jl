@@ -545,6 +545,31 @@ realize(b::POVRay, s::Cylinder) =
     void_ref(b)
   end
 
+realize(b::POVRay, s::SurfaceGrid) =
+  let buf = buffer(b),
+      mat = get_material(b, s),
+      pts = in_world.(s.points),
+      si = size(pts, 1),
+      sj = size(pts, 2)
+    for i in 1:si-1
+      for j in 1:sj-1
+        write_povray_polygon(buf, mat, [pts[i,j], pts[i+1,j], pts[i+1,j+1], pts[i,j+1]])
+      end
+      if s.closed_v
+        write_povray_polygon(buf, mat, [pts[i,sj], pts[i+1,sj], pts[i+1,1], pts[i,1]])
+      end
+    end
+    if s.closed_u
+      for j in 1:sj-1
+        write_povray_polygon(buf, mat, [pts[si,j], pts[1,j], pts[si,j+1], pts[si,j+1]])
+      end
+      if s.closed_v
+        write_povray_polygon(buf, mat, [pts[si,sj], pts[1,sj], pts[1,1], pts[si,1]])
+      end
+    end
+    void_ref(b)
+  end
+
 realize(b::POVRay, s::EmptyShape) = void_ref(b)
 realize(b::POVRay, s::UniversalShape) = void_ref(b)
 #=
