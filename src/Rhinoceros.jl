@@ -495,20 +495,25 @@ intersect_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
     end
 
 subtract_ref(b::RH, r0::RHNativeRef, r1::RHNativeRef) =
-    let refs = @remote(b, Subtract(r0.value, r1.value))
-        n = length(refs)
-        if n == 0
-            RHEmptyRef()
-        elseif n == 1
-            if is_empty_guid(refs[1]) # failed
-                RHSubtractionRef(r0, tuple(r1))
-            else
-                RHNativeRef(refs[1])
-            end
+  let refs = try @remote(b, Subtract(r0.value, r1.value)); catch e; [nothing] end,
+      n = length(refs)
+    if n == 0
+        RHEmptyRef()
+    elseif n == 1
+        if isnothing(refs[1]) # failed
+            RHSubtractionRef(r0, tuple(r1))
         else
-            RHUnionRef(map(RHNativeRef, tuple(refs...)))
+            RHNativeRef(refs[1])
         end
+    else
+        RHUnionRef(map(RHNativeRef, tuple(refs...)))
     end
+  end
+
+subtract_ref(b::RH, r0::SubtractionRef, r1::RHNativeRef) =
+  subtract_ref(b,
+    subtract_ref(b, r0.value, r1),
+    length(r0.values) == 1 ? r0.values[1] : RHUnionRef(r0.values))
 
 subtract_ref(b::RH, r0::RHRef, r1::RHUnionRef) =
   foldl((r0,r1)->subtract_ref(b,r0,r1), r1.values, init=r0)
