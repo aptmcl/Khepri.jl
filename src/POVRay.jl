@@ -354,15 +354,15 @@ povray_clay_settings_string() =
 global_settings {
   assumed_gamma 1.0
   radiosity {
-      pretrace_start 0.04
-      pretrace_end   0.002
+      pretrace_start 64/image_width  //0.04
+      pretrace_end 1/image_width     //0.002
       count 1000
       nearest_count 10
       error_bound 0.1
       recursion_limit 1
-      low_error_factor 0.7
+      low_error_factor 0.2 //0.7
       gray_threshold 0
-      minimum_reuse 0.01
+      minimum_reuse 0.001  //0.01
       brightness 1.2
       adc_bailout 0.01/2
   }
@@ -479,9 +479,22 @@ realize(b::POVRay, s::Sphere) =
     void_ref(b)
   end
 
+realize(b::POVRay, s::Torus) =
+  let buf = buffer(b)
+    write_povray_object(buf, "torus", get_material(b, s), s.re, s.ri) do
+      let p = in_world(s.center),
+          t = s.center.cs.transform
+        write_povray_object(buf, "matrix", nothing,
+                            [t[1,1], t[2,1], t[3,1],
+                             t[1,2], t[2,2], t[3,2],
+                             t[1,3], t[2,3], t[3,3],
+                             p.x, p.y, p.z])
+      end
+    end
+    void_ref(b)
+  end
+
 #=
-realize(b::ACAD, s::Torus) =
-  ACADTorus(connection(b), s.center, vz(1, s.center.cs), s.re, s.ri)
 realize(b::ACAD, s::Cuboid) =
   ACADIrregularPyramidFrustum(connection(b), [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
 realize(b::ACAD, s::RegularPyramidFrustum) =
@@ -504,8 +517,8 @@ realize(b::ACAD, s::IrregularPyramidFrustum) =
     ACADIrregularPyramidFrustum(connection(b), s.bs, s.ts)
 
 realize(b::ACAD, s::IrregularPrism) =
-  ACADIrregularPyramidFrustum(connection(b),
-                              s.bs,
+  write_povray_object(buffer(b), "prism", get_material(b, s), 0, norm(s.v)) do
+    s.bs,
                               map(p -> (p + s.v), s.bs))
 ## FIXME: deal with the rotation angle
 realize(b::ACAD, s::RightCuboid) =
@@ -548,39 +561,50 @@ realize(b::POVRay, s::Cylinder) =
     void_ref(b)
   end
 
-realize(b::POVRay, s::SurfaceGrid) =
-  let buf = buffer(b),
-      mat = get_material(b, s),
-      pts = in_world.(s.points),
-      si = size(pts, 1),
-      sj = size(pts, 2),
-      idx(i,j) = (i-1)*sj+(j-1),
-      idxs = Vector{Int}[],
-      quad(a,b,c,d) = (push!(idxs, [a, b, d]); push!(idxs, [d, b, c]))
-    for i in 1:si-1
-      for j in 1:sj-1
-        quad(idx(i,j), idx(i+1,j), idx(i+1,j+1), idx(i,j+1))
-      end
-      if s.closed_v
-        quad(idx(i,sj), idx(i+1,sj), idx(i+1,1), idx(i,1))
-      end
-    end
-    if s.closed_u
-      for j in 1:sj-1
-        quad(idx(si,j), idx(1,j), idx(si,j+1), idx(si,j+1))
-      end
-      if s.closed_v
-        quad(idx(si,sj), idx(1,sj), idx(1,1), idx(si,1))
-      end
-    end
+write_povray_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v) =
+  let si = size(points, 1),
+      sj = size(points, 2),
+      pts = in_world.(points),
+      vcs = in_world.(add_z.(points, 1) .- points),
+      idxs = quad_grid_indexes(si, sj, closed_u, closed_v)
     write_povray_object(buf, "mesh2", mat) do
-      write_povray_object(buf, "vertex_vectors", nothing, si*sj, reshape(permutedims(s.points), :)...)
+      write_povray_object(buf, "vertex_vectors", nothing, si*sj, reshape(permutedims(pts), :)...)
       # Must understand how to handle smoothness along one direction
-      #write_povray_object(buf, "normal_vectors", nothing, si*sj, reshape(permutedims(s.points), :)...)
+      if smooth_u && smooth_v
+        write_povray_object(buf, "normal_vectors", nothing, si*sj, reshape(permutedims(vcs), :)...)
+      end
       write_povray_object(buf, "face_indices", nothing, length(idxs), idxs...)
       # Must understand how to handle smoothness along one direction
       #write_povray_object(buf, "normal_indices", nothing, length(idxs), idxs...)
     end
+  end
+
+realize(b::POVRay, s::SurfaceGrid) =
+  let buf = buffer(b),
+      mat = get_material(b, s)
+    write_povray_mesh(
+      buf,
+      mat,
+      convert(AbstractMatrix{<:Loc}, map_division(identity, s, size(s.points,1)-1, size(s.points,2)-1)),
+      s.closed_u, s.closed_v,
+      s.smooth_u, s.smooth_v)
+    void_ref(b)
+  end
+
+
+realize(b::POVRay, s::SweepPath) =
+  let vertices = in_world.(path_vertices(s.profile)),
+      frames = map_division(identity, s.path, 20),
+      buf = buffer(b),
+      mat = get_material(b, s)
+    write_povray_mesh(
+      buf,
+      mat,
+      [xyz(cx(p), cy(p), cz(p), frame.cs) for p in vertices, frame in frames],
+      is_closed_path(s.profile),
+      is_closed_path(s.path),
+      is_smooth_path(s.profile),
+      is_smooth_path(s.path))
     void_ref(b)
   end
 

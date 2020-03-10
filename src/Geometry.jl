@@ -211,3 +211,48 @@ sweep_path_with_path(path, profile, n=128, m=64) =
                  is_smooth_path(profile),
                  is_smooth_path(path))
   end
+
+quad_grid(quad, points, closed_u, closed_v) =
+  let pts = in_world.(points),
+      si = size(pts, 1),
+      sj = size(pts, 2)
+    for i in 1:si-1
+      for j in 1:sj-1
+        quad(pts[i,j], pts[i+1,j], pts[i+1,j+1], pts[i,j+1])
+      end
+      if closed_v
+        quad(pts[i,sj], pts[i+1,sj], pts[i+1,1], pts[i,1])
+      end
+    end
+    if closed_u
+      for j in 1:sj-1
+        quad(pts[si,j], pts[1,j], pts[si,j+1], pts[si,j+1])
+      end
+      if closed_v
+        quad(pts[si,sj], pts[1,sj], pts[1,1], pts[si,1])
+      end
+    end
+  end
+
+quad_grid_indexes(si, sj, closed_u, closed_v) =
+  let idx(i,j) = (i-1)*sj+(j-1),
+      idxs = Vector{Int}[],
+      quad(a,b,c,d) = (push!(idxs, [a, b, d]); push!(idxs, [d, b, c]))
+    for i in 1:si-1
+      for j in 1:sj-1
+        quad(idx(i,j), idx(i+1,j), idx(i+1,j+1), idx(i,j+1))
+      end
+      if closed_v
+        quad(idx(i,sj), idx(i+1,sj), idx(i+1,1), idx(i,1))
+      end
+    end
+    if closed_u
+      for j in 1:sj-1
+        quad(idx(si,j), idx(1,j), idx(1,j+1), idx(si,j+1))
+      end
+      if closed_v
+        quad(idx(si,sj), idx(1,sj), idx(1,1), idx(si,1))
+      end
+    end
+    idxs
+  end

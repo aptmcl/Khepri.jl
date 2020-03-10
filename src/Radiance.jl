@@ -556,7 +556,6 @@ const Radiance{LOD} = RadianceBackend{RadianceKey, RadianceId, LOD}
 has_boolean_ops(::Type{Radiance}) = HasBooleanOps{false}()
 #eager_realize(::Type{Radiance}) = EagerRealize{false}()
 
-
 save_shape!(b::Radiance, s::Shape) =
   begin
     push!(b.shapes, s)
@@ -693,30 +692,11 @@ realize(b::Radiance, s::Box) =
 realize(b::Radiance, s::SurfaceGrid) =
   let buf = buffer(b),
       mod = get_material(b, s),
-      pts = in_world.(s.points),
-      si = size(pts, 1),
-      sj = size(pts, 2),
       id = next_id(b),
       n = 0
-    for i in 1:si-1
-      for j in 1:sj-1
-        write_rad_divided_quad(buf, mod, id, n, pts[i,j], pts[i+1,j], pts[i+1,j+1], pts[i,j+1])
-        n += 1
-      end
-      if s.closed_v
-        write_rad_divided_quad(buf, mod, id, n, pts[i,sj], pts[i+1,sj], pts[i+1,1], pts[i,1])
-        n += 1
-      end
-    end
-    if s.closed_u
-      for j in 1:sj-1
-        write_rad_divided_quad(buf, mod, id, n, pts[si,j], pts[1,j], pts[si,j+1], pts[si,j+1])
-        n += 1
-      end
-      if s.closed_v
-        write_rad_divided_quad(buf, mod, id, n, pts[si,sj], pts[1,sj], pts[1,1], pts[si,1])
-        n += 1
-      end
+    quad_grid(s.points, s.closed_u, s.closed_v) do p1, p2, p3, p4
+      write_rad_divided_quad(buf, mod, id, n, p1, p2, p3, p4)
+      n += 1
     end
     void_ref(b)
   end

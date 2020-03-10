@@ -846,7 +846,12 @@ convert(::Type{ClosedPath}, s::Polygon) =
         closed_path(vcat([MoveToOp(vs[1])], map(LineToOp, vs[2:end]), [CloseOp()]))
     end
 #####################################################################
+## Paths can be used to generate surfaces and solids
 
+@defproxy(sweep_path, Shape3D, path::Path=polygonal_path(), profile::Path=circular_path(), rotation::Real=0, scale::Real=1)
+
+
+#####################################################################
 export curve_domain, surface_domain, frame_at
 surface_domain(s::SurfaceRectangle) = (0, s.dx, 0, s.dy)
 surface_domain(s::SurfaceCircle) = (0, s.radius, 0, 2pi)
@@ -933,6 +938,8 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
     end
   end
 
+@defproxy(parametric_surface, Shape2D, definition::Function=(u,v)->xyz(u,v,0),
+          domain_u::Tuple{Real,Real}=(0,1), domain_v::Tuple{Real,Real}=(0,1))
 
 @defproxy(thicken, Shape3D, shape::Shape=surface_circle(), thickness::Real=1)
 

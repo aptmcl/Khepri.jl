@@ -8,6 +8,7 @@ using LinearAlgebra
 using IntervalSets
 using Interpolations
 using PyCall
+import Base.show
 
 include("Parameters.jl")
 include("Utils.jl")
