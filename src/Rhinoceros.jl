@@ -385,13 +385,11 @@ realize(b::RH, s::Torus) =
 realize(b::RH, s::Cuboid) =
     @remote(b, IrregularPyramidFrustum([s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3]))
 realize(b::RH, s::RegularPyramidFrustum) =
-    @remote(b, IrregularPyramidFrustum(connection(b),
-                              regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                              regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed)))
+    @remote(b, IrregularPyramidFrustum(regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+                                       regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed)))
 realize(b::RH, s::RegularPyramid) =
-    @remote(b, IrregularPyramid(connection(b),
-                       regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                       add_z(s.cb, s.h)))
+    @remote(b, IrregularPyramid(regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+                                add_z(s.cb, s.h)))
 realize(b::RH, s::IrregularPyramidFrustum) =
   @remote(b, IrregularPyramidFrustum(s.bs, s.ts))
 
@@ -399,14 +397,12 @@ realize(b::RH, s::IrregularPyramid) =
     @remote(b, IrregularPyramid(s.bs, s.t))
 realize(b::RH, s::RegularPrism) =
     let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-        @remote(b, IrregularPyramidFrustum(connection(b),
-                                  cbs,
-                                  map(p -> add_z(p, s.h), cbs)))
+        @remote(b, IrregularPyramidFrustum(cbs,
+                                           map(p -> add_z(p, s.h), cbs)))
     end
 realize(b::RH, s::IrregularPrism) =
-    @remote(b, IrregularPyramidFrustum(connection(b),
-                              s.bs,
-                              map(p -> (p + s.v), s.bs)))
+    @remote(b, IrregularPyramidFrustum(s.bs,
+                                       map(p -> p + s.v, s.bs)))
 
 realize(b::RH, s::RightCuboid) =
     @remote(b, XYCenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.width, s.height, s.h))
@@ -422,8 +418,6 @@ realize(b::RH, s::ConeFrustum) =
 
 realize(b::RH, s::Cylinder) =
   @remote(b, Cylinder(s.cb, s.r, s.cb + vz(s.h, s.cb.cs)))
-
-#realize(b::RH, s::Circle) = RHCircle(connection(b),
 
 backend_extrusion(b::RH, s::Shape, v::Vec) =
     and_mark_deleted(
@@ -602,7 +596,7 @@ backend_get_family(b::RH, f::TableFamily) =
 backend_get_family(b::RH, f::ChairFamily) =
     @remote(b, CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness))
 backend_get_family(b::RH, f::TableChairFamily) =
-    @remote(b, CreateRectangularTableAndChairsFamily(connection(b),
+    @remote(b, CreateRectangularTableAndChairsFamily(
         ref(f.table_family), ref(f.chair_family),
         f.table_family.length, f.table_family.width,
         f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
