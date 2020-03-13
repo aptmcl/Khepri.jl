@@ -567,6 +567,12 @@ write_povray_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v) 
       pts = in_world.(points),
       vcs = in_world.(add_z.(points, 1) .- points),
       idxs = quad_grid_indexes(si, sj, closed_u, closed_v)
+#    let ps = reshape(permutedims(pts), :)
+#      delete_all_shapes(autocad)
+#      for tr in idxs
+#        surface_polygon(ps[map(x->x+1,tr)], backend=autocad)
+#      end
+#    end
     write_povray_object(buf, "mesh2", mat) do
       write_povray_object(buf, "vertex_vectors", nothing, si*sj, reshape(permutedims(pts), :)...)
       # Must understand how to handle smoothness along one direction
@@ -776,6 +782,21 @@ set_backend_family(default_beam_family(), povray, povray_material_family(povray_
 set_backend_family(default_column_family(), povray, povray_material_family(povray_metal))
 set_backend_family(default_door_family(), povray, povray_material_family(povray_wood))
 set_backend_family(default_panel_family(), povray, povray_material_family(povray_glass))
+
+# Layers
+
+
+current_layer(b::POVRay) =
+  default_povray_material()
+
+current_layer(layer, b::POVRay) =
+  default_povray_material(layer)
+
+backend_create_layer(b::POVRay, name::String, active::Bool, color::RGB) =
+  begin
+    @assert active
+    povray_material(name, red=red(color), green=green(color), blue=blue(color))
+  end
 
 #=
 create_ground_plane(shapes, material=default_povray_ground_material()) =
