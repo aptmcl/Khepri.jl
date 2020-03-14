@@ -681,6 +681,15 @@ realize(b::POVRay, s::SubtractionShape3D) =
   end
 
 # BIM
+
+realize_box(b::POVRay, mat, p, dx, dy, dz) =
+  let buf = buffer(b),
+      bot = in_world(p),
+      top = in_world(add_xyz(p, dx, dy, dz))
+    write_povray_object(buf, "box", mat, bot, top)
+    void_ref(b)
+  end
+
 realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
   # PathSets require a different approach
   let buf = buffer(b),
@@ -782,6 +791,9 @@ set_backend_family(default_beam_family(), povray, povray_material_family(povray_
 set_backend_family(default_column_family(), povray, povray_material_family(povray_metal))
 set_backend_family(default_door_family(), povray, povray_material_family(povray_wood))
 set_backend_family(default_panel_family(), povray, povray_material_family(povray_glass))
+set_backend_family(default_table_family(), povray, povray_material_family(povray_wood))
+set_backend_family(default_chair_family(), povray, povray_material_family(povray_wood))
+set_backend_family(default_table_chair_family(), povray, povray_material_family(povray_wood))
 
 # Layers
 

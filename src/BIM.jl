@@ -326,7 +326,7 @@ backend_slab(b::Backend, profile, openings, thickness, family) =
 
 # Delegate on the lower-level pyramid fustrum
 realize_prism(b::Backend, top, bot, side, path::Path, h::Real) =
-  realize_fustrum(b,  top, bot, side, path, translate(path, vz(h)))
+  realize_fustrum(b, top, bot, side, path, translate(path, vz(h)))
 
 # If we don't know how to process a path, we convert it to a sequence of vertices
 realize_fustrum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
@@ -827,21 +827,20 @@ realize(b::Backend, s::Table) =
   backend_rectangular_table(b, add_z(s.loc, s.level.height), s.angle, s.family)
 
 backend_rectangular_table(b::Backend, p, angle, f) =
-  with(current_backend, b) do
-    basic_table(loc_from_o_phi(p, angle), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
-  end
+  realize_table(b, get_material(b, realize(b, f).material),
+                loc_from_o_phi(p, angle), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
 
-basic_table(p::Loc, length::Real, width::Real, height::Real,
-            top_thickness::Real, leg_thickness::Real) =
+realize_table(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
+              top_thickness::Real, leg_thickness::Real) =
   let dx = length/2,
       dy = width/2,
       leg_x = dx - leg_thickness/2,
       leg_y = dy - leg_thickness/2,
       c = add_xy(p, -dx, -dy),
-      table_top = box(add_z(c, height - top_thickness), length, width, top_thickness),
+      table_top = realize_box(b, mat, add_z(c, height - top_thickness), length, width, top_thickness),
       pts = add_xy.(add_xy.(p, [+leg_x, +leg_x, -leg_x, -leg_x], [-leg_y, +leg_y, +leg_y, -leg_y]), -leg_thickness/2, -leg_thickness/2),
-      legs = box.(pts, leg_thickness, leg_thickness, height - top_thickness)
-    union(table_top, legs...)
+      legs = [realize_box(b, mat, pt, leg_thickness, leg_thickness, height - top_thickness) for pt in pts]
+    [ensure_ref(b, r) for r in [table_top, legs...]]
   end
 
 @defproxy(chair, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::ChairFamily=default_chair_family())
@@ -850,15 +849,15 @@ realize(b::Backend, s::Chair) =
   backend_chair(b, add_z(s.loc, s.level.height), s.angle, s.family)
 
 backend_chair(b::Backend, p, angle, f) =
-  with(current_backend, b) do
-    basic_chair(loc_from_o_phi(p, angle), f.length, f.width, f.height, f.seat_height, f.thickness)
+  let mat = get_material(b, realize(b, f).material)
+    realize_chair(b, mat, loc_from_o_phi(p, angle), f.length, f.width, f.height, f.seat_height, f.thickness)
   end
 
-basic_chair(p::Loc, length::Real, width::Real, height::Real,
-            seat_height::Real, thickness::Real) =
-  union(basic_table(p, length, width, seat_height, thickness, thickness),
-        box(add_xyz(p, -length/2, -width/2, seat_height),
-            thickness, width, height - seat_height))
+realize_chair(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
+              seat_height::Real, thickness::Real) =
+  [realize_table(b, mat, p, length, width, seat_height, thickness, thickness)...,
+   realize_box(b, mat, add_xyz(p, -length/2, -width/2, seat_height),
+               thickness, width, height - seat_height)]
 
 @defproxy(table_and_chairs, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableChairFamily=default_table_chair_family())
 
@@ -867,34 +866,36 @@ realize(b::Backend, s::TableAndChairs) =
 
 backend_rectangular_table_and_chairs(b::Backend, p, angle, f) =
   let tf = f.table_family,
-      cf = f.chair_family
-    with(current_backend, b) do
-      basic_table_and_chairs(
-        loc_from_o_phi(p, angle),
-        p->basic_table(p, tf.length, tf.width, tf.height, tf.top_thickness, tf.leg_thickness),
-        p->basic_chair(p, cf.length, cf.width, cf.height, cf.seat_height, cf.thickness),
-        f.chairs_top,
-        f.chairs_bottom,
-        f.chairs_right,
-        f.chairs_left,
-        f.spacing)
-    end
+      cf = f.chair_family,
+      tmat = get_material(b, realize(b, tf).material),
+      cmat = get_material(b, realize(b, cf).material)
+    realize_table_and_chairs(b,
+      loc_from_o_phi(p, angle),
+      p->realize_table(b, tmat, p, tf.length, tf.width, tf.height, tf.top_thickness, tf.leg_thickness),
+      p->realize_chair(b, cmat, p, cf.length, cf.width, cf.height, cf.seat_height, cf.thickness),
+      tf.width,
+      tf.height,
+      f.chairs_top,
+      f.chairs_bottom,
+      f.chairs_right,
+      f.chairs_left,
+      f.spacing)
   end
 
-basic_table_and_chairs(p::Loc, table::Function, chair::Function,
-                       table_length::Real, table_width::Real,
-                       chairs_on_top::Int, chairs_on_bottom::Int,
-                       chairs_on_right::Int, chairs_on_left::Int,
-                       spacing::Real) =
+realize_table_and_chairs(b::Backend, p::Loc, table::Function, chair::Function,
+                         table_length::Real, table_width::Real,
+                         chairs_on_top::Int, chairs_on_bottom::Int,
+                         chairs_on_right::Int, chairs_on_left::Int,
+                         spacing::Real) =
   let dx = table_length/2,
       dy = table_width/2,
       row(p, angle, n) = [loc_from_o_phi(add_pol(p, i*spacing, angle), angle+pi/2) for i in 0:n-1],
       centered_row(p, angle, n) = row(add_pol(p, -spacing*(n-1)/2, angle), angle, n)
-    union(table(p),
-          chair.(centered_row(add_x(p, -dx), -pi/2, chairs_on_bottom))...,
-          chair.(centered_row(add_x(p, +dx), +pi/2, chairs_on_top))...,
-          chair.(centered_row(add_y(p, +dy), -pi, chairs_on_right))...,
-          chair.(centered_row(add_y(p, -dy), 0, chairs_on_left))...)
+    vcat(table(p),
+         chair.(centered_row(add_x(p, -dx), -pi/2, chairs_on_bottom))...,
+         chair.(centered_row(add_x(p, +dx), +pi/2, chairs_on_top))...,
+         chair.(centered_row(add_y(p, +dy), -pi, chairs_on_right))...,
+         chair.(centered_row(add_y(p, -dy), 0, chairs_on_left))...)
   end
 
 # Lights
