@@ -773,17 +773,17 @@ backend_wall(b::Unity, w_path, w_height, l_thickness, r_thickness, family) =
         let currlength = prevlength + path_length(w_seg_path),
             c_r_w_path = closed_path_for_height(r_w_path, w_height),
             c_l_w_path = closed_path_for_height(l_w_path, w_height)
-          push!(refs, realize_pyramid_fustrum(b, c_l_w_path, c_r_w_path, material))
+          push!(refs, realize_pyramid_frustum(b, c_l_w_path, c_r_w_path, material))
           prevlength = currlength
         end
       end
       refs
     end
 
-realize_pyramid_fustrum(b::Unity, bot_path::Path, top_path::Path, material) =
-  realize_pyramid_fustrum(b, path_vertices(bot_path), path_vertices(top_path), material)
+realize_pyramid_frustum(b::Unity, bot_path::Path, top_path::Path, material) =
+  realize_pyramid_frustum(b, path_vertices(bot_path), path_vertices(top_path), material)
 
-realize_pyramid_fustrum(b::Unity, bot_vs, top_vs, material) =
+realize_pyramid_frustum(b::Unity, bot_vs, top_vs, material) =
     UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, material)))
 
 #

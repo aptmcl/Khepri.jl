@@ -867,25 +867,41 @@ frame_at(s::SurfaceCircle, u::Real, v::Real) = add_pol(s.center, u, v)
 
 import Base.union
 export union, intersection, subtraction
+#=
+We do some pre-filtering to deal with the presence of empty shapes or to simplify one-arg cases.
+=#
 
 @defproxy(union_shape, Shape3D, shapes::Shapes=Shape[])
 union(shapes::Shapes) =
-  let non_empty_shapes = filter(s -> !is_empty_shape(s), shapes)
-    non_empty_shapes == [] ?
-      empty_shape() :
-      union_shape(non_empty_shapes)
+  let non_empty_shapes = filter(s -> !is_empty_shape(s), shapes),
+      count_non_empty_shapes = length(non_empty_shapes)
+    count_non_empty_shapes == 0 ? empty_shape() :
+    count_non_empty_shapes == 1 ? non_empty_shapes[1] :
+    union_shape(non_empty_shapes)
   end
 
 union(shape::Shape, shapes...) = union([shape, shapes...])
 
 @defproxy(intersection_shape, Shape3D, shapes::Shapes=Shape[])
 intersection(shapes::Shapes) = intersection_shape(shapes)
-intersection(shape::Shape, shapes...) = intersection_shape([shape, shapes...])
+intersection(shape::Shape, shapes...) =
+  is_empty_shape(shape) || any(is_empty_shape, shapes) ? empty_shape() :
+  shapes == [] ? shape : intersection_shape([shape, shapes...])
 
 @defproxy(subtraction_shape2D, Shape2D, shape::Shape=surface_circle(), shapes::Shapes=Shape[])
 @defproxy(subtraction_shape3D, Shape3D, shape::Shape=surface_sphere(), shapes::Shapes=Shape[])
-subtraction(shape::Shape2D, shapes...) = subtraction_shape2D(shape, [shapes...])
-subtraction(shape::Shape3D, shapes...) = subtraction_shape3D(shape, [shapes...])
+subtraction(shape::Shape2D, shapes...) =
+  is_empty_shape(shape) ? empty_shape() :
+    let non_empty_shapes = filter(s -> !is_empty_shape(s), shapes),
+        count_non_empty_shapes = length(non_empty_shapes)
+      count_non_empty_shapes == 0 ? shape : subtraction_shape2D(shape, [non_empty_shapes...])
+    end
+subtraction(shape::Shape3D, shapes...) =
+  is_empty_shape(shape) ? empty_shape() :
+    let non_empty_shapes = filter(s -> !is_empty_shape(s), shapes),
+        count_non_empty_shapes = length(non_empty_shapes)
+      count_non_empty_shapes == 0 ? shape : subtraction_shape3D(shape, [non_empty_shapes...])
+    end
 
 @defproxy(slice, Shape3D, shape::Shape=sphere(), p::Loc=u0(), n::Vec=vz(1))
 

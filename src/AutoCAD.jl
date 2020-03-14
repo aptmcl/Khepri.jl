@@ -839,6 +839,9 @@ backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
               vz(height))),
       r_thickness + l_thickness))
 
+backend_panel(b::ACAD, bot::Locs, top::Locs, family) =
+  @remote(b, IrregularPyramidFrustum(bot, top))
+
 ############################################
 
 backend_bounding_box(b::ACAD, shapes::Shapes) =

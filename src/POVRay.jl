@@ -295,7 +295,7 @@ povray_material(name::String;
                 specularity=0, roughness=0,
                 transmissivity=nothing, transmitted_specular=nothing) =
   povray_definition(name, "texture", """{
-  pigment { rgb<$(red),$(green),$(blue)> }
+  pigment { rgb <$(Float64(red)),$(Float64(green)),$(Float64(blue))> }
   finish { specular $(specularity) roughness $(roughness) }
 }""")
 
@@ -705,7 +705,7 @@ realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
     void_ref(b)
   end
 
-realize_pyramid_fustrum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
+realize_pyramid_frustum(b::POVRay, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
   let buf = buffer(b)
     if closed
       write_povray_polygon(buf, bot, reverse(bot_vs))
@@ -777,7 +777,8 @@ export povray_material_family,
 
 povray_stone = povray_include("stones2.inc", "texture", "T_Stone35")
 povray_metal = povray_include("textures.inc", "texture", "Chrome_Metal")
-povray_wood = povray_include("textures.inc", "texture", "DMFWood1")
+#povray_wood = povray_include("textures.inc", "texture", "DMFWood1")
+povray_wood = povray_include("woods.inc", "texture", "T_Wood10")
 povray_glass = povray_include("textures.inc", "material", "M_Glass")
 
 export povray_stone, povray_metal, povray_wood, povray_glass

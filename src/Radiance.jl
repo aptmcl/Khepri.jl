@@ -784,7 +784,7 @@ realize(b::Radiance, s::Rotate) =
 realize_prism(b::Radiance, top, bot, side, path::PathSet, h::Real) =
   realize_prism(b, top, bot, side, convert(ClosedPath, path), h)
 
-realize_pyramid_fustrum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
+realize_pyramid_frustum(b::Radiance, top, bot, side, bot_vs::Locs, top_vs::Locs, closed=true) =
   let buf = buffer(b)
     if closed
       write_rad_polygon(buf, bot, next_id(b), reverse(bot_vs))

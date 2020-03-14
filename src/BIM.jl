@@ -324,13 +324,13 @@ backend_slab(b::Backend, profile, openings, thickness, family) =
     realize_prism(b, mattop, matbot, matside, path_set(profile, openings...), thickness)
   end
 
-# Delegate on the lower-level pyramid fustrum
+# Delegate on the lower-level pyramid frustum
 realize_prism(b::Backend, top, bot, side, path::Path, h::Real) =
-  realize_fustrum(b, top, bot, side, path, translate(path, vz(h)))
+  realize_frustum(b, top, bot, side, path, translate(path, vz(h)))
 
 # If we don't know how to process a path, we convert it to a sequence of vertices
-realize_fustrum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
-  realize_pyramid_fustrum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
+realize_frustum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
+  realize_pyramid_frustum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
 
 #
 export add_slab_opening
@@ -376,18 +376,20 @@ realize(b::Backend, s::Roof) =
 @deffamily(panel_family, Family,
     thickness::Real=0.02)
 
-@defproxy(panel, Shape3D, vertices::Locs=Loc[], level::Any=default_level(), family::Any=default_panel_family())
+@defproxy(panel, Shape3D, vertices::Locs=Loc[x(0), x(1), y(1)], level::Any=default_level(), family::Any=default_panel_family())
 
 realize(b::Backend, s::Panel) =
-  let p1 = s.vertices[1],
-      p2 = s.vertices[2],
-      p3 = s.vertices[3],
-      n = vz(s.family.thickness/2, cs_from_o_vx_vy(p1, p2-p1, p3-p1)),
-      mat = get_material(b, realize(b, s.family).material)
-    realize_pyramid_fustrum(
-        b, mat, mat, mat,
-        map(p -> in_world(p - n), s.vertices),
-        map(p -> in_world(p + n), s.vertices))
+  let pts = in_world.(s.vertices),
+      n = vertices_normal(pts)*s.family.thickness/2
+    backend_panel(b,
+      map(p -> p - n, pts),
+      map(p -> p + n, pts),
+      s.family)
+  end
+
+backend_panel(b::Backend, bot::Locs, top::Locs, family) =
+  let mat = get_material(b, realize(b, family).material)
+    realize_pyramid_frustum(b, mat, mat, mat, bot, top)
   end
 
 #=
@@ -473,7 +475,7 @@ realize(::HasBooleanOps{false}, b::Backend, w::Wall) =
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_fustrum(b, matleft, matright, matright, c_l_w_path, c_r_w_path, false)
+        realize_frustum(b, matleft, matright, matright, c_l_w_path, c_r_w_path, false)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -493,7 +495,7 @@ realize(::HasBooleanOps{false}, b::Backend, w::Wall) =
                                        path_end(op_at_end ? l_w_path : l_op_path)]),
                 c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
                 c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height)
-              realize_fustrum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
+              realize_frustum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
               c_r_w_path, c_l_w_path = subtract_paths(b, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path)
               # preserve if not totally contained
               ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
@@ -824,7 +826,9 @@ realize(b::Backend, s::Column) =
 @defproxy(table, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableFamily=default_table_family())
 
 realize(b::Backend, s::Table) =
-  backend_rectangular_table(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  with_family_in_layer(b, s.family) do
+    backend_rectangular_table(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  end
 
 backend_rectangular_table(b::Backend, p, angle, f) =
   realize_table(b, get_material(b, realize(b, f).material),
@@ -846,7 +850,9 @@ realize_table(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
 @defproxy(chair, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::ChairFamily=default_chair_family())
 
 realize(b::Backend, s::Chair) =
-  backend_chair(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  with_family_in_layer(b, s.family) do
+    backend_chair(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  end
 
 backend_chair(b::Backend, p, angle, f) =
   let mat = get_material(b, realize(b, f).material)
@@ -862,7 +868,9 @@ realize_chair(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
 @defproxy(table_and_chairs, Shape3D, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableChairFamily=default_table_chair_family())
 
 realize(b::Backend, s::TableAndChairs) =
-  backend_rectangular_table_and_chairs(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  with_family_in_layer(b, s.family) do
+    backend_rectangular_table_and_chairs(b, add_z(s.loc, s.level.height), s.angle, s.family)
+  end
 
 backend_rectangular_table_and_chairs(b::Backend, p, angle, f) =
   let tf = f.table_family,
