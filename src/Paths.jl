@@ -41,6 +41,8 @@ coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
 
 abstract type Path end
 
+# A path has a domain
+
 import Base.getindex, Base.firstindex, Base.lastindex
 getindex(p::Path, i::Real) = location_at_length(p, i)
 firstindex(p::Path) = 0
@@ -48,6 +50,8 @@ lastindex(p::Path) = path_length(p)
 getindex(p::Path, i::ClosedInterval) = subpath(p, i.left, i.right)
 path_start(p::Path) = location_at_length(p, 0)
 path_end(p::Path) = location_at_length(p, path_length(p))
+
+
 
 abstract type OpenPath <: Path end
 abstract type ClosedPath <: Path end
@@ -156,6 +160,8 @@ spline_path(vertices::Locs) =
     open_spline_path(vertices)
 spline_path(vs...) = spline_path(vs)
 
+map_division(f, path) =
+  f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
 
 map_division(f::Function, path::OpenSplinePath, n::Integer) =
   let interpolator = curve_interpolator(path.vertices),
@@ -178,6 +184,15 @@ map_division(f::Function, path::ClosedSplinePath, n::Integer) =
          map(p->xyz(p[1], p[2], p[3], world_cs), ps),
          map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts)))
   end
+
+SplinePath = Union{OpenSplinePath, ClosedSplinePath}
+
+path_start(path::SplinePath) = path.vertices[1]
+path_end(path::OpenSplinePath) = path.vertices[end]
+path_end(path::ClosedSplinePath) = path.vertices[1]
+
+convert(::Type{ClosedSplinePath}, path::Path) =
+  closed_spline_path(path_vertices(path))
 
 #=
       fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
