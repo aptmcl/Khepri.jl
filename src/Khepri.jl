@@ -9,6 +9,7 @@ using IntervalSets
 using Interpolations
 using PyCall
 import Base.show
+import Base.convert
 
 include("Parameters.jl")
 include("Utils.jl")
