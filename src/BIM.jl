@@ -401,7 +401,9 @@ A wall contains doors and windows
 # Wall
 
 @deffamily(wall_family, Family,
-    thickness::Real=0.2)
+    thickness::Real=0.2,
+    left_coating_thickness::Real=0.0,
+    right_coating_thickness::Real=0.0)
 
 @defproxy(wall, Shape3D, path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
@@ -576,8 +578,8 @@ join_walls(walls...) =
 r_thickness(offset, thickness) = (1/2 - offset)*thickness
 l_thickness(offset, thickness) = (1/2 + offset)*thickness
 
-r_thickness(w::Wall) = r_thickness(w.offset, w.family.thickness)
-l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness)
+r_thickness(w::Wall) = r_thickness(w.offset, w.family.thickness + w.family.right_coating_thickness)
+l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness + w.family.left_coating_thickness)
 
 # Door
 
