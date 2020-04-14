@@ -197,8 +197,6 @@ with_family_in_layer(f::Function, backend::Backend, family::Family) =
     with(f, current_layer, realize(backend, family)) :
     f()
 
-#HACK Using Dict instead of IdDict just because get is not fully implemented for IdDict
-#FIXME after updating to Julia 1.2
 macro deffamily(name, parent, fields...)
   name_str = string(name)
   abstract_name = esc(Symbol(string))
@@ -252,20 +250,11 @@ end
 # When dispatching a BIM operation to a backend, we also need to dispatch the family
 
 backend_family(b::Backend, family::Family) =
-# replace this with next fragment after updating Julia
-  if haskey(family.implemented_as, b)
-    family.implemented_as[b]
-  else
+  get(family.implemented_as, b) do
     family.based_on == nothing ? # this is not a family_element (nor a derivation of a family_element)
       error("Family $(family) is missing the implementation for backend $(b)") :
       backend_family(b, family.based_on)
   end
-#=  get(family.implemented_as, b) do
-    family.based_on == nothing ? # this is not a family_element (nor a derivation of a family_element)
-      error("Family $(family) is missing the implementation for backend $(b)") :
-      backend_family(b, family.based_on)
-  end
-=#
 
 copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 
@@ -279,16 +268,13 @@ set_backend_family(family::Family, backend::Backend, backend_family::Family) =
 
 # Finally, we can implement a generic backend caching mechanism for families
 
+backend_get_family(b::Backend, f::Family) =
+  backend_get_family_ref(b, f, backend_family(b, f))
+
 realize(b::Backend, f::Family) =
-  f.ref(backend_get_family_ref(b, f, backend_family(b, f)))
-#=
-realize(b::Backend, f::Family) =
-  if f.ref() == nothing
-    f.ref(backend_get_family_ref(b, f, backend_family(b, f)))
-  else
+  isnothing(f.ref()) ?
+    f.ref(backend_get_family(b, f)) :
     f.ref()
-  end
-=#
 
 export backend_family, set_backend_family
 
