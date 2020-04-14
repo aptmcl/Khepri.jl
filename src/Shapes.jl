@@ -44,7 +44,7 @@ export Shape,
 #Backends are types parameterized by a key identifying the backend (e.g., AutoCAD) and by the type of reference they use
 
 abstract type Backend{K,R} end
-import Base.show
+
 show(io::IO, b::Backend{K,R}) where {K,R} = print(io, backend_name(b))
 
 backend_name(b::Backend{K,R}) where {K,R} = typeof(b)

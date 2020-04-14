@@ -43,7 +43,6 @@ abstract type Path end
 
 # A path has a domain
 
-import Base.getindex, Base.firstindex, Base.lastindex
 getindex(p::Path, i::Real) = location_at_length(p, i)
 firstindex(p::Path) = 0
 lastindex(p::Path) = path_length(p)
@@ -596,7 +595,6 @@ subpath_ending_at(path::PathSequence, d::Real) =
     error("Exceeded path length by ", d)
   end
 
-import Base.convert
 convert(::Type{PathOps}, path::PathSequence) =
   let start = in_world(location_at_length(path, 0)),
       ops = mapfoldl(convert_to_path_ops, vcat, path.paths, init=PathOp[])
@@ -628,7 +626,6 @@ translate(path::T, v::Vec) where T<:Union{PathSequence,PathSet} =
   T(translate.(path.paths, v))
 
 # Convertions from/to paths
-import Base.convert
 convert(::Type{OpenPath}, vs::Locs) =
   open_polygonal_path(vs)
 convert(::Type{ClosedPath}, vs::Locs) =

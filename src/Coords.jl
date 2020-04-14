@@ -140,7 +140,7 @@ translating_current_cs(f, _dx::Real=0, _dy::Real=0, _dz::Real=0; dx::Real=_dx, d
 abstract type Loc end
 abstract type Vec end
 
-Base.zero(::Type{<:Loc}) = u0()
+zero(::Type{<:Loc}) = u0()
 
 #ideally, this should be Vector{Loc} but empty vectors of Loc are
 #actually of type Vector{Any}
@@ -166,16 +166,16 @@ end
 
 # Basic conversions
 # From tuples of Loc
-Base.convert(::Type{Locs}, ps::NTuple{N,Loc}) where {N} = collect(XYZ, ps)
+convert(::Type{Locs}, ps::NTuple{N,Loc}) where {N} = collect(XYZ, ps)
 
 # From arrays of Any. This looks like a failure in Julia type inference, particularly when
 # an empty array is involved, e.g., line(vcat([xy(10,20), xy(30,40)], []))
-Base.convert(::Type{Locs}, ps::Vector{<:Any}) = collect(XYZ, ps)
+convert(::Type{Locs}, ps::Vector{<:Any}) = collect(XYZ, ps)
 
 
 
-Base.show(io::IO, loc::XYZ) =
-    print(io, "xyz($(loc.x),$(loc.y),$(loc.z)$(loc.cs == world_cs ? "" : ", ..."))")
+show(io::IO, loc::XYZ) =
+  print(io, "xyz($(loc.x),$(loc.y),$(loc.z)$(loc.cs == world_cs ? "" : ", ..."))")
 
 #import Base.getfield, Base.Field
 #getfield(p::XYZ, ::Field{:cyl_rho}) = hypot(p.x, p.y)
@@ -214,8 +214,8 @@ struct VXYZ <: Vec
     raw::SVector{4,Float64}
 end
 
-Base.show(io::IO, vec::VXYZ) =
-    print(io, "vxyz($(vec.x),$(vec.y),$(vec.z)$(vec.cs == world_cs ? "" : ", ..."))")
+show(io::IO, vec::VXYZ) =
+  print(io, "vxyz($(vec.x),$(vec.y),$(vec.z)$(vec.cs == world_cs ? "" : ", ..."))")
 
 
 vxyz(x::Real, y::Real, z::Real, cs::CS=current_cs()) =
@@ -453,11 +453,11 @@ meta_program(v::Vec) =
 # Integration in standard protocols
 
 # iteration for destructuring into components
-Base.iterate(v::Vec) = Base.iterate(v.raw)
-Base.iterate(v::Vec, state) = Base.iterate(v.raw, state)
+iterate(v::Vec) = iterate(v.raw)
+iterate(v::Vec, state) = iterate(v.raw, state)
 
-Base.iterate(v::Loc) = Base.iterate(v.raw)
-Base.iterate(v::Loc, state) = Base.iterate(v.raw, state)
+iterate(v::Loc) = iterate(v.raw)
+iterate(v::Loc, state) = iterate(v.raw, state)
 
 # Utilities
 export trig_center, trig_normal, quad_center, quad_normal, polygon_normal, iterate_quads
@@ -595,8 +595,8 @@ For the moment, I'll choose this one
 
 # Broadcasting
 
-Base.broadcastable(p::Loc) = Ref(p)
-Base.broadcastable(v::Vec) = Ref(v)
+broadcastable(p::Loc) = Ref(p)
+broadcastable(v::Vec) = Ref(v)
 
 # equality
 

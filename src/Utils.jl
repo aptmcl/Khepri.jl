@@ -38,8 +38,8 @@ import Base.==
 ==(x::Nil, y::Nil) = true
 ==(x::Cons, y::Cons) = (x.head == y.head) && (x.tail == y.tail)
 
-Base.show(io::IO, lst::Nil) = print(io, "list()")
-Base.show(io::IO, lst::Cons) =
+show(io::IO, lst::Nil) = print(io, "list()")
+show(io::IO, lst::Cons) =
   begin
     print(io, "list(")
     show(io, head(lst))

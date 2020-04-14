@@ -8,8 +8,9 @@ using LinearAlgebra
 using IntervalSets
 using Interpolations
 using PyCall
-import Base.show
+import Base.show, Base.zero, Base.iterate
 import Base.convert
+import Base.getindex, Base.firstindex, Base.lastindex, Base.broadcastable
 
 include("Parameters.jl")
 include("Utils.jl")
