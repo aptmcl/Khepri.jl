@@ -597,19 +597,19 @@ backend_get_family(b::RH, f::ChairFamily) =
     @remote(b, CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness))
 backend_get_family(b::RH, f::TableChairFamily) =
     @remote(b, CreateRectangularTableAndChairsFamily(
-        ref(f.table_family), ref(f.chair_family),
+        realize(b, f.table_family), realize(b, f.chair_family),
         f.table_family.length, f.table_family.width,
         f.chairs_top, f.chairs_bottom, f.chairs_right, f.chairs_left,
         f.spacing))
 
 backend_rectangular_table(b::RH, c, angle, family) =
-    @remote(b, Table(c, angle, ref(family)))
+    @remote(b, Table(c, angle, realize(b, family)))
 
 backend_chair(b::RH, c, angle, family) =
-    @remote(b, Chair(c, angle, ref(family)))
+    @remote(b, Chair(c, angle, realize(b, family)))
 
 backend_rectangular_table_and_chairs(b::RH, c, angle, family) =
-    @remote(b, TableAndChairs(c, angle, ref(family)))
+    @remote(b, TableAndChairs(c, angle, realize(b, family)))
 
 backend_slab(b::RH, profile, holes, thickness, family) =
     map_ref(b,
