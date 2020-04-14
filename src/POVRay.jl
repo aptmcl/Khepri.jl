@@ -13,7 +13,6 @@ export POVRay,
 # We will use MIME types to encode for POVRay
 const MIMEPOVRay = MIME"text/povray"
 
-import Base.show
 # First, basic types
 show(io::IO, ::MIMEPOVRay, s::String) =
   show(io, s)
@@ -307,26 +306,62 @@ povray_glass_material(name::String; args...) =
 ####################################################
 # Sky models
 
-povray_realistic_sky_string(turbidity, inner) =
-"""
-#version 3.5;
+povray_realistic_sky_string(turbidity, inner) = """
+#version 3.7;
 #include "colors.inc"
 #include "CIE.inc"
 #include "lightsys.inc"
 #include "lightsys_constants.inc"
 #include "sunpos.inc"
 #declare Current_Turbidity = $(turbidity);
+//To solve a bug in CIE_Skylight.in
+#local fiLuminous=finish{ambient 0 emission 1 diffuse 0 specular 0 phong 0 reflection 0 crand 0 irid{0}}
 #include "CIE_Skylight.inc"
 global_settings {
   assumed_gamma 1.0
   radiosity {
   }
 }
+#default {finish {ambient 0 diffuse 1}}
 light_source{
   $(inner)
   Light_Color(SunColor,5)
+  translate SolarPosition
 }
 """
+# This one seems to work better. Still 3.5 though.
+
+#=
+povray_realistic_sky_string(turbidity, inner) = """
+#version 3.5;
+#include "colors.inc"
+#include "CIE.inc"
+#include "lightsys.inc"
+#include "lightsys_constants.inc"
+#include "sunpos.inc"
+global_settings {
+  assumed_gamma 1.0
+  radiosity {
+  }
+}
+#default {finish {ambient 0 diffuse 1}}
+CIE_ColorSystemWhitepoint(Beta_ColSys, Daylight2Whitepoint(Kt_Daylight_Film))
+CIE_GamutMapping(off)
+#declare Lightsys_Brightness = 1.0;
+#declare Lightsys_Filter = <1,1,1>;
+#declare Al=38;    // sun altitude
+#declare Az=100;   // sun rotation
+#declare North=-z;
+#declare DomeSize=1e5;
+#declare Current_Turbidity = 5.0;
+#declare Intensity_Mult = 0.7;
+#include "CIE_Skylight.inc"
+light_source{ 0
+  Light_Color(SunColor,5)
+  translate SolarPosition
+}
+"""
+=#
 
 povray_realistic_sky_string(altitude, azimuth, turbidity, withsun) =
   povray_realistic_sky_string(
@@ -613,6 +648,16 @@ realize(b::POVRay, s::SweepPath) =
       is_smooth_path(s.path))
     void_ref(b)
   end
+
+#
+realize(b::POVRay, s::Thicken) =
+  realize(b, s.shape)
+
+
+
+
+
+
 
 realize(b::POVRay, s::EmptyShape) = void_ref(b)
 realize(b::POVRay, s::UniversalShape) = void_ref(b)
@@ -901,8 +946,8 @@ render_view(path::String, b::POVRay) =
     @info povpath
     export_to_povray(povpath)
     film_active() ?
-      run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
-      run(`$(povray_cmd()) Antialias=on Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
+      run(`$(povray_cmd()) +A Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
+      run(`$(povray_cmd()) +A Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
   end
 
 export clay_model
