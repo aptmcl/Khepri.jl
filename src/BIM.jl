@@ -272,9 +272,12 @@ backend_get_family(b::Backend, f::Family) =
   backend_get_family_ref(b, f, backend_family(b, f))
 
 realize(b::Backend, f::Family) =
+  backend_get_family(b, f)
+#=
   isnothing(f.ref()) ?
     f.ref(backend_get_family(b, f)) :
     f.ref()
+=#
 
 export backend_family, set_backend_family
 
