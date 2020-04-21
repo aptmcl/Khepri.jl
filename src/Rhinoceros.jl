@@ -695,24 +695,24 @@ delete_all_shapes_in_layer(layer::RHLayer, b::RH) =
 
 shape_from_ref(r, b::RH) =
   let c = connection(b)
-    let code = RHShapeCode(c, r),
+    let code = @remote(b, ShapeCode(r)),
         ref = LazyRef(b, RHNativeRef(r))
-              #ref = LazyRef(b, RHNativeRef(@remote(b, Clone(r)))) # HACK CLONING!!!!!
+      println(code)
       if code == 1
-        point(RHPointPosition(c, r),
+        point(@remote(b, PointPosition(r)),
               backend=b, ref=ref)
       elseif code == 2
-        circle(maybe_loc_from_o_vz(RHCircleCenter(c, r), RHCircleNormal(c, r)),
-               RHCircleRadius(c, r),
+        circle(maybe_loc_from_o_vz(@remote(b, CircleCenter(r)), @remote(b, CircleNormal(r))),
+               @remote(b, CircleRadius(r)),
                backend=b, ref=ref)
       elseif 3 <= code <= 6
-        line(RHLineVertices(c, r),
+        line(@remote(b, LineVertices(r)),
              backend=b, ref=ref)
       elseif code == 7
         spline([xy(0,0)], false, false, #HACK obtain interpolation points
                backend=b, ref=ref)
       elseif 103 <= code <= 106
-        polygon(RHLineVertices(c, r),
+        polygon(@remote(b, LineVertices(r)),
                 backend=b, ref=ref)
       elseif code == 40
         # FIXME: frontier is missing
@@ -780,36 +780,36 @@ select_positions(prompt::String, b::RH) =
 # HACK: The next operations should receive a set of shapes to avoid re-creating already existing shapes
 
 select_point(prompt::String, b::RH) =
-  select_one_with_prompt(prompt, b, RHGetPoint)
+  select_one_with_prompt(prompt, b, @get_remote b GetPoint)
 
 select_points(prompt::String, b::RH) =
-  select_many_with_prompt(prompt, b, RHGetPoints)
+  select_many_with_prompt(prompt, b, @get_remote b GetPoints)
 
 select_curve(prompt::String, b::RH) =
-  select_one_with_prompt(prompt, b, RHGetCurve)
+  select_one_with_prompt(prompt, b, @get_remote b GetCurve)
 
 select_curves(prompt::String, b::RH) =
-  select_many_with_prompt(prompt, b, RHGetCurves)
+  select_many_with_prompt(prompt, b, @get_remote b GetCurves)
 
 
 select_surface(prompt::String, b::RH) =
-  select_one_with_prompt(prompt, b, RHGetSurface)
+  select_one_with_prompt(prompt, b, @get_remote b GetSurface)
 
 select_surfaces(prompt::String, b::RH) =
-  select_many_with_prompt(prompt, b, RHGetSurfaces)
+  select_many_with_prompt(prompt, b, @get_remote b GetSurfaces)
 
 
 select_solid(prompt::String, b::RH) =
-  select_one_with_prompt(prompt, b, RHGetSolid)
+  select_one_with_prompt(prompt, b, @get_remote b GetSolid)
 
 select_solids(prompt::String, b::RH) =
-  select_many_with_prompt(prompt, b, RHGetSolids)
+  select_many_with_prompt(prompt, b, @get_remote b GetSolids)
 
 select_shape(prompt::String, b::RH) =
-  select_one_with_prompt(prompt, b, RHGetShape)
+  select_one_with_prompt(prompt, b, @get_remote b GetShape)
 
 select_shapes(prompt::String, b::RH) =
-  select_many_with_prompt(prompt, b, RHGetShapes)
+  select_many_with_prompt(prompt, b, @get_remote b GetShapes)
 
 captured_shape(b::RH, handle) =
   shape_from_ref(handle, b)
