@@ -41,11 +41,13 @@ realize(b::Backend, s::Level) = s.height
 export all_levels, default_level, default_level_to_level_height, upper_level
 
 #=
-@defproxy(polygonal_mass, BIMElement, points::Locs, height::Real)
-@defproxy(rectangular_mass, BIMElement, center::Loc, width::Real, len::Real, height::Real)
+@defproxy(polygonal_mass, BIMShape, points::Locs, height::Real)
+@defproxy(rectangular_mass, BIMShape, center::Loc, width::Real, len::Real, height::Real)
 
-@defproxy(column, BIMElement, center::Loc, bottom_level::Any, top_level::Any, family::Any)
+@defproxy(column, BIMShape, center::Loc, bottom_level::Any, top_level::Any, family::Any)
 =#
+
+abstract type BIMShape <: Shape3D end
 
 #=
 
@@ -271,7 +273,7 @@ Khepri module.
 
 families_registry = Dict{DataType, Vector{Family}}()
 
-available_families(element::BIMElement) = available_families(element.family)
+available_families(element::BIMShape) = available_families(element.family)
 available_families(family::Family) = available_families(typeof(family))
 available_families(family_type::DataType) = families_registry[family_type]
 
@@ -321,7 +323,7 @@ slab_family_elevation(b::Backend, family::SlabFamily) =
 slab_family_thickness(b::Backend, family::SlabFamily) =
   family.coating_thickness + family.thickness
 
-@defproxy(slab, BIMElement, contour::ClosedPath=rectangular_path(),
+@defproxy(slab, BIMShape, contour::ClosedPath=rectangular_path(),
           level::Level=default_level(), family::SlabFamily=default_slab_family(),
           openings::Vector{<:ClosedPath}=ClosedPath[])
 
@@ -384,7 +386,7 @@ slab_family_elevation(b::Backend, family::RoofFamily) = 0
 slab_family_thickness(b::Backend, family::RoofFamily) =
   family.coating_thickness + family.thickness
 
-@defproxy(roof, BIMElement, contour::ClosedPath=rectangular_path(),
+@defproxy(roof, BIMShape, contour::ClosedPath=rectangular_path(),
           level::Level=default_level(), family::RoofFamily=default_roof_family(),
           openings::Vector{<:ClosedPath}=ClosedPath[])
 
@@ -396,7 +398,7 @@ realize(b::Backend, s::Roof) =
 @deffamily(panel_family, Family,
     thickness::Real=0.02)
 
-@defproxy(panel, BIMElement, vertices::Locs=Loc[x(0), x(1), y(1)], level::Any=default_level(), family::Any=default_panel_family())
+@defproxy(panel, BIMShape, vertices::Locs=Loc[x(0), x(1), y(1)], level::Any=default_level(), family::Any=default_panel_family())
 
 realize(b::Backend, s::Panel) =
   let pts = in_world.(s.vertices),
@@ -425,7 +427,7 @@ A wall contains doors and windows
     left_coating_thickness::Real=0.0,
     right_coating_thickness::Real=0.0)
 
-@defproxy(wall, BIMElement, path::Path=rectangular_path(),
+@defproxy(wall, BIMShape, path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(convert(Level, bottom_level)),
           family::WallFamily=default_wall_family(),
@@ -608,7 +610,7 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness + w.family.left_
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(door, BIMElement, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
+@defproxy(door, BIMShape, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::DoorFamily=default_door_family())
 
 # Window
 
@@ -617,7 +619,7 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness + w.family.left_
   height::Real=2.0,
   thickness::Real=0.05)
 
-@defproxy(window, BIMElement, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
+@defproxy(window, BIMShape, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
 
 realize(b::Backend, s::Union{Door, Window}) =
   with_family_in_layer(b, s.family) do
@@ -679,7 +681,7 @@ A curtain wall is a special kind of wall that is made of a frame with windows.
   transom_frame::CurtainWallFrameFamily=
     curtain_wall_frame_family(width=0.06,depth=0.1,depth_offset=0.11))
 
-@defproxy(curtain_wall, BIMElement,
+@defproxy(curtain_wall, BIMShape,
           path::Path=rectangular_path(),
           bottom_level::Level=default_level(),
           top_level::Level=upper_level(bottom_level),
@@ -778,7 +780,7 @@ meta_program(w::Wall) =
 #beam_family(Width::Real=1.0, Height::Real=2.0; width=Width, height=Height) =
 #  beam_family(rectangular_path(xy(-width/2,-height), width, height))
 
-@defproxy(beam, BIMElement, cb::Loc=u0(), h::Real=1, angle::Real=0, family::BeamFamily=default_beam_family())
+@defproxy(beam, BIMShape, cb::Loc=u0(), h::Real=1, angle::Real=0, family::BeamFamily=default_beam_family())
 beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); angle::Real=Angle, family::BeamFamily=Family) =
     let (c, h) = position_and_height(cb, ct)
       beam(c, h, angle, family)
@@ -792,13 +794,13 @@ beam(cb::Loc, ct::Loc, Angle::Real=0, Family::BeamFamily=default_beam_family(); 
     #height::Real=2.0,
   profile::ClosedPath=rectangular_profile(0.2, 0.2))
 
-@defproxy(free_column, BIMElement, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
+@defproxy(free_column, BIMShape, cb::Loc=u0(), h::Real=1, angle::Real=0, family::ColumnFamily=default_column_family())
 free_column(cb::Loc, ct::Loc, Angle::Real=0, Family::ColumnFamily=default_column_family(); angle::Real=Angle, family::ColumnFamily=Family) =
     let (c, h) = position_and_height(cb, ct)
       free_column(c, h, angle, family)
     end
 
-@defproxy(column, BIMElement, cb::Loc=u0(), angle::Real=0,
+@defproxy(column, BIMShape, cb::Loc=u0(), angle::Real=0,
   bottom_level::Level=default_level(), top_level::Level=upper_level(bottom_level),
   family::ColumnFamily=default_column_family())
 
@@ -845,7 +847,7 @@ realize(b::Backend, s::Column) =
     chairs_left::Int=2,
     spacing::Real=0.7)
 
-@defproxy(table, BIMElement, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableFamily=default_table_family())
+@defproxy(table, BIMShape, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableFamily=default_table_family())
 
 realize(b::Backend, s::Table) =
   with_family_in_layer(b, s.family) do
@@ -869,7 +871,7 @@ realize_table(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
     [ensure_ref(b, r) for r in [table_top, legs...]]
   end
 
-@defproxy(chair, BIMElement, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::ChairFamily=default_chair_family())
+@defproxy(chair, BIMShape, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::ChairFamily=default_chair_family())
 
 realize(b::Backend, s::Chair) =
   with_family_in_layer(b, s.family) do
@@ -887,7 +889,7 @@ realize_chair(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
    realize_box(b, mat, add_xyz(p, -length/2, -width/2, seat_height),
                thickness, width, height - seat_height)]
 
-@defproxy(table_and_chairs, BIMElement, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableChairFamily=default_table_chair_family())
+@defproxy(table_and_chairs, BIMShape, loc::Loc=u0(), angle::Real=0, level::Level=default_level(), family::TableChairFamily=default_table_chair_family())
 
 realize(b::Backend, s::TableAndChairs) =
   with_family_in_layer(b, s.family) do
@@ -930,17 +932,17 @@ realize_table_and_chairs(b::Backend, p::Loc, table::Function, chair::Function,
 
 # Lights
 
-@defproxy(pointlight, BIMElement, loc::Loc=z(3), color::RGB=rgb(1,1,1), range::Real=10, intensity::Real=4, level::Level=default_level())
+@defproxy(pointlight, BIMShape, loc::Loc=z(3), color::RGB=rgb(1,1,1), range::Real=10, intensity::Real=4, level::Level=default_level())
 
 realize(b::Backend, s::Pointlight) =
   backend_pointlight(b, add_z(s.loc, s.level.height), s.color, s.range, s.intensity)
 
-@defproxy(spotlight, BIMElement, loc::Loc=z(3), dir::Vec=vz(-1), hotspot::Real=pi/4, falloff::Real=pi/3)
+@defproxy(spotlight, BIMShape, loc::Loc=z(3), dir::Vec=vz(-1), hotspot::Real=pi/4, falloff::Real=pi/3)
 
 realize(b::Backend, s::Spotlight) =
   backend_spotlight(b, s.loc, s.dir, s.hotspot, s.falloff)
 
-@defproxy(ieslight, BIMElement, file::String=required(), loc::Loc=z(3), dir::Vec=vz(-1), alpha::Real=0, beta::Real=0, gamma::Real=0)
+@defproxy(ieslight, BIMShape, file::String=required(), loc::Loc=z(3), dir::Vec=vz(-1), alpha::Real=0, beta::Real=0, gamma::Real=0)
 
 realize(b::Backend, s::Ieslight) =
   backend_ieslight(b, s.file, s.loc, s.dir, s.alpha, s.beta, s.gamma)
@@ -955,8 +957,8 @@ realize(b::Backend, s::Ieslight) =
 @deffamily(truss_bar_family, Family,
     radius::Real=0.03)
 
-@defproxy(truss_node, BIMElement, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
-@defproxy(truss_bar, BIMElement, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
+@defproxy(truss_node, BIMShape, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
+@defproxy(truss_bar, BIMShape, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
 
 realize(b::Backend, s::TrussNode) =
   with_family_in_layer(b, s.family) do
