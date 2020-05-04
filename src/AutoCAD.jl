@@ -1155,21 +1155,17 @@ changed_shape(ss::Shapes, b::ACAD) =
 
 # HACK: This should be filtered on the plugin, not here.
 all_shapes(b::ACAD) =
-    let c = connection(b)
-        Shape[shape_from_ref(r, b)
-              for r in filter(r -> @remote(b, ShapeCode(r)) != 0, @remote(b, GetAllShapes()))]
-    end
+  Shape[shape_from_ref(r, b)
+        for r in filter(r -> @remote(b, ShapeCode(r)) != 0, @remote(b, GetAllShapes()))]
 
 all_shapes_in_layer(layer, b::ACAD) =
-    let c = connection(b)
-        Shape[shape_from_ref(r, b) for r in @remote(b, GetAllShapesInLayer(layer))]
-    end
+  Shape[shape_from_ref(r, b) for r in @remote(b, GetAllShapesInLayer(layer))]
 
 highlight_shape(s::Shape, b::ACAD) =
-    @remote(b, SelectShapes(collect_ref(s)))
+  @remote(b, SelectShapes(collect_ref(s)))
 
 highlight_shapes(ss::Shapes, b::ACAD) =
-    @remote(b, SelectShapes(collect_ref(ss)))
+  @remote(b, SelectShapes(collect_ref(ss)))
 
 pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
   let refs = map(id -> @remote(b, GetHandleFromShape(id)), @remote(b, GetPreSelectedShapes()))
@@ -1177,10 +1173,10 @@ pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
   end
 
 disable_update(b::ACAD) =
-    @remote(b, DisableUpdate())
+  @remote(b, DisableUpdate())
 
 enable_update(b::ACAD) =
-    @remote(b, EnableUpdate())
+  @remote(b, EnableUpdate())
 
 # Render
 
