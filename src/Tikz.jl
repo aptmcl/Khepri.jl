@@ -120,6 +120,17 @@ tikz_line(out::IO, pts::Locs) =
     println(out, ";")
   end
 
+tikz_dimension(out::IO, p::Loc, q::Loc, text::AbstractString) =
+  begin
+    print(out, "\\dimline{")
+    tikz_coord(out, p)
+    print(out, "}{")
+    tikz_coord(out, q)
+    print(out, "}{;")
+    print(out, text)
+    println(out, "};")
+  end
+
 tikz_closed_line(out::IO, pts::Locs, filled::Bool=false) =
   begin
     tikz_draw(out, filled)
@@ -351,3 +362,21 @@ realize(b::TikZ, s::Text) =
   withTikZXForm(connection(b), s.corner) do out, c
     tikz_text(out, s.str, c, s.height)
   end
+
+#
+realize(b::TikZ, s::SurfaceGrid) =
+  let n = size(s.points,1),
+      m = size(s.points,2)
+    for i in 1:n
+      tikz_hobby_spline(connection(b), map(in_world, s.points[i,:]), false)
+    end
+    for j in 1:m
+      tikz_hobby_spline(connection(b), map(in_world, s.points[:,j]), false)
+    end
+  end
+
+###
+# Dimensioning
+
+#backend_dimension(b::TikZ, pa, pb, sep, scale, style) =
+#  tikz_dimension(connection(b), pa, pb, )
