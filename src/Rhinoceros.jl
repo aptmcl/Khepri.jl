@@ -697,7 +697,6 @@ shape_from_ref(r, b::RH) =
   let c = connection(b)
     let code = @remote(b, ShapeCode(r)),
         ref = LazyRef(b, RHNativeRef(r))
-      println(code)
       if code == 1
         point(@remote(b, PointPosition(r)),
               backend=b, ref=ref)
@@ -732,30 +731,6 @@ shape_from_ref(r, b::RH) =
       end
     end
   end
-
-"""            obj = _geometry_from_id(r)
-            ref = native_ref(r)
-            if isinstance(obj, geo.Point):
-                return point.new_ref(ref, fromPt(obj.Location))
-            elif isinstance(obj, geo.Curve):
-                if rh.IsLine(r) or rh.IsPolyline(r):
-                    if rh.IsCurveClosed(r):
-                        return polygon.new_ref(ref, [fromPt(p) for p in rh.CurvePoints(r)[:-1]])
-                    else:
-                        return line.new_ref(ref, [fromPt(p) for p in rh.CurvePoints(r)])
-                elif obj.IsCircle(Rhino.RhinoMath.ZeroTolerance):
-                    return circle.new_ref(ref, fromPt(rh.CircleCenterPoint(r)), rh.CircleRadius(r))
-                elif rh.IsCurveClosed(r):
-                    return closed_spline.new_ref(ref, [fromPt(p) for p in rh.CurvePoints(r)])
-                else:
-                    return spline.new_ref(ref, [fromPt(p) for p in rh.CurvePoints(r)])
-            elif rh.IsObject(r) and rh.IsObjectSolid(r):
-                return solid(native_ref(r))
-            elif rh.IsSurface(r) or rh.IsPolysurface(r):
-                return surface(native_ref(r))
-            else:
-                raise RuntimeError("{0}: Unknown Rhino object {1}".format('shape_from_ref', r))
-                """
 
 #
 
@@ -833,10 +808,11 @@ generate_captured_shapes(ss::Shapes, b::RH) =
   end
 
 all_shapes(b::RH) =
-  [shape_from_ref(r) for r in RHGetAllShapes(connection(b))]
+  Shape[shape_from_ref(r, b)
+        for r in filter(r -> @remote(b, ShapeCode(r)) != 0, @remote(b, GetAllShapes()))]
 
 all_shapes_in_layer(layer, b::RH) =
-  [shape_from_ref(r) for r in @remote(b, GetAllShapesInLayer(layer))]
+  Shape[shape_from_ref(r, b) for r in @remote(b, GetAllShapesInLayer(layer))]
 
 render_view(path::String, b::RH) =
   @remote(b, Render(render_width(), render_height(), path))
