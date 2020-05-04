@@ -210,6 +210,8 @@ macro deffamily(name, parent, fields...)
   name_str = string(name)
   abstract_name = esc(Symbol(string))
   struct_name = esc(Symbol(string(map(uppercasefirst,split(name_str,'_'))...)))
+  # We always add a name field
+  fields = [:(name::String=$(name_str)), fields...]
   field_names = map(field -> field.args[1].args[1], fields)
   field_types = map(field -> field.args[1].args[2], fields)
   field_inits = map(field -> field.args[2], fields)
@@ -244,7 +246,7 @@ macro deffamily(name, parent, fields...)
       $(struct_name)($(field_names...), based_on, implemented_as, Parameter{Any}(nothing))
     $(instance_name)(family:: Family, implemented_as=copy(family.implemented_as); $(instance_params...)) =
       $(struct_name)($(field_names...), family, implemented_as, Parameter{Any}(nothing))
-    $(default_name) = Parameter($(constructor_name)())
+    $(default_name) = Parameter{$struct_name}($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
     $(with_name)(f::Function; family :: $(struct_name) = $(default_name)(), $(instance_params...)) =
@@ -253,6 +255,8 @@ macro deffamily(name, parent, fields...)
 #          selector_names, field_names)...)
     Khepri.meta_program(v::$(struct_name)) =
         Expr(:call, $(Expr(:quote, name)), $(map(field_name -> :(meta_program(v.$(field_name))), field_names)...))
+    Khepri.meta_program(v::Parameter{$struct_name}) =
+        Expr(:call, $(Expr(:quote, default_name)))
   end
 end
 
@@ -265,6 +269,10 @@ avaliable_families(element::BIMElement) => Array of families
 default_family_parameter(element::BIMElement) => Parameter
 
 ALSO
+
+Give families names so that the interface can present them
+
+
 
 We need to detect using traceability the Khepri primitive that is called. So we cannot exclude the
 Khepri module.
