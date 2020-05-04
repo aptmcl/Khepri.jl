@@ -944,6 +944,7 @@ shape_from_ref(r, b::Unity) =
           sphere(@remote(b, SphereCenter(r)), @remote(b, SphereRadius(r)),
                  backend=b, ref=LazyRef(b, UnityNativeRef(r)))
         else
+          @warn "No shapes were previously collected (see in_shape_collection)"
           unknown(r, backend=b, ref=LazyRef(b, UnityNativeRef(r), 0, 0))
           #code = @remote(b, ShapeCode(r)),
           #ref = LazyRef(b, UnityNativeRef(r))
