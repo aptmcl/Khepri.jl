@@ -5,7 +5,7 @@ export Jupyter,
 
 ####################################################
 abstract type JupyterKey end
-const JupyterId = PlotlyJS.GenericTrace
+const JupyterId = Any #PlotlyJS.GenericTrace
 const JupyterRef = GenericRef{JupyterKey, JupyterId}
 const JupyterNativeRef = NativeRef{JupyterKey, JupyterId}
 const JupyterUnionRef = UnionRef{JupyterKey, JupyterId}
