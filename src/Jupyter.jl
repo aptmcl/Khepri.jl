@@ -1,3 +1,6 @@
+export Jupyter,
+       jupyter,
+
 ####################################################
 abstract type JupyterKey end
 const JupyterId = Int
@@ -17,15 +20,17 @@ mutable struct JupyterBackend{K,T} <: LazyBackend{K,T}
   lens::Real
 end
 
-const Jupyter = JupyterBackend{JupyterKey, JupyterId}
+const jupyter = JupyterBackend{JupyterKey, JupyterId}
 # Traits
 has_boolean_ops(::Type{Jupyter}) = HasBooleanOps{false}()
 
-# In Jupyter, everytime we save a shape, we attach the default_Jupyter_material
+const default_jupyter_material = Parameter{JupyterMaterial}("Red")
+
+# In Jupyter, everytime we save a shape, we attach the default_jupyter_material
 save_shape!(b::Jupyter, s::Shape) =
   begin
     prepend!(b.shapes, [s])
-    b.shape_material[s] = default_Jupyter_material()
+    b.shape_material[s] = default_jupyter_material()
     s
   end
 
