@@ -6,10 +6,12 @@ const JupyterNativeRef = NativeRef{JupyterKey, JupyterId}
 const JupyterUnionRef = UnionRef{JupyterKey, JupyterId}
 const JupyterSubtractionRef = SubtractionRef{JupyterKey, JupyterId}
 
+const JupyterMaterial = String
+
 mutable struct JupyterBackend{K,T} <: LazyBackend{K,T}
   shapes::Shapes
-  shape_material::Dict #{Shape,JupyterMaterial}
-  materials::Dict #{JupyterMaterial,JupyterMaterial}
+  shape_material::Dict{Shape,JupyterMaterial}
+  materials::Dict{JupyterMaterial,JupyterMaterial}
   camera::Loc
   target::Loc
   lens::Real
