@@ -5,7 +5,7 @@ export Jupyter,
 
 ####################################################
 abstract type JupyterKey end
-const JupyterId = Int
+const JupyterId = PlotlyJS.GenericTrace
 const JupyterRef = GenericRef{JupyterKey, JupyterId}
 const JupyterNativeRef = NativeRef{JupyterKey, JupyterId}
 const JupyterUnionRef = UnionRef{JupyterKey, JupyterId}
@@ -196,7 +196,7 @@ realize(b::Jupyter, s::SurfaceGrid) =
       xs = map(cx, pts[1]),
       ys = map(cy, map(r->r[1], pts)),
       zs = map(r->map(cz, r), pts)
-    PlotlyJS.surface(x=xs, y=ys, z=zs)
+    JupyterNativeRef(PlotlyJS.surface(x=xs, y=ys, z=zs))
   end
 
 #=
@@ -440,5 +440,5 @@ used_materials(b::Jupyter) =
 =#
 export_to_jupyter(b::Jupyter=current_backend()) =
   let x = 1
-    PlotlyJS.plot([ref(s) for s in b.shapes])
+    PlotlyJS.plot([ref(s).value for s in b.shapes])
   end
