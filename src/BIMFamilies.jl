@@ -15,7 +15,7 @@ We define standard family types
 for thickness in [11, 15, 30]
   register_family(
     wall_family_element(
-      default_window_family(),
+      default_wall_family(),
       name="Wall_$(thickness)",
       thickness=thickness))
 end
