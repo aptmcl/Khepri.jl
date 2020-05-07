@@ -20,7 +20,7 @@ mutable struct JupyterBackend{K,T} <: LazyBackend{K,T}
   lens::Real
 end
 
-const jupyter = JupyterBackend{JupyterKey, JupyterId}
+const Jupyter = JupyterBackend{JupyterKey, JupyterId}
 # Traits
 has_boolean_ops(::Type{Jupyter}) = HasBooleanOps{false}()
 
