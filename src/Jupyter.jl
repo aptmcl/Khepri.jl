@@ -8,8 +8,8 @@ const JupyterSubtractionRef = SubtractionRef{JupyterKey, JupyterId}
 
 mutable struct JupyterBackend{K,T} <: LazyBackend{K,T}
   shapes::Shapes
-  shape_material::Dict{Shape,JupyterMaterial}
-  materials::Dict{JupyterMaterial,JupyterMaterial}
+  shape_material::Dict #{Shape,JupyterMaterial}
+  materials::Dict #{JupyterMaterial,JupyterMaterial}
   camera::Loc
   target::Loc
   lens::Real
@@ -18,7 +18,6 @@ end
 const Jupyter = JupyterBackend{JupyterKey, JupyterId}
 # Traits
 has_boolean_ops(::Type{Jupyter}) = HasBooleanOps{false}()
-
 
 # In Jupyter, everytime we save a shape, we attach the default_Jupyter_material
 save_shape!(b::Jupyter, s::Shape) =
