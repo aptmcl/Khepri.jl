@@ -34,4 +34,5 @@ include("Unreal.jl")
 include("Camera.jl")
 const com = PyNULL()
 include("Robot.jl")
+include("BIMFamilies.jl")
 end

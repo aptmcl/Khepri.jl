@@ -279,15 +279,6 @@ Khepri module.
 
 =#
 
-families_registry = Dict{DataType, Vector{Family}}()
-
-available_families(element::BIMShape) = available_families(element.family)
-available_families(family::Family) = available_families(typeof(family))
-available_families(family_type::DataType) = families_registry[family_type]
-
-register_family(family::Family) = push!(get!(families_registry, typeof(family), Family[]), family)
-export available_families, register_family
-
 # When dispatching a BIM operation to a backend, we also need to dispatch the family
 
 backend_family(b::Backend, family::Family) =
