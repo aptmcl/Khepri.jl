@@ -216,10 +216,11 @@ realize(b::Jupyter, s::SweepPath) =
     void_ref(b)
   end
 
+=#
 # HACK: JUST FOR TESTING
 realize(b::Jupyter, s::Thicken) =
   realize(b, s.shape)
-
+#=
 
 
 
