@@ -1,3 +1,5 @@
+using PlotlyJS
+
 export Jupyter,
        jupyter
 
@@ -194,7 +196,7 @@ realize(b::Jupyter, s::SurfaceGrid) =
       xs = map(cx, pts[1]),
       ys = map(cy, map(r->r[1], pts)),
       zs = map(r->map(cz, r), pts)
-    JupyterlyJS.surface(x=xs, y=ys, z=zs)
+    PlotlyJS.surface(x=xs, y=ys, z=zs)
   end
 
 #=
@@ -435,33 +437,8 @@ used_materials(b::Jupyter) =
   unique(map(f -> realize(s.family, b), b.shapes))
 
 ####################################################
-
-export_to_Jupyter(path::String, b::Jupyter=current_backend()) =
-  let buf = b.buffer()
-    # First pass, to fill material dictionary
-    take!(buf)
-    # We cannot do this because the array might be updated during the iteration
-    for s in b.shapes
-      mark_deleted(s)
-    end
-    i = 1
-    while i <= length(b.shapes)
-      ref(b.shapes[i])
-      i += 1
-    end
-    open(path, "w") do out
-      # write the sky
-      write(out, b.sky)
-      # write the ground
-      write(out, b.ground)
-      # write materials
-      for (k,v) in b.materials
-        write_Jupyter_definition(out, k)
-      end
-      # write the objects
-      write(out, String(take!(buf)))
-      # write the view
-      write_Jupyter_camera(out, b.camera, b.target, b.lens)
-    end
-  end
 =#
+export_to_jupyter(b::Jupyter=current_backend()) =
+  let x = 1
+    PlotlyJS.plot([ref(s) for s in b.shapes])
+  end
