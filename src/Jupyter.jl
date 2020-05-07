@@ -1,5 +1,5 @@
 export Jupyter,
-       jupyter,
+       jupyter
 
 ####################################################
 abstract type JupyterKey end
