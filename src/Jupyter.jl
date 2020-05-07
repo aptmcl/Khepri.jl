@@ -192,9 +192,9 @@ write_Jupyter_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v)
 =#
 realize(b::Jupyter, s::SurfaceGrid) =
   let mat = 1, #get_material(b, s)
-      pts = map_division(identity, s, size(s.points,1)-1, size(s.points,2)-1),
-      xs = map(cx, pts[1]),
-      ys = map(cy, map(r->r[1], pts)),
+      pts = map_division(in_world, s, size(s.points,1)-1, size(s.points,2)-1),
+      xs = map(cx, map(r->r[1], pts)),
+      ys = map(cy, pts[1]),
       zs = map(r->map(cz, r), pts)
     JupyterNativeRef(PlotlyJS.surface(x=xs, y=ys, z=zs))
   end
@@ -438,6 +438,7 @@ used_materials(b::Jupyter) =
 
 ####################################################
 =#
+export export_to_jupyter
 export_to_jupyter(b::Jupyter=current_backend()) =
   let x = 1
     PlotlyJS.plot([ref(s).value for s in b.shapes])
