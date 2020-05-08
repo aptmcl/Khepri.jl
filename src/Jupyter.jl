@@ -192,7 +192,7 @@ write_Jupyter_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v)
 =#
 realize(b::Jupyter, s::Khepri.SurfaceGrid) =
   let mat = 1, #get_material(b, s)
-      pts = map_division(in_world, s, 20, 20),
+      pts = map_division(in_world, s, 20, 20)
     JupyterNativeRef(
       PlotlyJS.surface(
          x=map(r->map(cx, r), pts),
