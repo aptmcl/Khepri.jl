@@ -192,7 +192,8 @@ write_Jupyter_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v)
 =#
 realize(b::Jupyter, s::Khepri.SurfaceGrid) =
   let mat = 1, #get_material(b, s)
-      pts = map_division(in_world, s, 20, 20)
+      pts = map(in_world, s.points),
+      pts = [pts[i,:] for i in 1:size(pts,1)]
     JupyterNativeRef(
       PlotlyJS.surface(
          x=map(r->map(cx, r), pts),
@@ -200,7 +201,8 @@ realize(b::Jupyter, s::Khepri.SurfaceGrid) =
          z=map(r->map(cz, r), pts),
          autocolorscale=false,
          showscale=false,
-         colorscale=[[0, "rgb(50,10,50)"], [1, "rgb(250,10,250)"]]))
+         #colorscale=[[0, "rgb(255,20,147)"], [1, "rgb(255,182,193)"]] #[[0, "rgb(50,10,50)"], [1, "rgb(250,10,250)"]]
+         colorscale=[[0, "rgb(40,40,40)"], [1, "rgb(210,210,210)"]]))
   end
 
 #=
@@ -453,6 +455,7 @@ export_to_jupyter(b::Jupyter=current_backend()) =
                     camera_center_z=target.z,
                     camera_eye_x=camera.x,
                     camera_eye_y=camera.y,
-                    camera_eye_z=camera.z)
+                    camera_eye_z=camera.z,
+                    scene_aspectmode="data")
     PlotlyJS.plot([Khepri.ref(s).value for s in b.shapes if !is_empty_shape(s)], layout)
   end
