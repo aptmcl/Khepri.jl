@@ -201,6 +201,7 @@ realize(b::Jupyter, s::Khepri.SurfaceGrid) =
          z=map(r->map(cz, r), pts),
          autocolorscale=false,
          showscale=false,
+         hoverinfo="skip",
          #colorscale=[[0, "rgb(255,20,147)"], [1, "rgb(255,182,193)"]] #[[0, "rgb(50,10,50)"], [1, "rgb(250,10,250)"]]
          colorscale=[[0, "rgb(40,40,40)"], [1, "rgb(210,210,210)"]]))
   end
@@ -456,6 +457,10 @@ export_to_jupyter(b::Jupyter=current_backend()) =
                     camera_eye_x=camera.x,
                     camera_eye_y=camera.y,
                     camera_eye_z=camera.z,
-                    scene_aspectmode="data")
+                    scene_aspectmode="data",
+                    scene_xaxis_showticklabels=false,
+                    scene_yaxis_showticklabels=false,
+                    scene_zaxis_showticklabels=false,
+                    )
     PlotlyJS.plot([Khepri.ref(s).value for s in b.shapes if !is_empty_shape(s)], layout)
   end
