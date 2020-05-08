@@ -190,13 +190,17 @@ write_Jupyter_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v)
     end
   end
 =#
-realize(b::Jupyter, s::SurfaceGrid) =
+realize(b::Jupyter, s::Khepri.SurfaceGrid) =
   let mat = 1, #get_material(b, s)
-      pts = map_division(in_world, s, size(s.points,1)-1, size(s.points,2)-1),
-      xs = map(cx, map(r->r[1], pts)),
-      ys = map(cy, pts[1]),
-      zs = map(r->map(cz, r), pts)
-    JupyterNativeRef(PlotlyJS.surface(x=xs, y=ys, z=zs))
+      pts = map_division(in_world, s, 20, 20),
+    JupyterNativeRef(
+      PlotlyJS.surface(
+         x=map(r->map(cx, r), pts),
+         y=map(r->map(cy, r), pts),
+         z=map(r->map(cz, r), pts),
+         autocolorscale=false,
+         showscale=false,
+         colorscale=[[0, "rgb(50,10,50)"], [1, "rgb(250,10,250)"]]))
   end
 
 #=
@@ -220,15 +224,12 @@ realize(b::Jupyter, s::SweepPath) =
 # HACK: JUST FOR TESTING
 realize(b::Jupyter, s::Thicken) =
   realize(b, s.shape)
-#=
-
-
-
-
-
 
 realize(b::Jupyter, s::EmptyShape) = void_ref(b)
+
 realize(b::Jupyter, s::UniversalShape) = void_ref(b)
+
+#=
 #=
 realize(b::Jupyter, s::Move) =
     let r = map_ref(s.shape) do r
@@ -441,6 +442,17 @@ used_materials(b::Jupyter) =
 =#
 export export_to_jupyter
 export_to_jupyter(b::Jupyter=current_backend()) =
-  let x = 1
-    PlotlyJS.plot([ref(s).value for s in b.shapes])
+  let camera = in_world(b.camera),
+      target = in_world(b.target),
+      (width, height) = render_size(),
+      layout =
+    PlotlyJS.Layout(autosize=true, width=width, height=height,
+                    margin=attr(l=0, r=0, b=0, t=0),
+                    camera_center_x=target.x,
+                    camera_center_y=target.y,
+                    camera_center_z=target.z,
+                    camera_eye_x=camera.x,
+                    camera_eye_y=camera.y,
+                    camera_eye_z=camera.z)
+    PlotlyJS.plot([Khepri.ref(s).value for s in b.shapes if !is_empty_shape(s)], layout)
   end
