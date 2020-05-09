@@ -440,11 +440,3 @@ used_materials(b::Plot) =
 
 ####################################################
 =#
-export export_to_Plot
-export_to_Plot(b::Plot=current_backend()) =
-  let camera = in_world(b.camera),
-      target = in_world(b.target),
-      (width, height) = render_size(),
-      )
-    PlotlyJS.plot([Khepri.ref(s).value for s in b.shapes if !is_empty_shape(s)], layout)
-  end
