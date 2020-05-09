@@ -1,6 +1,7 @@
 export Shape,
        Path,
        backend,
+       new_backend,
        backend_name,
        current_backend,
        has_current_backend,
@@ -379,6 +380,8 @@ switch_to_backend(from::Backend, to::Backend) = current_backend(to)
 @defop set_length_unit(unit::String)
 @defop reset_backend()
 @defop save_as(pathname::String, format::String)
+
+new_backend(b::Backend = current_backend()) = backend(b)
 
 struct WrongTypeForParam <: Exception
   param::Symbol

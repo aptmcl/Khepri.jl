@@ -48,6 +48,14 @@ create_plot_connection() =
 plot = PLOT(LazyParameter(PlotlyJS.SyncPlot, create_plot_connection))
 
 reset_backend(b::PLOT) =
+  let param = b.connection
+    if ! isnothing(param.value)
+      param.value = (copy(param.value))
+      display(param.value)
+    end
+  end
+
+new_backend(b::PLOT) =
   reset(b.connection)
 
 #
