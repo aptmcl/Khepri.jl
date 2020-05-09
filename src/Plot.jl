@@ -47,6 +47,9 @@ create_plot_connection() =
 
 plot = PLOT(LazyParameter(PlotlyJS.SyncPlot, create_plot_connection))
 
+reset_backend(b::PLOT) =
+  reset(b.connection)
+
 #
 
 set_view(camera::Loc, target::Loc, lens::Real, b::Plot) =
@@ -62,15 +65,18 @@ get_view(b::Plot) =
 ###################################
 #
 delete_all_shapes(b::PLOT) =
-  let c = connection(b),
-      idxs = collect(1:length(c.plot.data))
-    deletetraces!(c, idxs...)
+  let c = connection(b)
+    if ! isempty(c.plot.data)
+      deletetraces!(c, collect(1:length(c.plot.data))...)
+    end
   end
 
 backend_delete_shapes(b::PLOT, shapes::Shapes) =
   let c = connection(b),
       idxs = [findfirst(==(ref(s).value), c.plot.data) for s in shapes]
-    deletetraces!(c, idxs...)
+    if ! isempty(idx)
+      deletetraces!(c, idxs...)
+    end
   end
 
 #=
@@ -222,12 +228,12 @@ realize(b::Plot, s::SweepPath) =
 
 =#
 # HACK: JUST FOR TESTING
-realize(b::Plot, s::Thicken) =
+realize(b::PLOT, s::Thicken) =
   realize(b, s.shape)
 
-realize(b::Plot, s::EmptyShape) = void_ref(b)
+realize(b::PLOT, s::EmptyShape) = void_ref(b)
 
-realize(b::Plot, s::UniversalShape) = void_ref(b)
+realize(b::PLOT, s::UniversalShape) = void_ref(b)
 
 #=
 #=
