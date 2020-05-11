@@ -268,32 +268,30 @@ cyl_z(p::Union{Loc,Vec}) = p.z
 pol_rho = cyl_rho
 pol_phi = cyl_phi
 
-
-
-
 unitized(v::Vec) =
   let r = sqrt(sum(abs2, v.raw))
     @assert r > 1e-15
     vxyz(v.raw./r, v.cs)
   end
+
 in_cs(from_cs::CS, to_cs::CS) =
-    to_cs == world_cs ?
+    to_cs === world_cs ?
         from_cs.transform :
-        inv(from_cs.transform) * to_cs.transform
+        inv(to_cs.transform) * from_cs.transform
 
 in_cs(p::Loc, cs::CS) =
-  p.cs == cs ?
+  p.cs === cs ?
     p :
-    cs == world_cs ?
+    cs === world_cs ?
       xyz(p.cs.transform * p.raw, world_cs) :
-      xyz(inv(p.cs.transform) * cs.transform * p.raw, cs)
+      xyz(inv(cs.transform) * p.cs.transform * p.raw, cs)
 
 in_cs(p::Vec, cs::CS) =
-  p.cs == cs ?
+  p.cs === cs ?
     p :
-    cs == world_cs ?
+    cs === world_cs ?
       vxyz(p.cs.transform * p.raw, world_cs) :
-      vxyz(inv(p.cs.transform) * cs.transform * p.raw, cs)
+      vxyz(inv(cs.transform) * p.cs.transform * p.raw, cs)
 
 in_cs(p, q) = in_cs(p, q.cs)
 
