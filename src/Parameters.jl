@@ -51,7 +51,7 @@ LazyParameter(T::DataType, initializer::Union{DataType,Function}) =
 #(p::LazyParameter{T}){T}()::T = p.value == nothing ? (p.value = p.initializer()) : get(p.value)
 #(p::LazyParameter{T}){T}(newvalue::T) = p.value = newvalue
 
-(p::LazyParameter)() = p.value === nothing ? (p.value = p.initializer()) : p.value
+(p::LazyParameter)() = isnothing(p.value) ? (p.value = p.initializer()) : p.value
 (p::LazyParameter)(newvalue) = p.value = newvalue
 
 import Base.reset
