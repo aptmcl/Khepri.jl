@@ -753,15 +753,15 @@ realize(b::ACAD, s::UnionMirror) =
     UnionRef((r0,r1))
   end
 
-realize(b::ACAD, s::SurfaceGrid) =
+backend_surface_grid(b::ACAD, points, closed_u, closed_v, smooth_u, smooth_v) =
     @remote(b, SurfaceFromGrid(
-        size(s.points,2),
-        size(s.points,1),
-        reshape(s.points,:),
-        s.closed_u,
-        s.closed_v,
+        size(points,2),
+        size(points,1),
+        reshape(points,:),
+        closed_u,
+        closed_v,
         # Autocad does not allow us to distinguish smoothness along different dimensions
-        s.smooth_u && s.smooth_v ? 2 : 0))
+        smooth_u && smooth_v ? 2 : 0))
 
 realize(b::ACAD, s::Thicken) =
   and_mark_deleted(

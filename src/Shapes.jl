@@ -566,6 +566,16 @@ surface_domain(s::Shape2D, backend::Backend=current_backend()) =
 map_division(f::Function, s::Shape2D, nu::Int, nv::Int, backend::Backend=current_backend()) =
     backend_map_division(backend, f, s, nu, nv)
 
+
+
+path_vertices(s::Shape1D) = path_vertices(shape_path(s))
+shape_path(s::Circle) = circular_path(s.center, s.radius)
+shape_path(s::Spline) = open_spline_path(s.points, s.v0, s.v1)
+shape_path(s::ClosedSpline) = closed_spline_path(s.points)
+
+
+
+
 @defproxy(text, Shape0D, str::String="", corner::Loc=u0(), height::Real=1)
 
 export text_centered
@@ -643,10 +653,22 @@ realize(b::Backend, s::Extrusion) =
 backend_extrusion(b::Backend, p::Point, v::Vec) =
   realize_and_delete_shapes(line([p.position, p.position + v], backend=b), [p])
 
-@defproxy(sweep, Shape3D, path::Shape1D=circle(), profile::Shape=point(), rotation::Real=0, scale::Real=1)
+@defproxy(sweep, Shape3D, path::Union{Shape1D, Path}=circle(), profile::Union{Shape,Path}=point(), rotation::Real=0, scale::Real=1)
 
 realize(b::Backend, s::Sweep) =
   backend_sweep(backend(s), s.path, s.profile, s.rotation, s.scale)
+
+backend_sweep(b::Backend, path::Shape, profile::Shape, rotation::Real, scale::Real) =
+  let vertices = in_world.(path_vertices(profile)),
+      frames = map_division(identity, path, 20)
+    backend_surface_grid(
+      b,
+      [xyz(cx(p), cy(p), cz(p), frame.cs) for p in vertices, frame in frames],
+      is_closed_path(profile),
+      is_closed_path(path),
+      is_smooth_path(profile),
+      is_smooth_path(path))
+  end
 
 @defproxy(revolve_point, Shape1D, profile::Shape0D=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
 @defproxy(revolve_curve, Shape2D, profile::Shape1D=line(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)
@@ -915,6 +937,7 @@ subtraction(shape::Shape3D, shapes...) =
           closed_u::Bool=false, closed_v::Bool=false,
           smooth_u::Bool=true, smooth_v::Bool=true,
           interpolator::Parameter{Any}=Parameter{Any}(missing))
+
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(pts) do p
                 let v = in_world(p).raw
@@ -956,6 +979,12 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
       end
     end
   end
+
+realize(b::Backend, s::SurfaceGrid) =
+  backend_surface_grid(b, s.points, s.closed_u, s.closed_v, s.smooth_u, s.smooth_v)
+
+
+
 
 @defproxy(parametric_surface, Shape2D, definition::Function=(u,v)->xyz(u,v,0),
           domain_u::Tuple{Real,Real}=(0,1), domain_v::Tuple{Real,Real}=(0,1))

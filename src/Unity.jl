@@ -586,15 +586,16 @@ realize(b::Unity, s::UnionMirror) =
   end
 =#
 
-realize(b::Unity, s::SurfaceGrid) =
+backend_surface_grid(b::Unity, points, closed_u, closed_v, smooth_u, smooth_v) =
   # we create two surfaces to have normals on both sides
-  let ptss = s.points,
+  let ptss = points,
       s1 = size(ptss,1),
       s2 = size(ptss,2),
       sstp = reverse(ptss, dims=1)
     @remote(b, SurfaceFromGrid(s2, s1, reshape(sstp,:), s.closed_u, s.closed_v, 2))
     @remote(b, SurfaceFromGrid(s2, s1, reshape(ptss,:), s.closed_u, s.closed_v, 2))
   end
+
 #=
 realize(b::Unity, s::Thicken) =
   and_delete_shape(
