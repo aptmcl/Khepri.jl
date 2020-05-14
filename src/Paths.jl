@@ -165,14 +165,19 @@ struct OpenSplinePath <: OpenPath
     vertices::Locs
     v0::Union{Bool,Vec}
     v1::Union{Bool,Vec}
+    interpolator
 end
 open_spline_path(vertices=[u0(), x(), xy(), y()], v0=false, v1=false) =
-    OpenSplinePath(vertices, v0, v1)
+  OpenSplinePath(vertices, v0, v1, curve_interpolator(vertices))
 
 struct ClosedSplinePath <: ClosedPath
     vertices::Locs
+    interpolator
 end
-closed_spline_path(vertices=[u0(), x(), xy(), y()]) = ClosedSplinePath(ensure_no_repeated_locations(vertices))
+closed_spline_path(vertices=[u0(), x(), xy(), y()]) =
+  let vertices = ensure_no_repeated_locations(vertices)
+    ClosedSplinePath(vertices, curve_interpolator(vertices))
+  end
 
 spline_path(vertices::Locs) =
   coincident_path_location(vertices[1], vertices[end]) ?
@@ -184,7 +189,7 @@ map_division(f, path) =
   f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
 
 map_division(f::Function, path::OpenSplinePath, n::Integer) =
-  let interpolator = curve_interpolator(path.vertices),
+  let interpolator = path.interpolator,
       ps = map_division(interpolator, 0.0, 1.0, n),
       vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
       #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
@@ -195,7 +200,7 @@ map_division(f::Function, path::OpenSplinePath, n::Integer) =
   end
 
 map_division(f::Function, path::ClosedSplinePath, n::Integer) =
-  let interpolator = curve_interpolator(path.vertices),
+  let interpolator = path.interpolator,
       ps = map_division(interpolator, 0.0, 1.0, n, false),
       vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n, false)
       #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
@@ -706,6 +711,18 @@ path_interpolated_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity
        path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
   end
 
+path_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
+  let p0 = location_at_length(path, t0),
+      p1 = location_at_length(path, t1),
+      tm = (t0 + t1)/2.0,
+      pm = location_at_length(path, tm)
+    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
+      [t0, tm, t1] :
+      [path_interpolated_lengths(path, t0, tm, epsilon, min_recursion - 1)...,
+       path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
+  end
+
+
 convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
   closed_polygonal_path(path_interpolated_vertices(path))
 convert(::Type{OpenPolygonalPath}, path::CircularPath) =
@@ -716,8 +733,9 @@ convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
   open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
   convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
-convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limit vectors
-  let interpolator = curve_interpolator(path.vertices),
+convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = open_polygonal_path(map_division(identity, path, 64))
+    # ERROR: ignores limit vectors
+#=  let interpolator = curve_interpolator(path.vertices),
       fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
     open_polygonal_path(
       map_division(
@@ -732,7 +750,7 @@ convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = # ERROR: ignores limi
             end,
         0.0, 1.0, 64)) # HACK this must be parameterized!
     end
-
+=#
 curve_interpolator(pts::Locs) =
     let pts = map(pts) do p
                 let v = in_world(p).raw
