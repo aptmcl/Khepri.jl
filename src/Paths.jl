@@ -27,6 +27,7 @@ export open_path,
        stroke,
        fill,
        path_length,
+       location_at,
        location_at_length,
        path_start,
        path_end,
@@ -34,7 +35,8 @@ export open_path,
        subpaths,
        join_paths,
        subtract_paths,
-       path_vertices
+       path_vertices,
+       path_frames
 
 path_tolerance = Parameter(1e-10)
 coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
@@ -71,16 +73,35 @@ arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=
   false ? #amplitude < 0 ?
     ArcPath(center, radius, start_angle + amplitude, - amplitude) :
     ArcPath(center, radius, start_angle, amplitude)
+
+location_at(path::ArcPath, ϕ::Real) =
+  let s = sign(path.amplitude),
+      ϕ = ϕ*s
+    loc_from_o_vx_vy(add_pol(path.center, path.radius, path.start_angle + ϕ),
+                     vpol(1, path.start_angle + ϕ + π, path.center.cs),
+                     vz(1, path.center.cs))
+  end
+
+map_division(f::Function, path::ArcPath, n::Integer) =
+  map_division(ϕ->f(location_at(path, ϕ)),
+               0,
+               path.amplitude,
+               n,
+               true)
+
 struct CircularPath <: ClosedPath
     center::Loc
     radius::Real
 end
 circular_path(Center::Loc=u0(), Radius::Real=1; center::Loc=Center, radius::Real=Radius) = CircularPath(center, radius)
+
+location_at(path::CircularPath, ϕ::Real) =
+  loc_from_o_vx_vy(add_pol(path.center, path.radius, ϕ),
+                   vpol(1, ϕ + π, path.center.cs),
+                   vz(1, path.center.cs))
+
 map_division(f::Function, path::CircularPath, n::Integer) =
-  map_division(ϕ->f(loc_from_o_vx_vy(add_pol(path.center, path.radius, ϕ),
-                                     vpol(1, ϕ+π, path.center.cs),
-                                     vz(1, path.center.cs))),
-               0, 2π, n, false)
+  map_division(ϕ->f(location_at(path, ϕ)), 0, 2π, n, false)
 
 struct RectangularPath <: ClosedPath
     corner::Loc
@@ -248,13 +269,12 @@ path_length(ps::Locs) =
   end
 
 location_at_length(path::CircularPath, d::Real) =
-  loc_from_o_phi(path.center + vpol(path.radius, d/path.radius), d/path.radius + pi/2)
+  location_at(path, d/path.radius + pi/2)
 location_at_length(path::ArcPath, d::Real) =
   let Δα = d/path.radius,
       s = sign(path.amplitude)
     Δα <= abs(path.amplitude) + path_tolerance() ?
-      loc_from_o_phi(path.center + vpol(path.radius, path.start_angle + Δα*s),
-                     path.start_angle + (Δα + pi/2)*s) :
+      location_at(path, Δα*s) :
       error("Exceeded path length by ", Δα - path.amplitude)
   end
 location_at_length(path::RectangularPath, d::Real) =
@@ -724,7 +744,6 @@ curve_interpolator(pts::Locs) =
             range(0,stop=1,length=size(pts, 1)))
     end
 
-
 convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
   let paths = path.paths,
       vertices = []
@@ -755,7 +774,12 @@ path_vertices(path::OpenPolygonalPath) = path.vertices
 path_vertices(path::ClosedPolygonalPath) = path.vertices
 path_vertices(path::OpenSplinePath) = path.vertices
 path_vertices(path::ClosedSplinePath) = path.vertices
-path_vertices(path::Path) = path_vertices(convert(ClosedPolygonalPath, path))
+path_vertices(path::Path) =
+  path_vertices(convert(is_closed_path(path) ? ClosedPolygonalPath : OpenPolygonalPath,
+                        path))
+
+path_frames(path::Path) = map_division(identity, path)
+
 
 subpaths(path::OpenPolygonalPath) =
   let ps = path.vertices
