@@ -3,13 +3,14 @@
 export show_cs
 
 show_cs(p, scale=1) =
-    let rcyl = scale/10
-        rcon = scale/5
-        lcyl = scale
-        lcon = scale/5
-        px = add_x(p, 3*lcyl)
-        py = add_y(p, 2*lcyl)
+    let rcyl = scale/10,
+        rcon = scale/5,
+        lcyl = scale,
+        lcon = scale/5,
+        px = add_x(p, 3*lcyl),
+        py = add_y(p, 2*lcyl),
         pz = add_z(p, 1*lcyl)
+      union(args...) = args[end] # Unity is having problems with unions
         union(cylinder(p, rcyl, px),
               cone(px, rcon, add_x(px, lcon)),
               cylinder(p, rcyl, py),
