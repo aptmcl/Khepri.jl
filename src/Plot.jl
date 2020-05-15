@@ -157,14 +157,14 @@ realize(b::ACAD, s::Line) =
 
 realize(b::PLOT, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
-    #@remote(b, Spline(s.points))
     let mat = 1, #get_material(b, s)
         pts = map(in_world, s.points),
-        r = PlotlyJS.Scatter3d(
-           x=map(r->map(cx, r), pts),
-           y=map(r->map(cy, r), pts),
-           z=map(r->map(cz, r), pts),
+        r = PlotlyJS.scatter3d(
+           x=map(cx, pts),
+           y=map(cy, pts),
+           z=map(cz, pts),
            line_shape="spline",
+           marker_size=2,
            autocolorscale=false,
            showscale=false,
            hoverinfo="skip")
