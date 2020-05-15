@@ -185,6 +185,21 @@ spline_path(vertices::Locs) =
     open_spline_path(vertices)
 spline_path(vs...) = spline_path(vs)
 
+location_at(path::OpenSplinePath, ϕ::Real) =
+  let interpolator = path.interpolator
+    ϕ == 0 ?
+    path.vertices[1] :
+    let n = round(Int, ϕ/0.1), # 10 frames in total?
+        ps = map_division(interpolator, 0.0, 1.0, n),
+        vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
+      #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
+      first(rotation_minimizing_frames(
+              path.vertices[1],
+              map(p->xyz(p[1], p[2], p[3], world_cs), ps),
+              map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts)))
+    end
+  end
+
 map_division(f, path) =
   f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
 
@@ -711,15 +726,15 @@ path_interpolated_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity
        path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
   end
 
-path_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
-  let p0 = location_at_length(path, t0),
-      p1 = location_at_length(path, t1),
+path_interpolated_vertices(path::SplinePath, t0=0, t1=1, epsilon=collinearity_tolerance(), min_recursion=1) =
+  let p0 = location_at(path, t0),
+      p1 = location_at(path, t1),
       tm = (t0 + t1)/2.0,
-      pm = location_at_length(path, tm)
+      pm = location_at(path, tm)
     min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
-      [t0, tm, t1] :
-      [path_interpolated_lengths(path, t0, tm, epsilon, min_recursion - 1)...,
-       path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
+      [p0, pm, p1] :
+      [path_interpolated_vertices(path, t0, tm, epsilon, min_recursion - 1)...,
+       path_interpolated_vertices(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
   end
 
 
@@ -788,10 +803,8 @@ convert(::Type{ClosedPath}, pset::PathSet) =
   foldl(subtract_paths, pset.paths)
 
 #### Utilities
-path_vertices(path::OpenPolygonalPath) = path.vertices
-path_vertices(path::ClosedPolygonalPath) = path.vertices
-path_vertices(path::OpenSplinePath) = path.vertices
-path_vertices(path::ClosedSplinePath) = path.vertices
+path_vertices(path::Union{PolygonalPath,SplinePath}) =
+  path.vertices
 path_vertices(path::Path) =
   path_vertices(convert(is_closed_path(path) ? ClosedPolygonalPath : OpenPolygonalPath,
                         path))
@@ -823,4 +836,4 @@ subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
 is_smooth_path(path::Path) = false
 is_smooth_path(pts::Locs) = false
 
-is_smooth_path(path::Union{ArcPath, CircularPath, OpenSplinePath, ClosedSplinePath}) = true
+is_smooth_path(path::Union{ArcPath,CircularPath,SplinePath}) = true
