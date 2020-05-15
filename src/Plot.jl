@@ -73,21 +73,206 @@ get_view(b::Plot) =
 ###################################
 #
 delete_all_shapes(b::PLOT) =
-  let c = connection(b)
-    if ! isempty(c.plot.data)
-      deletetraces!(c, collect(1:length(c.plot.data))...)
+  let c = connection(b),
+      idxs = collect(1:length(c.plot.data))
+    if length(idxs) > 0
+      deletetraces!(c, idxs...)
     end
   end
 
 backend_delete_shapes(b::PLOT, shapes::Shapes) =
   let c = connection(b),
       idxs = [findfirst(==(ref(s).value), c.plot.data) for s in shapes]
-    if ! isempty(idx)
+    if length(idxs) > 0
       deletetraces!(c, idxs...)
     end
   end
 
 #=
+backend_stroke(b::ACAD, path::CircularPath) =
+    @remote(b, Circle(path.center, vz(1, path.center.cs), path.radius))
+backend_stroke(b::ACAD, path::RectangularPath) =
+    let c = path.corner,
+        dx = path.dx,
+        dy = path.dy
+        @remote(b, ClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)]))
+    end
+backend_stroke(b::ACAD, path::ArcPath) =
+    backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
+
+backend_stroke(b::ACAD, path::OpenPolygonalPath) =
+  	@remote(b, PolyLine(path.vertices))
+backend_stroke(b::ACAD, path::ClosedPolygonalPath) =
+    @remote(b, ClosedPolyLine(path.vertices))
+backend_fill(b::ACAD, path::ClosedPolygonalPath) =
+    @remote(b, SurfaceClosedPolyLine(path.vertices))
+backend_fill(b::ACAD, path::RectangularPath) =
+    let c = path.corner,
+        dx = path.dx,
+        dy = path.dy
+        @remote(b, SurfaceClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)]))
+    end
+backend_stroke(b::ACAD, path::OpenSplinePath) =
+  if (path.v0 == false) && (path.v1 == false)
+    #@remote(b, Spline(path.vertices))
+    @remote(b, InterpSpline(
+                     path.vertices,
+                     path.vertices[2]-path.vertices[1],
+                     path.vertices[end]-path.vertices[end-1]))
+  elseif (path.v0 != false) && (path.v1 != false)
+    @remote(b, InterpSpline(path.vertices, path.v0, path.v1))
+  else
+    @remote(b, InterpSpline(
+                     path.vertices,
+                     path.v0 == false ? path.vertices[2]-path.vertices[1] : path.v0,
+                     path.v1 == false ? path.vertices[end-1]-path.vertices[end] : path.v1))
+  end
+backend_stroke(b::ACAD, path::ClosedSplinePath) =
+    @remote(b, InterpClosedSpline(path.vertices))
+backend_fill(b::ACAD, path::ClosedSplinePath) =
+    backend_fill_curves(b, @remote(b, InterpClosedSpline(path.vertices)))
+
+backend_fill_curves(b::ACAD, refs::ACADIds) = @remote(b, SurfaceFromCurves(refs))
+backend_fill_curves(b::ACAD, ref::ACADId) = @remote(b, SurfaceFromCurves([ref]))
+
+backend_stroke_line(b::ACAD, vs) = @remote(b, PolyLine(vs))
+
+backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
+  let end_angle = start_angle + amplitude
+    @remote(b, Arc(center, vz(1, center.cs), radius, start_angle, end_angle))
+  end
+backend_stroke_unite(b::ACAD, refs) = @remote(b, JoinCurves(refs))
+
+
+
+realize(b::ACAD, s::EmptyShape) =
+  ACADEmptyRef()
+realize(b::ACAD, s::UniversalShape) =
+  ACADUniversalRef()
+realize(b::ACAD, s::Point) =
+  @remote(b, Point(s.position))
+realize(b::ACAD, s::Line) =
+  @remote(b, PolyLine(s.vertices))
+=#
+
+realize(b::PLOT, s::Spline) = # This should be merged with opensplinepath
+  if (s.v0 == false) && (s.v1 == false)
+    #@remote(b, Spline(s.points))
+    let mat = 1, #get_material(b, s)
+        pts = map(in_world, s.points),
+        r = PlotlyJS.Scatter3d(
+           x=map(r->map(cx, r), pts),
+           y=map(r->map(cy, r), pts),
+           z=map(r->map(cz, r), pts),
+           line_shape="spline",
+           autocolorscale=false,
+           showscale=false,
+           hoverinfo="skip")
+      PlotlyJS.addtraces!(connection(b), r)
+      PlotNativeRef(r)
+    end
+  elseif (s.v0 != false) && (s.v1 != false)
+    @remote(b, InterpSpline(s.points, s.v0, s.v1))
+  else
+    @remote(b, InterpSpline(
+                     s.points,
+                     s.v0 == false ? s.points[2]-s.points[1] : s.v0,
+                     s.v1 == false ? s.points[end-1]-s.points[end] : s.v1))
+  end
+
+#=
+realize(b::ACAD, s::ClosedSpline) =
+  @remote(b, InterpClosedSpline(s.points))
+realize(b::ACAD, s::Circle) =
+  @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
+realize(b::ACAD, s::Arc) =
+  if s.radius == 0
+    @remote(b, Point(s.center))
+  elseif s.amplitude == 0
+    @remote(b, Point(s.center + vpol(s.radius, s.start_angle, s.center.cs)))
+  elseif abs(s.amplitude) >= 2*pi
+    @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
+  else
+    end_angle = s.start_angle + s.amplitude
+    if end_angle > s.start_angle
+      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle))
+    else
+      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle))
+    end
+  end
+
+realize(b::ACAD, s::Ellipse) =
+  if s.radius_x > s.radius_y
+    @remote(b, Ellipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x))
+  else
+    @remote(b, Ellipse(s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y))
+  end
+realize(b::ACAD, s::EllipticArc) =
+  error("Finish this")
+
+realize(b::ACAD, s::Polygon) =
+  @remote(b, ClosedPolyLine(s.vertices))
+realize(b::ACAD, s::RegularPolygon) =
+  @remote(b, ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
+realize(b::ACAD, s::Rectangle) =
+  @remote(b, ClosedPolyLine(
+    [s.corner,
+     add_x(s.corner, s.dx),
+     add_xy(s.corner, s.dx, s.dy),
+     add_y(s.corner, s.dy)]))
+realize(b::ACAD, s::SurfaceCircle) =
+  @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
+realize(b::ACAD, s::SurfaceArc) =
+    #@remote(b, SurfaceArc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude))
+    if s.radius == 0
+        @remote(b, Point(s.center))
+    elseif s.amplitude == 0
+        @remote(b, Point(s.center + vpol(s.radius, s.start_angle, s.center.cs)))
+    elseif abs(s.amplitude) >= 2*pi
+        @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
+    else
+        end_angle = s.start_angle + s.amplitude
+        if end_angle > s.start_angle
+            @remote(b, SurfaceFromCurves(
+                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)),
+                 @remote(b, PolyLine([add_pol(s.center, s.radius, end_angle),
+                                              add_pol(s.center, s.radius, s.start_angle)]))]))
+        else
+            @remote(b, SurfaceFromCurves(
+                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)),
+                 @remote(b, PolyLine([add_pol(s.center, s.radius, s.start_angle),
+                                              add_pol(s.center, s.radius, end_angle)]))]))
+        end
+    end
+
+realize(b::ACAD, s::SurfaceEllipse) =
+  if s.radius_x > s.radius_y
+    @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x))
+  else
+    @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y))
+  end
+
+
+realize(b::ACAD, s::SurfacePolygon) =
+  @remote(b, SurfaceClosedPolyLine(s.vertices))
+realize(b::ACAD, s::SurfaceRegularPolygon) =
+  @remote(b, SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
+realize(b::ACAD, s::SurfaceRectangle) =
+  @remote(b, SurfaceClosedPolyLine(
+    [s.corner,
+     add_x(s.corner, s.dx),
+     add_xy(s.corner, s.dx, s.dy),
+     add_y(s.corner, s.dy)]))
+realize(b::ACAD, s::Surface) =
+  let #ids = map(r->@remote(b, NurbSurfaceFrom(r)), @remote(b, SurfaceFromCurves(collect_ref(s.frontier))))
+      ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
+    foreach(mark_deleted, s.frontier)
+    ids
+  end
+backend_surface_boundary(b::ACAD, s::Shape2D) =
+    map(c -> shape_from_ref(c, b), @remote(b, CurvesFromSurface(ref(s).value)))
+
+
 realize(b::Plot, s::Sphere) =
   let mat = get_material(b, s)
     write_Plot_object(buffer(b), "sphere", mat, in_world(s.center), s.radius)
