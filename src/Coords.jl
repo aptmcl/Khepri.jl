@@ -268,9 +268,11 @@ cyl_z(p::Union{Loc,Vec}) = p.z
 pol_rho = cyl_rho
 pol_phi = cyl_phi
 
+const min_norm = 1e-15
+
 unitized(v::Vec) =
   let r = sqrt(sum(abs2, v.raw))
-    @assert r > 1e-15
+    @assert r > min_norm
     vxyz(v.raw./r, v.cs)
   end
 

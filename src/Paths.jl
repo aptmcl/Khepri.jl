@@ -186,27 +186,23 @@ spline_path(vertices::Locs) =
 spline_path(vs...) = spline_path(vs)
 
 location_at(path::OpenSplinePath, ϕ::Real) =
-  let interpolator = path.interpolator
-    ϕ == 0 ?
-    path.vertices[1] :
-    let n = round(Int, ϕ/0.1), # 10 frames in total?
-        ps = map_division(interpolator, 0.0, 1.0, n),
-        vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
-      #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
-      first(rotation_minimizing_frames(
-              path.vertices[1],
-              map(p->xyz(p[1], p[2], p[3], world_cs), ps),
-              map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts)))
-    end
+  let interpolator = path.interpolator,
+      p = interpolator(ϕ),
+      v = derivative(interpolator, ϕ), #Interpolations.gradient(interpolator, ϕ)[1],
+      u0 = path.vertices[1],
+      x = xyz(p[1], p[2], p[3], world_cs),
+      t = vxyz(v[1], v[2], v[3], world_cs),
+      r = in_world(vy(1, u0.cs))
+    loc_from_o_vx_vy(x, cross(r, t), r)
   end
 
 map_division(f, path) =
-  f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
+  f.(path_interpolated_vertices(path))
 
 map_division(f::Function, path::OpenSplinePath, n::Integer) =
   let interpolator = path.interpolator,
       ps = map_division(interpolator, 0.0, 1.0, n),
-      vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n)
+      vts = map_division(t->derivative(interpolator, t), 0.0, 1.0, n)
       #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
     f.(rotation_minimizing_frames(
          path.vertices[1],
@@ -217,7 +213,7 @@ map_division(f::Function, path::OpenSplinePath, n::Integer) =
 map_division(f::Function, path::ClosedSplinePath, n::Integer) =
   let interpolator = path.interpolator,
       ps = map_division(interpolator, 0.0, 1.0, n, false),
-      vts = map_division(t->Interpolations.gradient(interpolator, t)[1], 0.0, 1.0, n, false)
+      vts = map_division(t->derivative(interpolator, t), 0.0, 1.0, n, false)
       #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
     f.(rotation_minimizing_frames(
          path.vertices[1],
@@ -766,6 +762,8 @@ convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = open_polygonal_path(m
         0.0, 1.0, 64)) # HACK this must be parameterized!
     end
 =#
+
+#=
 curve_interpolator(pts::Locs) =
     let pts = map(pts) do p
                 let v = in_world(p).raw
@@ -776,6 +774,9 @@ curve_interpolator(pts::Locs) =
             interpolate(pts, BSpline(Cubic(Natural(OnGrid())))),
             range(0,stop=1,length=size(pts, 1)))
     end
+=#
+curve_interpolator(pts::Locs) =
+  ParametricSpline([pt.raw[i] for i in 1:3, pt in in_world.(pts)])
 
 convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
   let paths = path.paths,
@@ -818,13 +819,24 @@ loc_from_o_py_pz(o, py, pz) =
   let vy = py - o,
       vz = pz - o,
       vx = cross(vy, vz)
-    loc_from_o_vx_vy(o, vx, vy)
+    norm(vx) < min_norm ?
+      loc_from_o_vz(o, vz) :
+      loc_from_o_vx_vy(o, vx, vy)
   end
 
 path_frames(path::Path) = map_division(identity, path)
 path_frames(path::RectangularPath) =
   path_frames(convert(ClosedPolygonalPath, path))
-path_frames(path::PolygonalPath) =
+path_frames(path::OpenPolygonalPath) =
+  let pts1 = path.vertices,
+      pts2 = drop(pts1, 1),
+      pts3 = drop(pts2, 1),
+      frames = [loc_from_o_py_pz(p0, py, pz) for (p0, py, pz) in zip(pts2, pts1, pts3)]
+    [loc_from_o_vz(pts1[1], pts1[2]-pts1[1]),
+     frames...,
+     loc_from_o_vz(pts1[end], pts1[end]-pts1[end-1])]
+  end
+path_frames(path::ClosedPolygonalPath) =
   let pts1 = path.vertices,
       pts2 = drop(cycle(pts1), 1),
       pts3 = drop(pts2, 1)

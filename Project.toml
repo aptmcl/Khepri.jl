@@ -6,7 +6,7 @@ version = "0.1.0"
 [deps]
 ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+Dierckx = "39dd38d3-220a-591b-8e3c-4c3a8c710a94"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
