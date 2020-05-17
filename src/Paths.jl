@@ -809,8 +809,27 @@ path_vertices(path::Path) =
   path_vertices(convert(is_closed_path(path) ? ClosedPolygonalPath : OpenPolygonalPath,
                         path))
 
-path_frames(path::Path) = map_division(identity, path)
+iterate(path::PolygonalPath, i=1) =
+  i > length(path.vertices) ?
+    nothing :
+    (path.vertices[i], i+1)
 
+loc_from_o_py_pz(o, py, pz) =
+  let vy = py - o,
+      vz = pz - o,
+      vx = cross(vy, vz)
+    loc_from_o_vx_vy(o, vx, vy)
+  end
+
+path_frames(path::Path) = map_division(identity, path)
+path_frames(path::RectangularPath) =
+  path_frames(convert(ClosedPolygonalPath, path))
+path_frames(path::PolygonalPath) =
+  let pts1 = path.vertices,
+      pts2 = drop(cycle(pts1), 1),
+      pts3 = drop(pts2, 1)
+    [loc_from_o_py_pz(p0, py, pz) for (p0, py, pz) in zip(pts2, pts1, pts3)]
+  end
 
 subpaths(path::OpenPolygonalPath) =
   let ps = path.vertices
