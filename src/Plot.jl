@@ -151,14 +151,26 @@ realize(b::ACAD, s::UniversalShape) =
   ACADUniversalRef()
 realize(b::ACAD, s::Point) =
   @remote(b, Point(s.position))
-realize(b::ACAD, s::Line) =
-  @remote(b, PolyLine(s.vertices))
+
 =#
+realize(b::PLOT, s::Line) =
+  let pts = map(in_world, s.vertices),
+      r = PlotlyJS.scatter3d(
+         x=map(cx, pts),
+         y=map(cy, pts),
+         z=map(cz, pts),
+         line_shape="linear",
+         marker_size=2,
+         autocolorscale=false,
+         showscale=false,
+         hoverinfo="skip")
+    PlotlyJS.addtraces!(connection(b), r)
+    PlotNativeRef(r)
+  end
 
 realize(b::PLOT, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
-    let mat = 1, #get_material(b, s)
-        pts = map(in_world, s.points),
+    let pts = map(in_world, s.points),
         r = PlotlyJS.scatter3d(
            x=map(cx, pts),
            y=map(cy, pts),
