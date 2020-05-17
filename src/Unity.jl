@@ -592,8 +592,29 @@ backend_surface_grid(b::Unity, points, closed_u, closed_v, smooth_u, smooth_v) =
       s1 = size(ptss,1),
       s2 = size(ptss,2),
       sstp = reverse(ptss, dims=1)
-    @remote(b, SurfaceFromGrid(s2, s1, reshape(sstp,:), s.closed_u, s.closed_v, 2))
-    @remote(b, SurfaceFromGrid(s2, s1, reshape(ptss,:), s.closed_u, s.closed_v, 2))
+    println(s1, " ", s2, " ", closed_u, " ", closed_v)
+    if smooth_u && smooth_v
+      @remote(b, SurfaceFromGrid(s2, s1, reshape(sstp,:), closed_u, closed_v, 2))
+      @remote(b, SurfaceFromGrid(s2, s1, reshape(ptss,:), closed_u, closed_v, 2))
+    elseif smooth_u
+      for i in 1:(closed_v ? s1 : s1-1)
+        @remote(b, SurfaceFromGrid(s2, 2, reshape(sstp[[i,i%s1+1],:],:), closed_u, false, 2))
+        @remote(b, SurfaceFromGrid(s2, 2, reshape(ptss[[i,i%s1+1],:],:), closed_u, false, 2))
+      end
+    elseif smooth_v
+      for i in 1:(closed_u ? s2 : s2-1)
+        @remote(b, SurfaceFromGrid(2, s1, reshape(sstp[:,[i,i%s1+1]],:), false, closed_v, 2))
+        @remote(b, SurfaceFromGrid(2, s1, reshape(ptss[:,[i,i%s1+1]],:), false, closed_v, 2))
+      end
+    else
+      for i in 1:(closed_v ? s1 : s1-1)
+        for j in 1:(closed_u ? s2 : s2-1)
+          @remote(b, SurfaceFromGrid(2, 2, reshape(sstp[[i,i%s1+1],[j,j%s2+1]],:), false, false, 2))
+          @remote(b, SurfaceFromGrid(2, 2, reshape(ptss[[i,i%s1+1],[j,j%s2+1]],:), false, false, 2))
+        end
+      end
+    end
+    void_ref(b)
   end
 
 #=
