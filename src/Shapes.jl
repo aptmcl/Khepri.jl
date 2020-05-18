@@ -488,7 +488,6 @@ evaluate(s::Spline, t::Real) =
     end
   end
 
-=#
 evaluate(s::Spline, t::Real) =
   let interpolator = s.interpolator
     if ismissing(interpolator())
@@ -504,9 +503,11 @@ evaluate(s::Spline, t::Real) =
         vxyz(vy[1], vy[2], vy[3], world_cs))
     end
   end
-
+=#
+#=
 curve_domain(s::Spline) = (0.0, 1.0)
-frame_at(s::Spline, t::Real) = evaluate(s, t)
+frame_at(s::Spline, t::Real, backend::Backend=backend(s)) = evaluate(s, t)
+=#
 map_division(f::Function, s::Spline, n::Int, backend::Backend=backend(s)) =
   backend_map_division(backend, f, s, n)
 #=HACK, THIS IS NOT READY, YET. COMPARE WITH THE BACKEND VERSION!!!!!!
@@ -938,6 +939,7 @@ subtraction(shape::Shape3D, shapes...) =
           smooth_u::Bool=true, smooth_v::Bool=true,
           interpolator::Parameter{Any}=Parameter{Any}(missing))
 
+#=
 surface_interpolator(pts::AbstractMatrix{<:Loc}) =
     let pts = map(pts) do p
                 let v = in_world(p).raw
@@ -949,12 +951,14 @@ surface_interpolator(pts::AbstractMatrix{<:Loc}) =
             range(0,stop=1,length=size(pts, 1)),
             range(0,stop=1,length=size(pts, 2)))
     end
+=#
 
 # For interpolator to work, we need this:
 
 convert(::Type{AbstractMatrix{<:Loc}}, pts::Vector{<:Vector{<:Loc}}) =
   permutedims(hcat(pts...))
 
+#=
 evaluate(s::SurfaceGrid, u::Real, v::Real) =
   let interpolator = s.interpolator
     if ismissing(interpolator())
@@ -968,6 +972,7 @@ evaluate(s::SurfaceGrid, u::Real, v::Real) =
         vxyz(v[2][1], v[2][2], v[2][3], world_cs))
     end
   end
+=#
 
 surface_domain(s::SurfaceGrid) = (0.0, 1.0, 0.0, 1.0)
 frame_at(s::SurfaceGrid, u::Real, v::Real) = evaluate(s, u, v)
