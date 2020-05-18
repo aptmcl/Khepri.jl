@@ -186,28 +186,34 @@ spline_path(vertices::Locs) =
 spline_path(vs...) = spline_path(vs)
 
 location_at(path::OpenSplinePath, ϕ::Real) =
-  let interpolator = path.interpolator,
-      p = interpolator(ϕ),
-      v = derivative(interpolator, ϕ), #Interpolations.gradient(interpolator, ϕ)[1],
-      u0 = path.vertices[1],
-      x = xyz(p[1], p[2], p[3], world_cs),
-      t = vxyz(v[1], v[2], v[3], world_cs),
-      r = in_world(vy(1, u0.cs))
-    loc_from_o_vx_vy(x, cross(r, t), r)
+  let interpol = path.interpolator,
+      f = interpol(ϕ),
+      d1 = derivative(interpol, ϕ), #Interpolations.gradient(interpolator, ϕ)[1],
+      d2 = derivative(interpol, ϕ, nu=2),#u0 = path.vertices[1],
+      p = xyz(f[1], f[2], f[3], world_cs),
+      t = vxyz(d1[1], d1[2], d1[3], world_cs),
+      n = vxyz(d2[1], d2[2], d2[3], world_cs)#,
+      #r = in_world(vy(1, u0.cs))
+    loc_from_o_vx_vy(p, n, cross(t, n))
   end
 
 map_division(f, path) =
-  f.(path_interpolated_vertices(path))
+  f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
 
-map_division(f::Function, path::OpenSplinePath, n::Integer) =
-  let interpolator = path.interpolator,
-      ps = map_division(interpolator, 0.0, 1.0, n),
-      vts = map_division(t->derivative(interpolator, t), 0.0, 1.0, n)
-      #vns = map_division(t->Interpolations.hessian(interpolator, t)[1], 0.0, 1.0, n)
-    f.(rotation_minimizing_frames(
-         path.vertices[1],
-         map(p->xyz(p[1], p[2], p[3], world_cs), ps),
-         map(vy->vxyz(vy[1], vy[2], vy[3], world_cs), vts)))
+map_division(func::Function, path::OpenSplinePath, n::Integer) =
+  let interpol = path.interpolator,
+      fs = map_division(interpol, 0.0, 1.0, n),
+      f = fs[1],
+      d1s = map_division(t->derivative(interpol, t), 0.0, 1.0, n),
+      d1 = d1s[1],
+      d2 = derivative(interpol, 0.0, nu=2),
+      p = xyz(f[1], f[2], f[3], world_cs),
+      t = vxyz(d1[1], d1[2], d1[3], world_cs),
+      n = vxyz(d2[1], d2[2], d2[3], world_cs)
+    func.(rotation_minimizing_frames(
+            loc_from_o_vx_vy(p, n, cross(t, n)),
+            map(p->xyz(p[1], p[2], p[3], world_cs), fs),
+            map(t->vxyz(t[1], t[2], t[3], world_cs), d1s)))
   end
 
 map_division(f::Function, path::ClosedSplinePath, n::Integer) =
@@ -700,17 +706,6 @@ convert(::Type{ClosedPolygonalPath}, path::RectangularPath) =
     closed_polygonal_path([p, add_x(p, dx), add_xy(p, dx, dy), add_y(p, dy)])
   end
 
-path_interpolated_vertices(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
-  let p0 = location_at_length(path, t0),
-      p1 = location_at_length(path, t1),
-      tm = (t0 + t1)/2.0,
-      pm = location_at_length(path, tm)
-    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
-      [p0, pm, p1] :
-      [path_interpolated_vertices(path, t0, tm, epsilon, min_recursion - 1)...,
-       path_interpolated_vertices(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
-  end
-
 path_interpolated_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity_tolerance(), min_recursion=1) =
   let p0 = location_at_length(path, t0),
       p1 = location_at_length(path, t1),
@@ -744,7 +739,8 @@ convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
   open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
   convert(OpenPolygonalPath, convert(ClosedPolygonalPath, path))
-convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) = open_polygonal_path(map_division(identity, path, 64))
+convert(::Type{OpenPolygonalPath}, path::OpenSplinePath) =
+  open_polygonal_path(map_division(identity, path))
     # ERROR: ignores limit vectors
 #=  let interpolator = curve_interpolator(path.vertices),
       fixed_normal(vn, vt) = norm(vn) < path_tolerance() ? SVector{3}(vpol(1, sph_phi(xyz(vt[1],vt[2],vt[3], world_cs))+pi/2).raw[1:3]) : vn
@@ -775,6 +771,7 @@ curve_interpolator(pts::Locs) =
             range(0,stop=1,length=size(pts, 1)))
     end
 =#
+
 curve_interpolator(pts::Locs) =
   ParametricSpline([pt.raw[i] for i in 1:3, pt in in_world.(pts)])
 
