@@ -197,7 +197,7 @@ collinear_points(p0, pm, p1, epsilon=collinearity_tolerance()) =
 
 triangle_area(a, b, c) =
   let s = (a + b + c)/2.0
-    sqrt(s*(s - a)*(s - b)*(s - c))
+    sqrt(max(0.0, s*(s - a)*(s - b)*(s - c)))
   end
 
 export sweep_path_with_path
