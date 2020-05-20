@@ -870,7 +870,7 @@ Boolean = Bool
 @def_ro_property Bars IRobotResultsServer IRobotBarResultServer
 @def_ro_property displacements IRobotNodeResultServer IRobotNodeDisplacementServer
 @def_ro_property Stresses IRobotBarResultServer IRobotBarStressServer
-@def_ro_property Main IRobotObjObject IRobotObjPartMain
+@def_ro_property (MainPart, Main) IRobotObjObject IRobotObjPartMain
 @def_rw_property Geometry IRobotObjPartMain IRobotGeoObject
 @def_ro_property Attribs IRobotObjPartMain IRobotObjAttributes
 @def_rw_property Meshed IRobotObjAttributes Boolean
@@ -1207,9 +1207,9 @@ create_cladding(id, pts) =
 #      Geometry(m, contour)
 #      Meshed(Attribs(m), false)
       initialize(contour)
-      Main(contour)
-      Attribs(Main(contour))
-      Meshed(Attribs(Main(contour)))
+      MainPart(contour)
+      Attribs(MainPart(contour))
+      Meshed(Attribs(MainPart(contour)))
       set_label(contour, I_LT_CLADDING, "Two-way")
       update(contour)
       contour

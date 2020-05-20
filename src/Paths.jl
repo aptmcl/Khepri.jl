@@ -31,6 +31,7 @@ export open_path,
        location_at_length,
        path_start,
        path_end,
+       path_domain,
        subpath,
        subpaths,
        join_paths,
@@ -43,8 +44,6 @@ coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
 
 abstract type Path end
 
-# A path has a domain
-
 getindex(p::Path, i::Real) = location_at_length(p, i)
 firstindex(p::Path) = 0
 lastindex(p::Path) = path_length(p)
@@ -52,16 +51,37 @@ getindex(p::Path, i::ClosedInterval) = subpath(p, i.left, i.right)
 path_start(p::Path) = location_at_length(p, 0)
 path_end(p::Path) = location_at_length(p, path_length(p))
 
-
-
 abstract type OpenPath <: Path end
 abstract type ClosedPath <: Path end
 
 is_closed_path(path::Path) = false
 is_closed_path(path::ClosedPath) = true
+is_open_path(path::Path) = ! is_closed_path(path)
 # To avoid duplicate convertions, we also deal with Locs
 is_closed_path(pts::Locs) = coincident_path_location(pts[1], pts[end])
 
+# Default path domain, probably only makes sense for Splines.
+path_domain(path::Path) = (0, 1)
+
+# Generic map_division using path default domain divided into equal parts
+map_division(f::Function, path::Path, n::Integer) =
+  map_division(ϕ->f(location_at(path, ϕ)), path_domain(path)..., n, ! is_open_path(path))
+# Even more generic map_division, with default domain and divided "naturaly"
+map_division(f::Function, path::Path) =
+  f.(path_interpolated_frames(path))
+
+path_interpolated_frames(path::Path, (t0, t1)=path_domain(path), epsilon=collinearity_tolerance(), min_recursion=1) =
+  let p0 = location_at(path, t0),
+      p1 = location_at(path, t1),
+      tm = (t0 + t1)/2.0,
+      pm = location_at(path, tm)
+    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
+      [p0, pm, p1] :
+      [path_interpolated_frames(path, (t0, tm), epsilon, min_recursion - 1)...,
+       path_interpolated_frames(path, (tm, t1), epsilon, min_recursion - 1)[2:end]...]
+  end
+
+## Arc path
 struct ArcPath <: OpenPath
     center::Loc
     radius::Real
@@ -73,7 +93,7 @@ arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=
   false ? #amplitude < 0 ?
     ArcPath(center, radius, start_angle + amplitude, - amplitude) :
     ArcPath(center, radius, start_angle, amplitude)
-
+path_domain(path::ArcPath) = (0, path.amplitude)
 location_at(path::ArcPath, ϕ::Real) =
   let s = sign(path.amplitude),
       ϕ = ϕ*s
@@ -82,27 +102,20 @@ location_at(path::ArcPath, ϕ::Real) =
                      vz(1, path.center.cs))
   end
 
-map_division(f::Function, path::ArcPath, n::Integer) =
-  map_division(ϕ->f(location_at(path, ϕ)),
-               0,
-               path.amplitude,
-               n,
-               true)
-
+## Circular path
 struct CircularPath <: ClosedPath
     center::Loc
     radius::Real
 end
-circular_path(Center::Loc=u0(), Radius::Real=1; center::Loc=Center, radius::Real=Radius) = CircularPath(center, radius)
-
+circular_path(Center::Loc=u0(), Radius::Real=1; center::Loc=Center, radius::Real=Radius) =
+  CircularPath(center, radius)
+path_domain(path::CircularPath) = (0, 2π)
 location_at(path::CircularPath, ϕ::Real) =
   loc_from_o_vx_vy(add_pol(path.center, path.radius, ϕ),
                    vpol(1, ϕ + π, path.center.cs),
                    vz(1, path.center.cs))
 
-map_division(f::Function, path::CircularPath, n::Integer) =
-  map_division(ϕ->f(location_at(path, ϕ)), 0, 2π, n, false)
-
+## Rectangular path
 struct RectangularPath <: ClosedPath
     corner::Loc
     dx::Real
@@ -111,20 +124,6 @@ end
 rectangular_path(corner::Loc=u0(), dx::Real=1, dy::Real=1) = RectangularPath(corner, dx, dy)
 centered_rectangular_path(p, dx, dy) =
   rectangular_path(p-vxy(dx/2, dy/2), dx, dy)
-
-# Sections also use paths, but they are centered at the origin
-export rectangular_profile,
-       circular_profile,
-       top_aligned_rectangular_profile
-
-rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
-  centered_rectangular_path(u0(), width, height)
-
-circular_profile(Radius::Real=1; radius::Real=Radius) =
-  circular_path(u0(), radius)
-
-top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
-  rectangular_path(xy(-width/2,-height), width, height)
 
 struct OpenPolygonalPath <: OpenPath
     vertices::Locs
@@ -185,6 +184,7 @@ spline_path(vertices::Locs) =
     open_spline_path(vertices)
 spline_path(vs...) = spline_path(vs)
 
+
 location_at(path::OpenSplinePath, ϕ::Real) =
   let interpol = path.interpolator,
       f = interpol(ϕ),
@@ -196,9 +196,6 @@ location_at(path::OpenSplinePath, ϕ::Real) =
       #r = in_world(vy(1, u0.cs))
     loc_from_o_vx_vy(p, n, cross(t, n))
   end
-
-map_division(f, path) =
-  f.(rotation_minimizing_frames(path_interpolated_vertices(path)))
 
 map_division(func::Function, path::OpenSplinePath, n::Integer) =
   let interpol = path.interpolator,
@@ -717,24 +714,12 @@ path_interpolated_lengths(path, t0=0, t1=path_length(path), epsilon=collinearity
        path_interpolated_lengths(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
   end
 
-path_interpolated_vertices(path::SplinePath, t0=0, t1=1, epsilon=collinearity_tolerance(), min_recursion=1) =
-  let p0 = location_at(path, t0),
-      p1 = location_at(path, t1),
-      tm = (t0 + t1)/2.0,
-      pm = location_at(path, tm)
-    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
-      [p0, pm, p1] :
-      [path_interpolated_vertices(path, t0, tm, epsilon, min_recursion - 1)...,
-       path_interpolated_vertices(path, tm, t1, epsilon, min_recursion - 1)[2:end]...]
-  end
-
-
 convert(::Type{ClosedPolygonalPath}, path::CircularPath) =
-  closed_polygonal_path(path_interpolated_vertices(path))
+  closed_polygonal_path(path_interpolated_frames(path))
 convert(::Type{OpenPolygonalPath}, path::CircularPath) =
-  open_polygonal_path(path_interpolated_vertices(path))
+  open_polygonal_path(path_interpolated_frames(path))
 convert(::Type{OpenPolygonalPath}, path::ArcPath) =
-  open_polygonal_path(path_interpolated_vertices(path))
+  open_polygonal_path(path_interpolated_frames(path))
 convert(::Type{OpenPolygonalPath}, path::ClosedPolygonalPath) =
   open_polygonal_path(vcat(path.vertices, [path.vertices[1]]))
 convert(::Type{OpenPolygonalPath}, path::RectangularPath) =
@@ -812,27 +797,46 @@ iterate(path::PolygonalPath, i=1) =
     nothing :
     (path.vertices[i], i+1)
 
-loc_from_o_py_pz(o, py, pz) =
-  let vy = py - o,
-      vz = pz - o,
-      vx = cross(vy, vz)
-    norm(vx) < min_norm ?
-      loc_from_o_vz(o, vz) :
-      loc_from_o_vx_vy(o, vx, vy)
-  end
+loc_from_o_vx_vz(o, vx, vz) =
+  norm(vx) < min_norm ?
+    loc_from_o_vz(o, vz) :
+    let vy = -cross(vx, vz)
+      loc_from_o_vx_vy(o, cross(vy, vz), vy)
+    end
 
-path_frames(path::Path) = map_division(identity, path)
+loc_from_o_px_pz(o, px, pz) =
+  loc_from_o_vx_vz(o, px - o, pz - o)
+
+path_frames(path::Path) =
+  path_interpolated_frames(path)
+
 path_frames(path::RectangularPath) =
   path_frames(convert(ClosedPolygonalPath, path))
-path_frames(path::OpenPolygonalPath) =
-  let pts1 = path.vertices,
-      pts2 = drop(pts1, 1),
-      pts3 = drop(pts2, 1),
-      frames = [loc_from_o_py_pz(p0, py, pz) for (p0, py, pz) in zip(pts2, pts1, pts3)]
-    [loc_from_o_vz(pts1[1], pts1[2]-pts1[1]),
-     frames...,
-     loc_from_o_vz(pts1[end], pts1[end]-pts1[end-1])]
+
+average_frame(f1, f2) =
+  let vx1 = in_world(vx(1, f1.cs)),
+      vy1 = in_world(vy(1, f1.cs)),
+      vx2 = in_world(vx(1, f2.cs)),
+      vy2 = in_world(vy(1, f2.cs))
+    loc_from_o_vx_vy(intermediate_loc(f1, f2), (vx1 + vx2)/2, (vy1 + vy2)/2)
   end
+
+path_frames(path::OpenPolygonalPath) =
+  let pts = path.vertices,
+      pt1 = pts[1],
+      pt2 = pts[2],
+      ptn1 = pts[end-1],
+      ptn = pts[end]
+    length(pts) < 3 ?
+      loc_from_o_vz(pt1, pt1-pt2) :
+      let normal(pprev, p, pnext) = (unitized(pnext-p) - unitized(p-pprev))
+        [loc_from_o_vx_vz(pt1, normal(pt1, pt2, pts[3]), pt2-pt1),
+         [loc_from_o_vx_vz(p, normal(pprev, p, pnext), ((p-pprev) + (pnext-p))/2)
+          for (pprev, p, pnext) in zip(pts, drop(pts, 1), drop(pts, 2))]...,
+         loc_from_o_vx_vz(ptn, normal(pts[end-2], ptn1, ptn), ptn - ptn1)]
+      end
+  end
+
 path_frames(path::ClosedPolygonalPath) =
   let pts1 = path.vertices,
       pts2 = drop(cycle(pts1), 1),
@@ -863,5 +867,18 @@ subtract_paths(path1::ClosedPolygonalPath, path2::ClosedPolygonalPath) =
 # In practice, it means that it does not have "corners"
 is_smooth_path(path::Path) = false
 is_smooth_path(pts::Locs) = false
-
 is_smooth_path(path::Union{ArcPath,CircularPath,SplinePath}) = true
+
+##Profiles are just predefined paths used for sections, usually centered at the origin
+export rectangular_profile,
+       circular_profile,
+       top_aligned_rectangular_profile
+
+rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
+  centered_rectangular_path(u0(), width, height)
+
+circular_profile(Radius::Real=1; radius::Real=Radius) =
+  circular_path(u0(), radius)
+
+top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
+  rectangular_path(xy(-width/2,-height), width, height)

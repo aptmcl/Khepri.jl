@@ -6,7 +6,7 @@ using ColorTypes
 using StaticArrays
 using LinearAlgebra
 using IntervalSets
-using Interpolations
+using Dierckx
 using PyCall
 import Base.show, Base.zero, Base.iterate
 import Base.convert
@@ -30,7 +30,7 @@ include("Grasshopper.jl")
 include("Radiance.jl")
 include("POVRay.jl")
 #include("Jupyter.jl")
-include("Plot.jl")
+#include("Plot.jl")
 include("Unity.jl")
 include("Unreal.jl")
 include("Camera.jl")

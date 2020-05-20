@@ -522,6 +522,12 @@ iterate_quads(f, ptss) =
 export rotation_minimizing_frames
 
 rotation_minimizing_frames(frames) =
+  rotation_minimizing_frames(
+    frames[1],
+    [in_world(frame) for frame in frames],
+    [in_world(vz(1, frame.cs)) for frame in frames])
+
+#=
   let new_frames = [frames[1]]
     for x1 in drop(frames, 1)
       # Reflection of x0 tangent and axis onto x1
@@ -545,6 +551,7 @@ rotation_minimizing_frames(frames) =
     end
     new_frames
   end
+=#
 
 rotation_minimizing_frames(u0, xs, ts) =
   let ri = in_world(vy(1, u0.cs)),

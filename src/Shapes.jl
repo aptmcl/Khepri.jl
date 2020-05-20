@@ -660,15 +660,15 @@ realize(b::Backend, s::Sweep) =
   backend_sweep(backend(s), s.path, s.profile, s.rotation, s.scale)
 
 backend_sweep(b::Backend, path::Union{Shape,Path}, profile::Union{Shape,Path}, rotation::Real, scale::Real) =
-  let vertices = in_world.(path_frames(profile)),
-      frames = path_frames(path)
+  let vertices = in_world.(path_vertices(profile)),
+      frames = map_division(identity, path, 100) #rotation_minimizing_frames(path_frames(path))
     backend_surface_grid(
       b,
-      [xyz(cx(p), cy(p), cz(p), frame.cs) for p in vertices, frame in frames],
-      is_closed_path(path),
+      [xyz(cx(p), cy(p), cz(p), frame.cs) for frame in frames, p in vertices],
       is_closed_path(profile),
-      is_smooth_path(path),
-      is_smooth_path(profile))
+      is_closed_path(path),
+      is_smooth_path(profile),
+      is_smooth_path(path))
   end
 
 @defproxy(revolve_point, Shape1D, profile::Shape0D=point(), p::Loc=u0(), n::Vec=vz(1,p.cs), start_angle::Real=0, amplitude::Real=2*pi)

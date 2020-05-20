@@ -200,10 +200,11 @@ triangle_area(a, b, c) =
     sqrt(max(0.0, s*(s - a)*(s - b)*(s - c)))
   end
 
+#=
 export sweep_path_with_path
-sweep_path_with_path(path, profile, n=128, m=64) =
-  let vertices = in_world.(path_vertices(profile)),
-      frames = rotation_minimizing_frames(map_division(identity, path, n))
+sweep_path_with_path(path, profile) =
+  let vertices = in_world.(path_frames(profile)),
+      frames = path_frames(path)
       #show_cs.(frames, 0.1)
     surface_grid([[xyz(cx(p), cy(p), cz(p), frame.cs) for p in vertices]
                   for frame in frames],
@@ -212,6 +213,7 @@ sweep_path_with_path(path, profile, n=128, m=64) =
                  is_smooth_path(profile),
                  is_smooth_path(path))
   end
+=#
 
 quad_grid(quad, points, closed_u, closed_v) =
   let pts = in_world.(points),

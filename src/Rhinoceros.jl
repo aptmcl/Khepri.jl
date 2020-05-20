@@ -203,7 +203,7 @@ realize(b::RH, s::UniversalShape) =
   RHUniversalRef()
 
 backend_stroke(b::RH, path::CircularPath) =
-    @remote(b, Circle(connection(b), path.center, vz(1, path.center.cs), path.radius))
+    @remote(b, Circle(path.center, vz(1, path.center.cs), path.radius))
 backend_stroke(b::RH, path::RectangularPath) =
     let c = path.corner,
         dx = path.dx,
@@ -570,14 +570,14 @@ realize(b::RH, s::UnionMirror) =
     UnionRef((r0,r1))
   end
 
-realize(b::RH, s::SurfaceGrid) =
-  let (nu, nv) = size(s.points),
-      order(n) = min(max(2*floor(Int,n/30) + 1, 2), 7)
-    @remote(b, SurfaceFromGrid(nu, nv,
-                               reshape(permutedims(s.points), :),
-                               s.closed_u, s.closed_v,
-                               s.smooth_u ? order(nu) : 1,
-                               s.smooth_v ? order(nv) : 1))
+backend_surface_grid(b::RH, points, closed_u, closed_v, smooth_u, smooth_v) =
+  let (nu, nv) = size(points),
+      order(n) = min(max(2*floor(Int,n/30) + 1, 2), 5)
+    @remote(b, SurfaceFromGrid(nv, nu,
+                               reshape(permutedims(points), :),
+                               closed_v, closed_u,
+                               smooth_u ? order(nu) : 1,
+                               smooth_v ? order(nv) : 1))
   end
 
 realize(b::RH, s::Thicken) =
