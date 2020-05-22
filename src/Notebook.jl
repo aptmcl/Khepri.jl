@@ -1,6 +1,6 @@
 using PlotlyJS
 
-export plot
+export notebook
 
 ####################################################
 abstract type PlotKey end
@@ -45,7 +45,7 @@ create_plot_connection() =
     s
   end
 
-plot = PLOT(LazyParameter(PlotlyJS.SyncPlot, create_plot_connection))
+notebook = PLOT(LazyParameter(PlotlyJS.SyncPlot, create_plot_connection))
 
 reset_backend(b::PLOT) =
   let param = b.connection
