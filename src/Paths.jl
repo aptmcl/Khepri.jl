@@ -288,7 +288,7 @@ path_length(ps::Locs) =
   end
 
 location_at_length(path::CircularPath, d::Real) =
-  location_at(path, d/path.radius + pi/2)
+  location_at(path, d/path.radius)
 location_at_length(path::ArcPath, d::Real) =
   let Δα = d/path.radius,
       s = sign(path.amplitude)
