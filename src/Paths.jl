@@ -182,7 +182,7 @@ spline_path(vertices::Locs) =
   coincident_path_location(vertices[1], vertices[end]) ?
     closed_spline_path(vertices[1:end-1]) :
     open_spline_path(vertices)
-spline_path(vs...) = spline_path(vs)
+spline_path(v::Loc, vs...) = spline_path([v, vs...])
 
 
 location_at(path::OpenSplinePath, ϕ::Real) =
@@ -758,7 +758,7 @@ curve_interpolator(pts::Locs) =
 =#
 
 curve_interpolator(pts::Locs) =
-  ParametricSpline([pt.raw[i] for i in 1:3, pt in in_world.(pts)])
+  ParametricSpline([pt.raw[i] for i in 1:3, pt in in_world.(pts)], k=length(pts)<=3 ? 2 : 3)
 
 convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
   let paths = path.paths,
