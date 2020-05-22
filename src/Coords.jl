@@ -499,8 +499,6 @@ polygon_normal(vs) =
       cross(v0,v1)
       for (v0,v1) in zip(vs, drop(cycle(vs), 1))))
 
-
-
 iterate_quads(f, ptss) =
   [[f(p0, p1, p2, p3)
     for (p0, p1, p2, p3)
