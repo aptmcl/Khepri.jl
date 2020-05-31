@@ -10,6 +10,7 @@ export Shape,
        delete_shape, delete_shapes,
        delete_all_shapes,
        set_length_unit,
+       is_collecting_shape,
        collecting_shapes,
        collected_shapes,
        with_transaction,
@@ -248,7 +249,9 @@ with_transaction(fn) =
 Frequently, we need to collect all shapes that are created:
 =#
 
+# HACK: Replace in_shape_collection with is_collecting_shapes
 in_shape_collection = Parameter(false)
+is_collecting_shapes = in_shape_collection
 collected_shapes = Parameter(Shape[])
 collect_shape!(s::Shape) = (push!(collected_shapes(), s); s)
 collecting_shapes(fn) =

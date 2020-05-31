@@ -1167,6 +1167,9 @@ highlight_shape(s::Shape, b::ACAD) =
 highlight_shapes(ss::Shapes, b::ACAD) =
   @remote(b, SelectShapes(collect_ref(ss)))
 
+# HACK: This must be implemented for all backends
+pre_selected_shapes_from_set(ss::Shapes, b::Backend) = []
+
 pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
   let refs = map(id -> @remote(b, GetHandleFromShape(id)), @remote(b, GetPreSelectedShapes()))
     filter(s -> @remote(b, GetHandleFromShape(ref(s).value)) in refs, ss)
