@@ -378,8 +378,10 @@ backend_fill_curves(b::ACAD, ref::ACADId) = @remote(b, SurfaceFromCurves([ref]))
 backend_stroke_line(b::ACAD, vs) = @remote(b, PolyLine(vs))
 
 backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
-  let end_angle = start_angle + amplitude
-    @remote(b, Arc(center, vz(1, center.cs), radius, start_angle, end_angle))
+  let p = in_world(add_pol(center, radius, start_angle)),
+      alpha = pol_phi(p),
+      end_angle = alpha + amplitude
+    @remote(b, Arc(center, vz(1, center.cs), radius, alpha, end_angle))
   end
 backend_stroke_unite(b::ACAD, refs) = @remote(b, JoinCurves(refs))
 
