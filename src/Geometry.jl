@@ -186,6 +186,70 @@ lines_intersection(p0, p1, p2, p3) =
     end
   end
 
+export epsilon, nearest_point_from_lines, circle_from_three_points
+const epsilon = Parameter(1e-8)
+
+nearest_point_from_lines(l0p0::Loc, l0p1::Loc, l1p0::Loc, l1p1::Loc) =
+  let u = l0p1-l0p0,
+      v = l1p1-l1p0,
+      w = l0p0-l1p0,
+      a = dot(u, u),
+      b = dot(u, v),
+      c = dot(v, v),
+      d = dot(u, w),
+      e = dot(v, w),
+      D = a*c-b*b,
+      (sc, tc) = D < epsilon() ?
+                #almost parallel
+                (0.0, b > c ? d/b : e/c) :
+                ((b*e-c*d)/D, (a*e-b*d)/D),
+      (p0, p1) = (l0p0+u*sc, l1p0+v*tc)
+    intermediate_loc(p0, p1)
+  end
+
+circle_from_three_points_2d(v0::Loc, v1::Loc, v2::Loc) =
+  let v1sv0 = v1-v0,
+      v2sv0 = v2-v0,
+      v2sv1 = v2-v1,
+      v1pv0 = v1+(v0-u0()),
+      v2pv0 = v2+(v0-u0()),
+      a = v1sv0.x,
+      b = v1sv0.y,
+      c = v2sv0.x,
+      d = v2sv0.y,
+      e = a*v1pv0.x+b*v1pv0.y,
+      f = c*v2pv0.x+d*v2pv0.y,
+      g = 2.0*(a*v2sv1.y-b*v2sv1.x),
+      iscolinear = abs(g) < 1e-8,
+      (cx, cy, dx, dy) = iscolinear ?
+                         let minx = min(v0.x, v1.x, v2.x),
+                             miny = min(v0.y, v1.y, v2.y),
+                             maxx = max(v0.x, v1.x, v2.x),
+                             maxy = max(v0.y, v1.y, v2.y),
+                             x = (minx+maxx)/2,
+                             y = (miny+maxy)/2
+                           (x, y, x-minx, y-miny)
+                         end :
+                         let x = (d*e-b*f)/g,
+                             y = (a*f-c*e)/g
+                           (x, y, x-v0.x, y-v0.y)
+                         end,
+      radius_squared = dx*dx+dy*dy,
+      radius = sqrt(radius_squared)
+    (xy(cx, cy), radius)
+  end
+
+circle_from_three_points(p0::Loc, p1::Loc, p2::Loc) =
+  let cs = cs_from_o_vx_vy(p0, p1-p0, p2-p0)
+    with(current_cs, cs) do
+      c, r = circle_from_three_points_2d(in_cs(p0, cs),
+                                         in_cs(p1, cs),
+                                         in_cs(p2, cs))
+      (c, r)
+    end
+  end
+
+
 const collinearity_tolerance = Parameter(1e-2)
 # are the three points sufficiently collinear?
 collinear_points(p0, pm, p1, epsilon=collinearity_tolerance()) =
