@@ -379,7 +379,8 @@ backend_stroke_line(b::ACAD, vs) = @remote(b, PolyLine(vs))
 
 backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
   let p = in_world(add_pol(center, radius, start_angle)),
-      alpha = pol_phi(p),
+      c = in_world(center),
+      alpha = pol_phi(p-c),
       end_angle = alpha + amplitude
     @remote(b, Arc(center, vz(1, center.cs), radius, alpha, end_angle))
   end
