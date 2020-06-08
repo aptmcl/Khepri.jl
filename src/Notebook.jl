@@ -60,7 +60,7 @@ new_backend(b::PLOT) =
 
 #
 
-set_view(camera::Loc, target::Loc, lens::Real, b::Plot) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Plot) =
   begin
     b.camera = camera
     b.target = target

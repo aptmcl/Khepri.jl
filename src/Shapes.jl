@@ -1122,7 +1122,7 @@ end
 @defop delete_all_shapes_in_layer(layer)
 @defop disable_update()
 @defop enable_update()
-@defop set_view(camera::Loc, target::Loc, lens::Real)
+@defop set_view(camera::Loc, target::Loc, lens::Real=50, aperture::Real=32)
 @defop get_view()
 @defop set_sun(altitude::Real, azimuth::Real)
 @defop add_ground_plane()

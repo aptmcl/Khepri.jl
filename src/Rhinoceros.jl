@@ -658,7 +658,7 @@ backend_bounding_box(b::RH, shapes::Shapes) =
   @remote(b, BoundingBox(collect_ref(shapes)))
 
 import Base.view
-set_view(camera::XYZ, target::XYZ, lens::Real, b::RH) =
+set_view(camera::XYZ, target::XYZ, lens::Real, aperture::Real, b::RH) =
   @remote(b, View(camera, target, lens))
 
 get_view(b::RH) =

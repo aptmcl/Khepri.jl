@@ -134,6 +134,7 @@ rendering_with(f;
     end
 
 export default_lens,
+       default_aperture,
        view_angles,
        track_still_target,
        track_moving_target,
@@ -148,6 +149,7 @@ export default_lens,
        select_camera_target_lens_positions
 
 default_lens = Parameter(50)
+default_aperture = Parameter(32)
 
 view_angles(lens=default_lens(), width=render_width(), height=render_height()) =
   let h_angle = 2*180/pi*atan(36/(2*lens)),
@@ -157,9 +159,9 @@ view_angles(lens=default_lens(), width=render_width(), height=render_height()) =
 
 
 
-set_view_save_frame(camera, target, lens=default_lens()) =
+set_view_save_frame(camera, target, lens=default_lens(), aperture=default_aperture()) =
   begin
-    set_view(camera, target, lens)
+    set_view(camera, target, lens, aperture)
     save_film_frame()
   end
 
@@ -171,9 +173,9 @@ set_view_save_frame(camera, target, lens=default_lens()) =
 # parameters: camera path (list of locations) + fixed target (1 location)
 # number of locations in the path defines the number of frames
 
-track_still_target(camera_path, target, lens=default_lens()) =
+track_still_target(camera_path, target, lens=default_lens(), aperture=default_aperture()) =
   for camera in camera_path
-    set_view_save_frame(camera, target, lens)
+    set_view_save_frame(camera, target, lens, aperture)
   end
 
 # Moving camera and target
@@ -182,22 +184,20 @@ track_still_target(camera_path, target, lens=default_lens()) =
 # parameters: camera (initial location) + target path (list of locations)
 # number of locations in the path defines the number of frames
 
-set_view_save_frames(cameras::Locs, targets::Locs, lens::Real) =
+set_view_save_frames(cameras::Locs, targets::Locs, lens::Real, aperture::Real) =
   for (camera, target) in zip(cameras, targets)
-    set_view_save_frame(camera, target, lens)
+    set_view_save_frame(camera, target, lens, aperture)
   end
 
-set_view_save_frames(cameras::Locs, targets::Locs, lenses::Vector{<:Real}) =
-  for (camera, target, lens) in zip(cameras, targets, lenses)
-    set_view_save_frame(camera, target, lens)
-  end
+set_view_save_frames(cameras::Locs, targets::Locs, lenses::Vector{<:Real}, apertures::Vector{<:Real}) =
+  map(set_view_save_frame, cameras, targets, lenses, apertures)
 
 twin_path(path, v) = map(p -> p+v, path)
 
-track_moving_target(camera, targets, lens=default_lens()) =
+track_moving_target(camera, targets, lens=default_lens(), aperture=default_aperture()) =
   let v = camera - targets[1]
       cameras = twin_path(targets, v)
-    set_view_save_frames(cameras, targets, lens)
+    set_view_save_frames(cameras, targets, lens, aperture)
   end
 
 # Walkthroughs
@@ -205,10 +205,10 @@ track_moving_target(camera, targets, lens=default_lens()) =
 # targets object moves and the camera follows a few positions behind
 # parameters: path (list of locations) + number of distance locations
 
-walkthrough(path, camera_spread, lens=default_lens()) =
+walkthrough(path, camera_spread, lens=default_lens(), aperture=default_aperture()) =
   let target_path = path[camera_spread:end]
       camera_path = path[1:end-camera_spread]
-    set_view_save_frames(camera_path, target_path, lens)
+    set_view_save_frames(camera_path, target_path, lens, aperture)
   end
 
 # Panning
@@ -219,9 +219,9 @@ walkthrough(path, camera_spread, lens=default_lens()) =
 # parameters: fixed camera + target path
 # number of locations in the path defines the number of frames
 
-panning(camera, targets, lens=default_lens()) =
+panning(camera, targets, lens=default_lens(), aperture=default_aperture()) =
   for target in targets
-    set_view_save_frame(camera, target, lens)
+    set_view_save_frame(camera, target, lens, aperture)
   end
 
 #;(define my-path (rotation-path (x 0) -50 0 2pi 0 100)) ;example
@@ -235,10 +235,10 @@ panning(camera, targets, lens=default_lens()) =
 # paremeters: fixed camera + fixed target + zomming scale (lens degrees to change) + number of frames
 # zomming scale: delta > 1 => zooms in, delta < 1 => zooms out - |delta| >> zoom mais violeto
 
-lens_zoom(camera, target, delta, frames, lens=default_lens()) =
+lens_zoom(camera, target, delta, frames, lens=default_lens(), aperture=default_aperture()) =
   let lenses = range(lens, step=delta, length=frames)
     for lens in lenses
-      set_view_save_frame(camera, target, lens)
+      set_view_save_frame(camera, target, lens, aperture)
     end
   end
 

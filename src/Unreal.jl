@@ -724,7 +724,7 @@ unreal"public Vector3 ViewCamera()"
 unreal"public Vector3 ViewTarget()"
 unreal"public float ViewLens()"
 
-set_view(camera::Loc, target::Loc, lens::Real, b::Unreal) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Unreal) =
   let c = connection(b)
     UnrealSetView(c, camera, target, lens)
     interrupt_processing(c)

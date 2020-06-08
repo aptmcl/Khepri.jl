@@ -821,7 +821,7 @@ backend_bounding_box(b::Unity, shapes::Shapes) =
   @remote(b, BoundingBox(collect_ref(shapes)))
 =#
 
-set_view(camera::Loc, target::Loc, lens::Real, b::Unity) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Unity) =
   let c = connection(b)
     @remote(b, SetView(camera, target, lens))
     interrupt_processing(c)
@@ -1109,8 +1109,6 @@ render_view(path::String, b::Unity) =
       interrupt_processing(c)
       path
     end
-
-
 
 highlight_shape(s::Shape, b::Unity) =
     @remote(b, SelectGameObjects(collect_ref(s)))

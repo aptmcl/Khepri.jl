@@ -850,7 +850,7 @@ backend_panel(b::ACAD, bot::Locs, top::Locs, family) =
 backend_bounding_box(b::ACAD, shapes::Shapes) =
   @remote(b, BoundingBox(collect_ref(shapes)))
 
-set_view(camera::Loc, target::Loc, lens::Real, b::ACAD) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::ACAD) =
   @remote(b, View(camera, target, lens))
 
 get_view(b::ACAD) =
