@@ -170,7 +170,7 @@ realize(b::PLOT, s::Line) =
 
 realize(b::PLOT, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
-    let pts = map_division(in_world, s, length(s.points)*4),
+    let pts = map_division(in_world, spline_path(s.points), length(s.points)*4),
         r = PlotlyJS.scatter3d(
            x=map(cx, pts),
            y=map(cy, pts),
