@@ -1,5 +1,6 @@
 # Paths are an important concept for BIM (and other things)
-export open_path,
+export empty_path,
+       open_path,
        closed_path,
        open_path_ops,
        closed_path_ops,
@@ -43,6 +44,17 @@ path_tolerance = Parameter(1e-10)
 coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
 
 abstract type Path end
+
+struct EmptyPath <: Path
+end
+
+empty_path() = EmptyPath()
+is_empty_path(path::Path) = false
+is_empty_path(path::EmptyPath) = true
+
+struct PointPath <: Path
+    location::Loc
+end
 
 getindex(p::Path, i::Real) = location_at_length(p, i)
 firstindex(p::Path) = 0
@@ -581,13 +593,19 @@ closed_path_sequence(paths...) =
 
 PathSequence = Union{OpenPathSequence, ClosedPathSequence}
 
-path_sequence(paths...) =
-  coincident_path_location(path_start(paths[1]), path_end(paths[end])) ?
-    closed_path_sequence(paths...) :
-    open_path_sequence(paths...)
+# HACK : Include treatment of empty paths.
 
-ensure_connected_paths(paths) = # AML: Finish this
-    paths
+
+
+path_sequence(paths...) =
+  let paths = ensure_connected_paths([paths...])
+    coincident_path_location(path_start(paths[1]), path_end(paths[end])) ?
+      ClosedPathSequence(paths) :
+      OpenPathSequence(paths)
+  end
+
+ensure_connected_paths(paths) = filter(!is_empty_path, paths)
+
 path_length(path::PathSequence) =
   sum(map(path_length, path.paths))
 location_at_length(path::PathSequence, d::Real) =
@@ -882,3 +900,7 @@ circular_profile(Radius::Real=1; radius::Real=Radius) =
 
 top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   rectangular_path(xy(-width/2,-height), width, height)
+
+## Utility operations
+
+mirror(path::Path, p::Loc, v::Vec) = error("Mush be finished")
