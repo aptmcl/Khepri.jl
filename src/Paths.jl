@@ -220,7 +220,7 @@ map_division(func::Function, path::OpenSplinePath, n::Integer) =
       t = vxyz(d1[1], d1[2], d1[3], world_cs),
       n = vxyz(d2[1], d2[2], d2[3], world_cs)
     func.(rotation_minimizing_frames(
-            loc_from_o_vx_vy(p, n, cross(t, n)),
+            norm(n) <= 1e-9 ? loc_from_o_vz(p, t) : loc_from_o_vx_vy(p, n, cross(t, n)),
             map(p->xyz(p[1], p[2], p[3], world_cs), fs),
             map(t->vxyz(t[1], t[2], t[3], world_cs), d1s)))
   end
