@@ -22,33 +22,35 @@ a < Number(0.0, "a")
 #in_gh(sym) = Expr(:., :GH, QuoteNode(sym))
 in_gh(sym) = Symbol("GH$(sym)")
 
-macro ghdef(name, i, init)
+macro ghdef(name, init)
   let str = string(name),
       ghname = esc(in_gh(name))
     quote
       $(ghname)(description::Base.String, short_description=description[1:1], message=description*" parameter", value=$init) =
-        [$(str), description, short_description, message, $i, value]
+        [$(str), description, short_description, message, value]
       $(ghname)(value::Base.Any, description=$(str), short_description=description[1:1], message=description*" parameter") =
-        [$(str), description, short_description, message, $i, value]
+        [$(str), description, short_description, message, value]
     end
   end
 end
-@ghdef(String, "item", "")
-@ghdef(Boolean, "item", false)
-@ghdef(Number, "item", 0.0)
-@ghdef(Integer, "item", 0)
-@ghdef(Point, "item", u0())
-@ghdef(Vector, "item", vx(1))
-@ghdef(Any, "item", nothing)
-@ghdef(JL, "item", nothing)
-@ghdef(Strings, "list", [])
-@ghdef(Booleans, "list", [])
-@ghdef(Numbers, "list", [])
-@ghdef(Integers, "list", [])
-@ghdef(Points, "list", [])
-@ghdef(Vectors, "list", [])
-@ghdef(Many, "list", [])
-@ghdef(JLs, "list", nothing)
+@ghdef(String, "")
+@ghdef(Boolean, false)
+@ghdef(Number, 0.0)
+@ghdef(Integer, 0)
+@ghdef(Point, u0())
+@ghdef(Vector, vx(1))
+@ghdef(Any, nothing)
+@ghdef(Eval, nothing)
+@ghdef(JL, nothing)
+@ghdef(Strings, [])
+@ghdef(Booleans, [])
+@ghdef(Numbers, [])
+@ghdef(Integers, [])
+@ghdef(Points, [])
+@ghdef(Vectors, [])
+@ghdef(Many, [])
+@ghdef(Evals, [])
+@ghdef(JLs, [])
 
 export define_kgh_function
 
@@ -59,7 +61,6 @@ kgh_forms(text, idx=1) =
       [expr, kgh_forms(text, idx)...]
   end
 
-
 is_kgh_io_function_name(sym) =
   sym in (:String, :Strings,
           :Boolean, :Booleans,
@@ -67,6 +68,7 @@ is_kgh_io_function_name(sym) =
           :Integer, :Integers,
           :Point, :Points,
           :Vector, :Vectors,
+          :Eval, :Evals,
           :JL, :JLs,
           :Any, :Many)
 
@@ -89,7 +91,8 @@ is_kgh_output(form) =
    is_kgh_io_function_call(form.args[3])) ||
   is_kgh_io_function_call(form)
 
-kgh_io_param(form) = form.args[2] == :_ ? :__result : form.args[2]
+kgh_io_param(form) =
+  form.args[2] == :_ ? :__result : form.args[2]
 kgh_io_call(form) =
   let param = form.args[2],
       form = form.args[3],
