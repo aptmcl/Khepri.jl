@@ -8,6 +8,13 @@ using LinearAlgebra
 using IntervalSets
 using Dierckx
 using PyCall
+#using MeshCat
+#using CoordinateTransformations
+#using Rotations
+#using GeometryTypes
+#using GeometryBasics
+#using Colors
+
 import Base.show, Base.zero, Base.iterate
 import Base.convert
 import Base.getindex, Base.firstindex, Base.lastindex, Base.broadcastable
@@ -29,6 +36,8 @@ include("Revit.jl")
 include("Radiance.jl")
 include("POVRay.jl")
 #include("Notebook.jl")
+#include("MeshCat.jl")
+include("Grasshopper.jl")
 include("Unity.jl")
 include("Unreal.jl")
 include("Camera.jl")
