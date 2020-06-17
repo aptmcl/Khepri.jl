@@ -21,11 +21,15 @@ a < Number(0.0, "a")
 
 #in_gh(sym) = Expr(:., :GH, QuoteNode(sym))
 in_gh(sym) = Symbol("GH$(sym)")
+kgh_io_function_names = Symbol[]
+is_kgh_io_function_name(sym) =
+  sym in kgh_io_function_names
 
 macro ghdef(name, init)
   let str = string(name),
       ghname = esc(in_gh(name))
     quote
+      push!(kgh_io_function_names, $(QuoteNode(name)))
       $(ghname)(description::Base.String, short_description=description[1:1], message=description*" parameter", value=$init) =
         [$(str), description, short_description, message, value]
       $(ghname)(value::Base.Any, description=$(str), short_description=description[1:1], message=description*" parameter") =
@@ -34,6 +38,7 @@ macro ghdef(name, init)
   end
 end
 @ghdef(String, "")
+@ghdef(Path, "")
 @ghdef(Boolean, false)
 @ghdef(Number, 0.0)
 @ghdef(Integer, 0)
@@ -43,6 +48,7 @@ end
 @ghdef(Eval, nothing)
 @ghdef(JL, nothing)
 @ghdef(Strings, [])
+@ghdef(Paths, [])
 @ghdef(Booleans, [])
 @ghdef(Numbers, [])
 @ghdef(Integers, [])
@@ -60,17 +66,6 @@ kgh_forms(text, idx=1) =
       [] :
       [expr, kgh_forms(text, idx)...]
   end
-
-is_kgh_io_function_name(sym) =
-  sym in (:String, :Strings,
-          :Boolean, :Booleans,
-          :Number, :Numbers,
-          :Integer, :Integers,
-          :Point, :Points,
-          :Vector, :Vectors,
-          :Eval, :Evals,
-          :JL, :JLs,
-          :Any, :Many)
 
 is_kgh_io_function_call(e) =
   e isa Expr && e.head === :call && is_kgh_io_function_name(e.args[1])
@@ -225,4 +220,20 @@ __inps_foo[1] = 1
 __inps_foo[2] = 2
 __func_foo()
 __outs_foo
+=#
+#=
+create_kgh_function("foo", raw"""
+path < String()
+autos < Numbers()
+costs < Numbers()
+
+open(path, "w") do f
+  for (a, c) in zip(autos, costs)
+    println(f, "$a $c")
+  end
+end
+""")
+
+dump(:("foo $bar"))
+
 =#
