@@ -343,6 +343,7 @@ create_MCAT_connection() =
   let (width, height) = render_size(),
       vis = Visualizer()
     display(render(vis))
+    MeshCat.wait(vis)
     vis
   end
 
