@@ -94,7 +94,7 @@ kgh_io_call(form) =
       func = Expr(:., :Khepri, QuoteNode(in_gh(form.args[1])))
     match_expr(form, :(_())) ||
     (match_expr(form, :(_(_))) && !(form.args[2] isa String)) ?
-        :($(func)($(string(param)), $(form.args[2:end]...))) :
+        :($(func)($(form.args[2:end]...), $(string(param)))) :
         :($(func)($(form.args[2:end]...)))
   end
 
@@ -117,25 +117,38 @@ create_kgh_function(name::String, body::String) =
       inp_docs = Symbol("__doc_inps_$name"),
       out_docs = Symbol("__doc_outs_$name"),
       shapes = Symbol("__shapes_$name")
-    quote
-      $(inp_docs) = Any[$(inp_forms...)]
-      $(out_docs) = Any[$(out_forms...)]
-      $(inps) = Array{Any,1}(undef, $(length(inp_inits)))
-      $(outs) = Array{Any,1}(undef, $(length(out_inits)))
-      $(shapes) = Shape[]
-      function $(Symbol("__func_$name"))()
-        $(inp_inits...)
-        __result = begin
-              $(forms...)
-            end
-        $(out_inits...)
-        nothing
+    if isempty(inp_forms) && isempty(out_forms)
+      quote
+        $(inp_docs) = Any[$(inp_forms...)]
+        $(out_docs) = Any[$(out_forms...)]
+        $(inps) = Array{Any,1}(undef, $(length(inp_inits)))
+        $(outs) = Array{Any,1}(undef, $(length(out_inits)))
+        $(shapes) = Shape[]
+        function $(Symbol("__func_$name"))()
+          nothing
+        end
+      end
+    else
+      quote
+        $(inp_docs) = Any[$(inp_forms...)]
+        $(out_docs) = Any[$(out_forms...)]
+        $(inps) = Array{Any,1}(undef, $(length(inp_inits)))
+        $(outs) = Array{Any,1}(undef, $(length(out_inits)))
+        $(shapes) = Shape[]
+        function $(Symbol("__func_$name"))()
+          $(inp_inits...)
+          __result = begin
+                $(forms...)
+              end
+          $(out_inits...)
+          nothing
+        end
       end
     end
   end
 
 define_kgh_function(name::String, body::String) =
-  eval(create_kgh_function(name, body))
+  Base.eval(Main, create_kgh_function(name, body))
 #=
 fn = """
 a < Number("Number", "N", "Parameter N", 0.0)
@@ -196,31 +209,6 @@ d > String("Bar")
 eval(create_kgh_function("foo", fn))
 =#
 
-
-#=
-fn = """
-a < Number("Number", "N", "Parameter N", 0.0)
-b < Number()
-_ > Point()
-
-f(a + b)
-
-xy(a + 1, b)
-"""
-
-code = Khepri.create_kgh_function("foo", fn)
-eval(code)
-
-f = display
-
-
-__doc_inps_foo
-__doc_outs_foo
-__inps_foo[1] = 1
-__inps_foo[2] = 2
-__func_foo()
-__outs_foo
-=#
 #=
 create_kgh_function("foo", raw"""
 path < String()
@@ -236,4 +224,15 @@ end
 
 dump(:("foo $bar"))
 
+=#
+
+#=
+str1 = """# v < Type("Input", "I", "Parameter I", default)
+a < Number(2)
+b < Number(3)
+_ > Number()
+
+sqrt(a^2 + b^2)"""
+
+create_kgh_function("zzz", str1)
 =#
