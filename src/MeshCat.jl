@@ -1,26 +1,7 @@
-#=
-convert(::Type{GeometryTypes.Point}, p::Khepri.Loc) =
-  let p = in_world(p)
-    GeometryTypes.Point(Float64(cx(p)), Float64(cy(p)), Float64(cz(p)))
-  end
-convert(::Type{GeometryTypes.Vec}, v::Khepri.Vec) =
-  let v = in_world(v)
-    GeometryTypes.Vec(Float64(Khepri.cx(v)), Float64(Khepri.cy(v)), Float64(Khepri.cz(v)))
-  end
-convert(::Type{GeometryTypes.Normal}, v::Khepri.Vec) =
-  let v = in_world(v)
-    GeometryTypes.Normal(Float64(Khepri.cx(v)), Float64(Khepri.cy(v)), Float64(Khepri.cz(v)))
-  end
-
-add_object!(vis, id, obj) =
-  begin
-
-    id
-  end
-=#
 export meshcat
 
 ## Primitives
+using UUIDs, MsgPack
 
 send_meshcat(vis::Visualizer, obj) =
   write(vis.core, pack(obj))
@@ -31,7 +12,11 @@ send_setobject(vis, path, obj) =
     path
   end
 
-using UUIDs, MsgPack
+send_setproperty(vis, path, property, value) =
+  send_meshcat(vis, (type="set_property", path=path, property=property, value=value))
+
+#send_setproperty(connection(meshcat), "/Background/hide_background", "value", true)
+#send_meshcat(connection(meshcat), (type="hide_background",))
 
 send_delobject(vis, path) =
   send_meshcat(vis, (type="delete", path=path))
@@ -45,8 +30,9 @@ meshcat_transform(p::Loc) =
 meshcat_metadata() =
   (type="Object", version=4.5)
 
-meshcat_materials(material_id) =
-  [(
+meshcat_material(color) =
+  (
+    uuid=string(uuid1()),
     #"vertexColors" => 0,
     #"transparent" => false,
     #"opacity" => 1.0,
@@ -54,39 +40,36 @@ meshcat_materials(material_id) =
     #"linewidth" => 1.0,
     #"depthFunc" => 3,
     side=2,
-    color="0xFFFFFF",
+    color="0x$(hex(color))",
+    #color="0xAAAAAA",
     #"reflectivity" => 0.5,
     type="MeshLambertMaterial",
-    uuid=material_id,
     depthWrite=true
-    )]
+    )
 
-meshcat_centered_box_geometries(geom_id, dx, dy, dz) =
-  [(type="BoxGeometry",
-    uuid=geom_id,
-    width=dx,
-    depth=dy,
-    height=dz)]
+default_meshcat_material = Parameter(meshcat_material(RGB(1,1,1)))
 
-meshcat_object(geom_id, material_id, p) =
-  (geometry=geom_id,
-   material=material_id,
-   matrix=meshcat_transform(p),
+meshcat_object(geom, material, p) =
+  (uuid=string(uuid1()),
    type="Mesh",
-   uuid=string(uuid1()))
+   geometry=geom.uuid,
+   material=material.uuid,
+   matrix=meshcat_transform(p))
 
-meshcat_centered_box(p, dx, dy, dz) =
-  let geom_id = string(uuid1()),
-      material_id = string(uuid1())
+meshcat_centered_box(p, dx, dy, dz, material) =
+  let geom = (uuid=string(uuid1()),
+              type="BoxGeometry",
+              width=dx,
+              depth=dy,
+              height=dz)
     (metadata=meshcat_metadata(),
-     geometries=meshcat_centered_box_geometries(geom_id, dx, dy, dz),
-     materials=meshcat_materials(material_id),
-     object=meshcat_object(geom_id, material_id, p))
+     geometries=[geom],
+     materials=[material],
+     object=meshcat_object(geom, material, p))
   end
 
-meshcat_box(p, dx, dy, dz) =
-  meshcat_centered_box(p+vxyz(dx/2, dy/2, dz/2, p.cs), dx, dy, dz)
-
+meshcat_box(p, dx, dy, dz, material) =
+  meshcat_centered_box(p+vxyz(dx/2, dy/2, dz/2, p.cs), dx, dy, dz, material)
 
 #=
 send_delobject(v, "/meshcat")
@@ -95,54 +78,51 @@ send_setobject(v, "/meshcat/box2", meshcat_box(loc_from_o_vx_vy(u0(), vxy(1,1), 
 send_delobject(v, "/meshcat/box2")
 =#
 
-meshcat_sphere(p, r) =
-  let geom_id = string(uuid1()),
-      material_id = string(uuid1())
+meshcat_sphere(p, r, material) =
+  let geom = (uuid=string(uuid1()),
+              type="SphereGeometry",
+              radius=r,
+              widthSegments=64,
+              heightSegments=64)
     (metadata=meshcat_metadata(),
-     geometries=[(type="SphereGeometry",
-                  uuid=geom_id,
-                  radius=r,
-                  widthSegments=64,
-                  heightSegments=64)],
-     materials=meshcat_materials(material_id),
-     object=meshcat_object(geom_id, material_id, p))
+     geometries=[geom],
+     materials=[material],
+     object=meshcat_object(geom, material, p))
   end
 
-meshcat_centered_cone(p, r, h) =
-  let geom_id = string(uuid1()),
-      material_id = string(uuid1())
+meshcat_centered_cone(p, r, h, material) =
+  let geom = (uuid=string(uuid1()),
+              type="ConeGeometry",
+              radius=r,
+              height=h,
+              radialSegments=64)
     (metadata=meshcat_metadata(),
-     geometries=[(type="ConeGeometry",
-                  uuid=geom_id,
-                  radius=r,
-                  height=h,
-                  radialSegments=64)],
-     materials=meshcat_materials(material_id),
-     object=meshcat_object(geom_id, material_id, p))
+     geometries=[geom],
+     materials=[material],
+     object=meshcat_object(geom, material, p))
   end
 
-meshcat_cone(p, r, h) =
-  meshcat_centered_cone(p+vz(h/2, p.cs), r, h)
+meshcat_cone(p, r, h, material) =
+  meshcat_centered_cone(p+vz(h/2, p.cs), r, h, material)
 
-meshcat_centered_cone_frustum(p, rb, rt, h) =
-  let geom_id = string(uuid1()),
-      material_id = string(uuid1())
+meshcat_centered_cone_frustum(p, rb, rt, h, material) =
+  let geom = (uuid=string(uuid1()),
+              type="CylinderGeometry",
+              radiusTop=rt,
+              radiusBottom=rb,
+              height=h,
+              radialSegments=64)
     (metadata=meshcat_metadata(),
-     geometries=[(type="CylinderGeometry",
-                  uuid=geom_id,
-                  radiusTop=rt,
-                  radiusBottom=rb,
-                  height=h,
-                  radialSegments=64)],
-     materials=meshcat_materials(material_id),
-     object=meshcat_object(geom_id, material_id, p))
+     geometries=[geom],
+     materials=[material],
+     object=meshcat_object(geom, material, p))
   end
 
-meshcat_cone_frustum(p, rb, rt, h) =
-  meshcat_centered_cone_frustum(p+vz(h/2, p.cs), rb, rt, h)
+meshcat_cone_frustum(p, rb, rt, h, material) =
+  meshcat_centered_cone_frustum(p+vz(h/2, p.cs), rb, rt, h, material)
 
-meshcat_cylinder(p, r, h) =
-  meshcat_centered_cone_frustum(p+vz(h/2, p.cs), r, r, h)
+meshcat_cylinder(p, r, h, material) =
+  meshcat_centered_cone_frustum(p+vz(h/2, p.cs), r, r, h, material)
 
 #=
 send_setobject(v, "/meshcat/sphere1", meshcat_sphere(xyz(-2,-3,0), 1))
@@ -151,24 +131,25 @@ send_setobject(v, "/meshcat/cylinder1", meshcat_cylinder(loc_from_o_vx_vy(x(-3),
 
 swap_y_z(v) = [v[1],v[3],v[2]]
 
-meshcat_mesh(vertices, faces) =
-  let geom_id = string(uuid1()),
-      material_id = string(uuid1()),
-      pts = (itemSize=3,
-             type="Float32Array",
-             array=convert(Vector{Float32}, reduce(vcat, [swap_y_z(v.raw) for v in vertices]))),
-      idxs = (itemSize=3,
-              type="Uint32Array",
-              array=convert(Vector{UInt32}, collect(Iterators.flatten(faces))))
+meshcat_mesh(vertices, faces, material) =
+  let geom = (uuid=string(uuid1()),
+              type="BufferGeometry",
+              data=(
+                attributes=(
+                  position=(
+                    itemSize=3,
+                    type="Float32Array",
+                    array=convert(Vector{Float32}, reduce(vcat, [swap_y_z(v.raw) for v in vertices]))),
+                  #uv=?
+                  ),
+                index=(
+                  itemSize=3,
+                  type="Uint32Array",
+                  array=convert(Vector{UInt32}, collect(Iterators.flatten(faces))))))
     (metadata=meshcat_metadata(),
-     geometries=[(type="BufferGeometry",
-                  uuid=geom_id,
-                  data=(attributes=(position=pts,
-                                    #uv=?
-                                    ),
-                        index=idxs))],
-     materials=meshcat_materials(material_id),
-     object=meshcat_object(geom_id, material_id, u0()))
+     geometries=[geom],
+     materials=[material],
+     object=meshcat_object(geom, material, u0(world_cs)))
   end
 
 #=
@@ -330,11 +311,18 @@ const MCATSubtractionRef = SubtractionRef{MCATKey, MCATId}
 
 abstract type MCATMaterial end
 
+struct MCATLayer
+  name
+  material
+end
+
+mcat_layer(name, color) =
+  MCATLayer(name, meshcat_material(color))
+
 mutable struct MCATBackend{K,T} <: Backend{K,T}
   connection::LazyParameter{Visualizer}
   count::Int64
-  layer::String
-  material::Union{Nothing, MCATMaterial}
+  layer::MCATLayer
 end
 
 const MCAT = MCATBackend{MCATKey, MCATId}
@@ -349,44 +337,27 @@ create_MCAT_connection() =
 
 meshcat = MCAT(LazyParameter(Visualizer, create_MCAT_connection),
                0,
-               "default",
-               nothing)
+               mcat_layer("default", RGB(1,1,1)))
 
-connection(b::MCATBackend{K,T}) where {K,T} = b.connection()
+connection(b::MCAT) = b.connection()
+material(b::MCAT) = b.layer.material
 
 const meshcat_root_path = "/Khepri"
 
 next_id(b::MCATBackend{K,T}) where {K,T} =
   begin
       b.count += 1
-      string(meshcat_root_path, "/", b.layer, "/", b.count - 1)
+      string(meshcat_root_path, "/", b.layer.name, "/", b.count - 1)
   end
-#=
-add_object!(b::MCAT, obj) =
+
+add_object(b::MCAT, obj) =
   let vis = connection(b),
       id = next_id(b)
-    isnothing(b.material) ?
-      send_meshcat!(vis, joinpath(b.layer, id), obj) :
-      error("Go handle material!") #setobject!(vis[b.layer][id], obj, b.material)
+    #isnothing(b.material) ?
+      send_setobject(connection(b), next_id(b), obj) #:
+    #  error("Go handle material!") #setobject!(vis[b.layer][id], obj, b.material)
   end
 
-
-function setobject!(vis::Visualizer, obj::AbstractObject)
-    send(vis.core, SetObject(obj, vis.path))
-    vis
-end
-
-function setobject!(vis::ArrowVisualizer, material::AbstractMaterial=defaultmaterial();
-        shaft_material::AbstractMaterial=material,
-        head_material::AbstractMaterial=material)
-    settransform!(vis, zero(Point{3, Float64}), zero(Vec{3, Float64}))
-    shaft = Cylinder(zero(Point{3, Float64}), Point(0.0, 0.0, 1.0), 1.0)
-    setobject!(vis.vis[:shaft], shaft, shaft_material)
-    head = Cone(zero(Point{3, Float64}), Point(0.0, 0.0, 1.0), 1.0)
-    setobject!(vis.vis[:head], head, head_material)
-    vis
-end
-=#
 #=
 For each object, we need to pack two messages, one to encode the object properties,
 the other to encode its transform.
@@ -437,11 +408,8 @@ MeshCat.setcontrol!(
     property: "zoom",
     value: 2.0
 }
-
-struct MCATColoredMaterial <: MCATMaterial
-  color
-end
 =#
+
 
 set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::MCAT) =
   begin
@@ -669,7 +637,7 @@ backend_surface_boundary(b::MCAT, s::Shape2D) =
 =#
 
 realize(b::MCAT, s::Sphere) =
-  send_setobject(connection(b), next_id(b), meshcat_sphere(s.center, s.radius))
+  add_object(b, meshcat_sphere(s.center, s.radius, material(b)))
 #=
 realize(b::MCAT, s::Torus) =
   let buf = buffer(b)
@@ -713,22 +681,18 @@ realize(b::MCAT, s::IrregularPrism) =
     s.bs,
                               map(p -> (p + s.v), s.bs))
 ## FIXME: deal with the rotation angle
-realize(b::MCAT, s::RightCuboid) =
-  MCATCenteredBox(connection(b), s.cb, s.width, s.height, s.h)
 =#
+=#
+realize(b::MCAT, s::RightCuboid) =
+  add_object(b, meshcat_box(s.cb, s.width, s.height, s.h, material(b)))
 
 realize(b::MCAT, s::Box) =
-  let buf = buffer(b),
-      bot = in_world(s.c),
-      top = in_world(s.c + vxyz(s.dx, s.dy, s.dz, s.c.cs)),
-      mat = get_material(b, s)
-    write_MCAT_object(buf, "box", mat, bot, top)
-    void_ref(b)
+  let #mat = get_material(b, s)
+    add_object(b, meshcat_box(s.c, s.dx, s.dy, s.dz, material(b)))
   end
-=#
 
 realize(b::MCAT, s::Cone) =
-  send_setobject(connection(b), next_id(b), meshcat_cone(s.cb, s.r, s.h))
+  add_object(b, meshcat_cone(s.cb, s.r, s.h, material(b)))
 
 #=
 realize(b::MCAT, s::ConeFrustum) =
@@ -743,7 +707,7 @@ realize(b::MCAT, s::ConeFrustum) =
 =#
 
 realize(b::MCAT, s::Cylinder) =
-  send_setobject(connection(b), next_id(b), meshcat_cylinder(s.cb, s.r, s.h))
+  send_setobject(connection(b), next_id(b), meshcat_cylinder(s.cb, s.r, s.h, material(b)))
 
 meshcat_faces(si, sj, closed_u, closed_v) =
   let idx(i,j) = (i-1)*sj+(j-1),
@@ -773,7 +737,7 @@ realize(b::MCAT, s::SurfaceGrid) =
       si = size(pts, 1),
       sj = size(pts, 2),
       idxs = meshcat_faces(si, sj, s.closed_u, s.closed_v)
-    send_setobject(connection(b), next_id(b), meshcat_mesh(reshape(permutedims(pts),:), idxs)) #reshape(permutedims(pts), :), idxs))
+    send_setobject(connection(b), next_id(b), meshcat_mesh(reshape(permutedims(pts),:), idxs, material(b))) #reshape(permutedims(pts), :), idxs))
   end
 
 #=
@@ -962,17 +926,19 @@ export MCAT_material_family,
        MCAT_wall_family,
        default_MCAT_material
 
+=#
+
 # Layers
 current_layer(b::MCAT) =
-  default_MCAT_material()
+  b.layer
 
 current_layer(layer, b::MCAT) =
-  default_MCAT_material(layer)
+  b.layer = layer
 
 backend_create_layer(b::MCAT, name::String, active::Bool, color::RGB) =
   begin
     @assert active
-    MCAT_material(name, red=red(color), green=green(color), blue=blue(color))
+    mcat_layer(name, color)
   end
 
 #=
@@ -1008,15 +974,7 @@ realize(b::MCAT, s::Beam) =
 realize(b::MCAT, s::Union{Door, Window}) =
   void_ref(b)
 
-used_materials(b::MCAT) =
-  unique(map(f -> realize(s.family, b), b.shapes))
-
 ####################################################
-=#
-
-
-
-
 
 #=
 
