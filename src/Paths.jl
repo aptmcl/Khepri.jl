@@ -77,7 +77,7 @@ path_domain(path::Path) = (0, 1)
 
 # Generic map_division using path default domain divided into equal parts
 map_division(f::Function, path::Path, n::Integer) =
-  map_division(ϕ->f(location_at(path, ϕ)), path_domain(path)..., n, ! is_open_path(path))
+  map_division(ϕ->f(location_at(path, ϕ)), path_domain(path)..., n, is_open_path(path))
 # Even more generic map_division, with default domain and divided "naturaly"
 map_division(f::Function, path::Path) =
   f.(path_interpolated_frames(path))
@@ -87,7 +87,12 @@ path_interpolated_frames(path::Path, (t0, t1)=path_domain(path), epsilon=colline
       p1 = location_at(path, t1),
       tm = (t0 + t1)/2.0,
       pm = location_at(path, tm)
-    min_recursion < 0 && collinear_points(p0, pm, p1, epsilon) ?
+    min_recursion < 0 &&
+    collinear_points(p0, pm, p1, epsilon) &&
+    let tr = (t0 + t1)/(1.9+rand()*0.2),
+        pr = location_at(path, tr) # To avoid coincidences
+      collinear_points(p0, pr, p1, epsilon)
+    end ?
       [p0, pm, p1] :
       [path_interpolated_frames(path, (t0, tm), epsilon, min_recursion - 1)...,
        path_interpolated_frames(path, (tm, t1), epsilon, min_recursion - 1)[2:end]...]
@@ -211,9 +216,9 @@ location_at(path::OpenSplinePath, ϕ::Real) =
 
 map_division(func::Function, path::OpenSplinePath, n::Integer) =
   let interpol = path.interpolator,
-      fs = map_division(interpol, 0.0, 1.0, n),
+      fs = map_division(interpol, 0.0, 1.0, n, true),
       f = fs[1],
-      d1s = map_division(t->derivative(interpol, t), 0.0, 1.0, n),
+      d1s = map_division(t->derivative(interpol, t), 0.0, 1.0, n, true),
       d1 = d1s[1],
       d2 = derivative(interpol, 0.0, nu=2),
       p = xyz(f[1], f[2], f[3], world_cs),
@@ -589,7 +594,7 @@ struct ClosedPathSequence <: ClosedPath
   paths::Vector{<:Path}
 end
 closed_path_sequence(paths...) =
-  ClosedPathSequence(ensure_connected_paths([paths...]))
+  ClosedPathSequence(ensure_connected_paths([paths..., polygonal_path(path_end(paths[end]), path_start(paths[1]))]))
 
 PathSequence = Union{OpenPathSequence, ClosedPathSequence}
 
