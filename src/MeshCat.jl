@@ -19,16 +19,28 @@ send_meshcat(vis::Visualizer, obj) =
   write(vis.core, pack(obj))
 
 send_setobject(vis, path, obj) =
-  let msg = (type="set_object", path=path, object=obj)
-    send_meshcat(vis, msg)
+  let msg = (type="set_object", path=path, object=obj),
+      data = pack(msg)
+    vis.core.tree[path].object = data
+    write(vis.core, data)
     path
   end
 
 send_settransform(vis, path, transform) =
-  send_meshcat(vis, (type="set_transform", path=path, matrix=convert(Vector{Float32}, transform)))
+  let msg = (type="set_transform", path=path, matrix=convert(Vector{Float32}, transform)),
+      data = pack(msg)
+    vis.core.tree[path].transform = data
+    write(vis.core, data)
+    nothing
+  end
 
 send_setproperty(vis, path, property, value) =
-  send_meshcat(vis, (type="set_property", path=path, property=property, value=value))
+  let msg = (type="set_property", path=path, property=property, value=value),
+      data = pack(msg)
+    vis.core.tree[path].properties[property] = data
+    write(vis.core, data)
+    nothing
+  end
 
 send_setvisible(vis, path, value) =
   send_meshcat(vis, (type="set_property", path=path, property="visible", value=value))
@@ -271,17 +283,7 @@ next_id(b::MCATBackend{K,T}) where {K,T} =
   end
 
 add_object(b::MCAT, obj) =
-  let vis = connection(b),
-      id = next_id(b)
-    #isnothing(b.material) ?
-      send_setobject(connection(b), next_id(b), obj) #:
-    #  error("Go handle material!") #setobject!(vis[b.layer][id], obj, b.material)
-  end
-
-#=
-For each object, we need to pack two messages, one to encode the object properties,
-the other to encode its transform.
-=#
+  send_setobject(connection(b), next_id(b), obj)
 
 has_boolean_ops(::Type{MCAT}) = HasBooleanOps{false}()
 void_ref(b::MCAT) = MCATNativeRef("")
@@ -290,10 +292,7 @@ reset_backend(b::MCAT) =
   display(render(connection(b)))
 
 new_backend(b::MCAT) =
-  begin
-    reset(b.connection)
-    display(render(connection(b)))
-  end
+  reset(b.connection)
 #
 
 #=
@@ -330,19 +329,23 @@ MeshCat.setcontrol!(
 }
 =#
 
-
 set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::MCAT) =
   let v = connection(b),
       (x1,y1,z1) = raw_point(camera),
       (x2,y2,z2) = raw_point(target)
     send_settransform(v, "/Cameras/default", [
-      1, 0, 0, 0,
+      1, 0, 0, 1,
       0, 1, 0, 0,
       0, 0, 1, 0,
-      x1, y1, z1, 1])
-    send_setproperty(v ,"/Cameras/default/rotated/<object>", "position", [x1-x2,z1-z2,y1-y1])
-  #  b.lens = lens
+      x2, y2, z2, 1])
+    send_setproperty(v, "/Cameras/default/rotated/<object>", "position", [x1-x2,z1-z2,y2-y1])
+    #  b.lens = lens
   end
+
+send_setproperty(connection(meshcat), "/Cameras/default/rotated/<object>", "position", [10,0,10])
+send_setproperty(connection(meshcat), "/Cameras/default/rotated/<object>", "quaternion", [pi/2,0,0,0])
+
+
 
 get_view(b::MCAT) =
   b.camera, b.target, b.lens
@@ -435,7 +438,8 @@ realize(b::MCAT, s::Point) =
 realize(b::MCAT, s::Line) =
   stroke(open_polygonal_path(s.vertices), b)
 
-realize(b::MCAT, s::Spline) = # This should be merged with opensplinepath
+realize(b::MCAT, s::Spline) =
+ # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
     add_object(b, meshcat_line(path_frames(open_spline_path(s.points)), line_material(b)))
   elseif (s.v0 != false) && (s.v1 != false)
