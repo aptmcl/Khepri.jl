@@ -3,6 +3,7 @@ using Base.Iterators
 using Sockets
 using Dates
 using ColorTypes
+using Colors
 using StaticArrays
 using LinearAlgebra
 using IntervalSets

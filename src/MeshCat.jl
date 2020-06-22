@@ -1,5 +1,17 @@
 export meshcat
 
+#=
+ATTENTION!!!
+
+Use Chrome debugger to visualize threeJS examples, break the execution and
+evaluate in the console:
+
+JSON.stringify(scene.toJSON(), undefined, 2)
+
+=#
+
+
+
 ## Primitives
 using UUIDs, MsgPack
 
@@ -12,14 +24,25 @@ send_setobject(vis, path, obj) =
     path
   end
 
+send_settransform(vis, path, transform) =
+  send_meshcat(vis, (type="set_transform", path=path, matrix=convert(Vector{Float32}, transform)))
+
 send_setproperty(vis, path, property, value) =
   send_meshcat(vis, (type="set_property", path=path, property=property, value=value))
+
+send_setvisible(vis, path, value) =
+  send_meshcat(vis, (type="set_property", path=path, property="visible", value=value))
 
 #send_setproperty(connection(meshcat), "/Background/hide_background", "value", true)
 #send_meshcat(connection(meshcat), (type="hide_background",))
 
 send_delobject(vis, path) =
   send_meshcat(vis, (type="delete", path=path))
+
+meshcat_point(p::Loc) =
+  let p = in_world(p)
+    [cx(p),cz(p),cy(p)]
+  end
 
 meshcat_transform(p::Loc) =
   # MeshCat swaps Y with Z
@@ -31,8 +54,8 @@ meshcat_metadata() =
   (type="Object", version=4.5)
 
 meshcat_material(color) =
-  (
-    uuid=string(uuid1()),
+  (uuid=string(uuid1()),
+   type="MeshLambertMaterial",
     #"vertexColors" => 0,
     #"transparent" => false,
     #"opacity" => 1.0,
@@ -43,18 +66,76 @@ meshcat_material(color) =
     color="0x$(hex(color))",
     #color="0xAAAAAA",
     #"reflectivity" => 0.5,
-    type="MeshLambertMaterial",
-    depthWrite=true
+    #depthWrite=true
     )
 
-default_meshcat_material = Parameter(meshcat_material(RGB(1,1,1)))
-
-meshcat_object(geom, material, p) =
+meshcat_line_material(color) =
   (uuid=string(uuid1()),
-   type="Mesh",
-   geometry=geom.uuid,
-   material=material.uuid,
-   matrix=meshcat_transform(p))
+   type="LineBasicMaterial",
+   color="0x$(hex(color))",
+   #linewidth=2, Due to limitations of the OpenGL Core Profile with the WebGL renderer on most platforms linewidth will always be 1 regardless of the set value.
+   #depthFunc=3,
+   #depthTest=true,
+   #depthWrite=true,
+   #stencilWrite=false,
+   #stencilWriteMask=255,
+   #stencilFunc=519,
+   #stencilRef=0,
+   #stencilFuncMask=255,
+   #stencilFail=7680,
+   #stencilZFail=7680,
+   #stencilZPass=7680
+   )
+
+meshcat_object(type, geom, material, p=u0(world_cs)) =
+  (metadata=meshcat_metadata(),
+   geometries=[geom],
+   materials=[material],
+   object=(uuid=string(uuid1()),
+           type=type,
+           geometry=geom.uuid,
+           material=material.uuid,
+           matrix=meshcat_transform(p)))
+
+
+meshcat_buffer_geometry_attributes_position(vertices) =
+  (itemSize=3,
+   type="Float32Array",
+   array=convert(Vector{Float32}, reduce(vcat, [meshcat_point(v) for v in vertices])))
+
+meshcat_line(vertices, material) =
+  let geom = (uuid=string(uuid1()),
+              type="BufferGeometry",
+              data=(
+                attributes=(
+                  position=meshcat_buffer_geometry_attributes_position(vertices),),))
+    meshcat_object("Line", geom, material)
+  end
+
+meshcat_surface_polygon(vertices, material) =
+  let geom = (uuid=string(uuid1()),
+              type="BufferGeometry",
+              data=(
+                attributes=(
+                  position=meshcat_buffer_geometry_attributes_position([vertices..., vertices[1]]),),))
+    meshcat_object("Mesh", geom, material)
+  end
+
+meshcat_circle_mesh(center, radius, start_angle, amplitude, material) =
+  let geom = (uuid=string(uuid1()),
+              type="CircleBufferGeometry",
+              radius=radius,
+              segments=64,
+              thetaStart=start_angle,
+              thetaLength=amplitude)
+    meshcat_object("Mesh", geom, material, center)
+  end
+
+#=
+
+
+
+=#
 
 meshcat_centered_box(p, dx, dy, dz, material) =
   let geom = (uuid=string(uuid1()),
@@ -62,10 +143,7 @@ meshcat_centered_box(p, dx, dy, dz, material) =
               width=dx,
               depth=dy,
               height=dz)
-    (metadata=meshcat_metadata(),
-     geometries=[geom],
-     materials=[material],
-     object=meshcat_object(geom, material, p))
+    meshcat_object("Mesh", geom, material, p)
   end
 
 meshcat_box(p, dx, dy, dz, material) =
@@ -84,10 +162,7 @@ meshcat_sphere(p, r, material) =
               radius=r,
               widthSegments=64,
               heightSegments=64)
-    (metadata=meshcat_metadata(),
-     geometries=[geom],
-     materials=[material],
-     object=meshcat_object(geom, material, p))
+    meshcat_object("Mesh", geom, material, p)
   end
 
 meshcat_centered_cone(p, r, h, material) =
@@ -96,10 +171,7 @@ meshcat_centered_cone(p, r, h, material) =
               radius=r,
               height=h,
               radialSegments=64)
-    (metadata=meshcat_metadata(),
-     geometries=[geom],
-     materials=[material],
-     object=meshcat_object(geom, material, p))
+    meshcat_object("Mesh", geom, material, p)
   end
 
 meshcat_cone(p, r, h, material) =
@@ -112,10 +184,7 @@ meshcat_centered_cone_frustum(p, rb, rt, h, material) =
               radiusBottom=rb,
               height=h,
               radialSegments=64)
-    (metadata=meshcat_metadata(),
-     geometries=[geom],
-     materials=[material],
-     object=meshcat_object(geom, material, p))
+    meshcat_object("Mesh", geom, material, p)
   end
 
 meshcat_cone_frustum(p, rb, rt, h, material) =
@@ -128,178 +197,20 @@ meshcat_cylinder(p, r, h, material) =
 send_setobject(v, "/meshcat/sphere1", meshcat_sphere(xyz(-2,-3,0), 1))
 send_setobject(v, "/meshcat/cylinder1", meshcat_cylinder(loc_from_o_vx_vy(x(-3), vxy(1,1), vxz(-1,1)), 1, 5))
 =#
-
-swap_y_z(v) = [v[1],v[3],v[2]]
-
 meshcat_mesh(vertices, faces, material) =
   let geom = (uuid=string(uuid1()),
               type="BufferGeometry",
               data=(
                 attributes=(
-                  position=(
-                    itemSize=3,
-                    type="Float32Array",
-                    array=convert(Vector{Float32}, reduce(vcat, [swap_y_z(v.raw) for v in vertices]))),
+                  position=meshcat_buffer_geometry_attributes_position(vertices),
                   #uv=?
                   ),
                 index=(
                   itemSize=3,
                   type="Uint32Array",
                   array=convert(Vector{UInt32}, collect(Iterators.flatten(faces))))))
-    (metadata=meshcat_metadata(),
-     geometries=[geom],
-     materials=[material],
-     object=meshcat_object(geom, material, u0(world_cs)))
+    meshcat_object("Mesh", geom, material, u0(world_cs))
   end
-
-#=
-Dict{String,Any}(
-  "object" => Dict{String,Any}(
-    "type" => "set_object",
-    "path" => "/meshcat"
-    "geometries" => Any[Dict{String,Any}(
-      "uuid" => "1c892160-b1fe-11ea-3542-9fc0f2d5a2ea",
-      "data" => Dict{String,Any}(
-        "attributes" => Dict{String,Any}(
-          "position" => Dict{String,Any}(
-            "array" => Float32[-0.0001, -0.0001, -0.0001, 0.0, 0.0, -0.0001, -0.0001, 0.0, -0.0001, 0.0, -0.0001, 0.0, 0.0, -0.0001, -0.0001, -0.0001, 0.0, 0.0, -0.0001, -0.0001, 0.0, 0.0999, -0.0001, -0.1, 0.05, 0.0, -0.05, 0.06666667, -0.033333335, -0.033333335, 0.0999, 0.0, -0.1, 0.0999, -0.1, -0.0001, 0.1, -0.05, -0.05, 0.1, -0.1, -0.0001, 0.1, -0.0001, -0.1, 0.05, -0.05, 0.0, 0.0999, -0.1, 0.0, -0.0001, 0.0999, -0.1, -0.05, 0.1, -0.05, -0.033333335, 0.06666667, -0.033333335, -0.0001, 0.1, -0.1, 0.0, 0.05, -0.05, 0.0, 0.0999, -0.1, -0.1, 0.0999, -0.0001, -0.1, 0.1, -0.0001, -0.05, 0.05, 0.0, -0.1, 0.0999, 0.0, 0.05, 0.05, -0.1, 0.033333335, 0.033333335, -0.06666667, -0.05, 0.0, 0.05, -0.033333335, -0.033333335, 0.06666667, -0.0001, -0.1, 0.0999, 0.0, -0.05, 0.05, 0.0, -0.1, 0.0999, -0.1, -0.0001, 0.0999, -0.1, 0.0, 0.0999, -0.05, -0.05, 0.1, -0.0001, -0.1, 0.1, -0.1, -0.0001, 0.1, 0.033333335, -0.06666667, 0.033333335, 0.05, -0.1, 0.05, -0.06666667, 0.033333335, 0.033333335, -0.1, 0.05, 0.05],
-            "type" => "Float32Array",
-            "itemSize" => 3)),
-        "index" => Dict{String,Any}(
-          "array" => MeshCat.PackedVector{UInt32}(UInt32[0x00000000, 0x00000001, 0x00000002, 0x00000000, 0x00000003, 0x00000004, 0x00000000, 0x00000004, 0x00000001, 0x00000000, 0x00000002, 0x00000005, 0x00000000, 0x00000006, 0x00000003, 0x00000000, 0x00000005, 0x00000006, 0x00000007, 0x00000008, 0x00000009, 0x00000007, 0x0000000a, 0x00000008, 0x0000000b, 0x0000000c, 0x00000009, 0x0000000b, 0x0000000d, 0x0000000c, 0x00000007, 0x0000000c, 0x0000000e, 0x00000007, 0x00000009, 0x0000000c, 0x00000004, 0x00000008, 0x00000001, 0x00000004, 0x00000009, 0x00000008, 0x0000000b, 0x0000000f, 0x00000010, 0x0000000b, 0x00000009, 0x0000000f, 0x00000004, 0x0000000f, 0x00000009, 0x00000004, 0x00000003, 0x0000000f, 0x00000011, 0x00000012, 0x00000013, 0x00000011, 0x00000014, 0x00000012, 0x00000002, 0x00000015, 0x00000013, 0x00000002, 0x00000001, 0x00000015, 0x00000011, 0x00000015, 0x00000016, 0x00000011, 0x00000013, 0x00000015, 0x00000017, 0x00000012, 0x00000018, 0x00000017, 0x00000013, 0x00000012, 0x00000002, 0x00000019, 0x00000005, 0x00000002, 0x00000013, 0x00000019, 0x00000017, 0x00000019, 0x00000013, 0x00000017, 0x0000001a, 0x00000019, 0x0000001b, 0x00000016, 0x0000001c, 0x00000008, 0x0000000a, 0x0000001c, 0x0000000a, 0x0000001b, 0x0000001c, 0x00000016, 0x00000015, 0x0000001c, 0x00000001, 0x00000008, 0x0000001c, 0x00000015, 0x00000001, 0x0000001c, 0x00000006, 0x0000001d, 0x0000001e, 0x00000006, 0x00000005, 0x0000001d, 0x0000001f, 0x00000020, 0x0000001e, 0x0000001f, 0x00000021, 0x00000020, 0x00000006, 0x00000020, 0x00000003, 0x00000006, 0x0000001e, 0x00000020, 0x00000022, 0x0000001d, 0x00000023, 0x00000022, 0x0000001e, 0x0000001d, 0x0000001f, 0x00000024, 0x00000025, 0x0000001f, 0x0000001e, 0x00000024, 0x00000022, 0x00000024, 0x0000001e, 0x00000022, 0x00000026, 0x00000024, 0x0000000f, 0x00000003, 0x00000027, 0x00000028, 0x00000010, 0x00000027, 0x00000010, 0x0000000f, 0x00000027, 0x00000003, 0x00000020, 0x00000027, 0x00000021, 0x00000028, 0x00000027, 0x00000020, 0x00000021, 0x00000027, 0x00000019, 0x0000001a, 0x00000029, 0x0000001d, 0x00000005, 0x00000029, 0x00000005, 0x00000019, 0x00000029, 0x0000001a, 0x0000002a, 0x00000029, 0x00000023, 0x0000001d, 0x00000029, 0x0000002a, 0x00000023, 0x00000029]),
-          "type" => "Uint32Array",
-          "itemSize" => 3)),
-      "type" => "BufferGeometry")],
-    "object" => Dict{String,Any}(
-      "material" => "1c892160-b1fe-11ea-1947-6f8e0ec55cac",
-      "uuid" => "1c892160-b1fe-11ea-25b0-51dfca2aef35",
-      "geometry" => "1c892160-b1fe-11ea-3542-9fc0f2d5a2ea",
-      "matrix" => [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-      "type" => "Mesh"),
-    "materials" => Any[Dict{String,Any}(
-      "vertexColors" => 0,
-      "transparent" => false,
-      "opacity" => 1.0f0,
-      "depthTest" => true,
-      "linewidth" => 1.0,
-      "depthFunc" => 3,
-      "side" => 2,
-      "uuid" => "1c892160-b1fe-11ea-1947-6f8e0ec55cac",
-      "color" => "0xFFFFFF",
-      "type" => "MeshLambertMaterial",
-      "depthWrite" => true)],
-    "metadata" => Dict{String,Any}(
-      "version" => 4.5,"type" => "Object")))
-=#
-
-#=
-create_meshcat_spline(path, vs) =
-    let geom_id = string(uuid1()),
-        material_id = string(uuid1()),
-        obj_id = string(uuid1())
-      Dict("type="set_object",
-           "path=path,
-           "object=Dict(
-              "metadata"=> Dict{String, Any}(
-                  "type="Object",
-                  "version=4.5),
-              "geometries=[Dict{String, Any}(
-                  "type="SplineCurve",
-                  "uuid=geom_id,
-                  "points=[(-10,0), (-5,5), (0,0), (5,-5), (10,0)])],
-              "materials=[Dict{String, Any}(
-                  "vertexColors=0,
-                  "transparent=false,
-                  "opacity=1.0,
-                  "depthTest=true,
-                  "linewidth=1.0,
-                  "depthFunc=3,
-                  "side=2,
-                  "color="0xFFFFFF",
-                  "reflectivity=0.5,
-                  "type="LineBasicMaterial",
-                  "uuid=material_id,
-                  "depthWrite=true)],
-              "object"=> Dict("geometry=geom_id,
-                              "material=material_id,
-                              "matrix=[1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                              "type="Mesh",
-                              "uuid=obj_id)))
-    end
-
-send_meshcat(v, create_meshcat_spline("/meshcat/box1", []))
-=#
-#=
-
-  Drawing lines
-  Let's say you want to draw a line or a circle, not a wireframe Mesh. First we need to set up the renderer, scene and camera (see the Creating a scene page).
-
-  Here is the code that we will use:
-
-  var renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
-
-  var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 500 );
-  camera.position.set( 0, 0, 100 );
-  camera.lookAt( 0, 0, 0 );
-
-  var scene = new THREE.Scene();
-  Next thing we will do is define a material. For lines we have to use LineBasicMaterial or LineDashedMaterial.
-
-  //create a blue LineBasicMaterial
-  var material = new THREE.LineBasicMaterial( { color: 0x0000ff } );
-  After material we will need a geometry with some vertices:
-
-  var points = [];
-  points.push( new THREE.Vector3( - 10, 0, 0 ) );
-  points.push( new THREE.Vector3( 0, 10, 0 ) );
-  points.push( new THREE.Vector3( 10, 0, 0 ) );
-
-  var geometry = new THREE.BufferGeometry().setFromPoints( points );
-  Note that lines are drawn between each consecutive pair of vertices, but not between the first and last (the line is not closed.)
-
-  Now that we have points for two lines and a material, we can put them together to form a line.
-
-  var line = new THREE.Line( geometry, material );
-  All that's left is to add it to the scene and call render.
-
-  scene.add( line );
-  renderer.render( scene, camera );
-=#
-
-#=
-
-{
-    "type": "set_object",
-    "path": "/meshcat/box",
-    "object": {
-        "metadata": {"type": "Object", "version": 4.5},
-        "geometries": [{"depth": 0.5,
-                        "height": 0.5,
-                        "type": "BoxGeometry",
-                        "uuid": "fbafc3d6-18f8-11e8-b16e-f8b156fe4628",
-                        "width": 0.5}],
-        "materials": [{"color": 16777215,
-                       "reflectivity": 0.5,
-                       "type": "MeshPhongMaterial",
-                       "uuid": "e3c21698-18f8-11e8-b16e-f8b156fe4628"}],
-        "object": {"geometry": "fbafc3d6-18f8-11e8-b16e-f8b156fe4628",
-                   "material": "e3c21698-18f8-11e8-b16e-f8b156fe4628",
-                   "matrix": [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                   "type": "Mesh",
-                   "uuid": "fbafc3d7-18f8-11e8-b16e-f8b156fe4628"}},
-}
-Translating that box by the vector [2, 3, 4]:
-
-{
-    "type": "set_transform",
-    "path": "/meshcat/box",
-    "matrix": [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 3.0, 4.0, 1.0]
-}
-
-=#
-
 
 ####################################################
 abstract type MCATKey end
@@ -314,10 +225,11 @@ abstract type MCATMaterial end
 struct MCATLayer
   name
   material
+  line_material
 end
 
 mcat_layer(name, color) =
-  MCATLayer(name, meshcat_material(color))
+  MCATLayer(name, meshcat_material(color), meshcat_line_material(color))
 
 mutable struct MCATBackend{K,T} <: Backend{K,T}
   connection::LazyParameter{Visualizer}
@@ -326,6 +238,10 @@ mutable struct MCATBackend{K,T} <: Backend{K,T}
 end
 
 const MCAT = MCATBackend{MCATKey, MCATId}
+
+connection(b::MCAT) = b.connection()
+material(b::MCAT) = b.layer.material
+line_material(b::MCAT) = b.layer.line_material
 
 create_MCAT_connection() =
   let (width, height) = render_size(),
@@ -339,8 +255,12 @@ meshcat = MCAT(LazyParameter(Visualizer, create_MCAT_connection),
                0,
                mcat_layer("default", RGB(1,1,1)))
 
-connection(b::MCAT) = b.connection()
-material(b::MCAT) = b.layer.material
+export display_view
+display_view() =
+  let vis = connection(meshcat)
+    display(render(vis))
+    MeshCat.wait(vis)
+  end
 
 const meshcat_root_path = "/Khepri"
 
@@ -412,10 +332,16 @@ MeshCat.setcontrol!(
 
 
 set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::MCAT) =
-  begin
-    b.camera = camera
-    b.target = target
-    b.lens = lens
+  let v = connection(b),
+      (x1,y1,z1) = raw_point(camera),
+      (x2,y2,z2) = raw_point(target)
+    send_settransform(v, "/Cameras/default", [
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      x1, y1, z1, 1])
+    send_setproperty(v ,"/Cameras/default/rotated/<object>", "position", [x1-x2,z1-z2,y1-y1])
+  #  b.lens = lens
   end
 
 get_view(b::MCAT) =
@@ -436,27 +362,36 @@ backend_delete_shapes(b::MCAT, shapes::Shapes) =
   end
 
 backend_stroke(b::MCAT, path::CircularPath) =
-  add_object!(
-    b,
-    GeometryTypes.Circle(convert(GeometryTypes.Point, path.center),
-                         Float64(path.radius)))
+  add_object(b, meshcat_line(path_frames(path), line_material(b)))
 
-    #=
 backend_stroke(b::MCAT, path::RectangularPath) =
-    let c = path.corner,
-        dx = path.dx,
-        dy = path.dy
-        @remote(b, ClosedPolyLine([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)]))
-    end
+  let c = path.corner,
+      dx = path.dx,
+      dy = path.dy
+    add_object(
+      b,
+      meshcat_line([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy)],
+                   line_material(b)))
+  end
+
 backend_stroke(b::MCAT, path::ArcPath) =
-    backend_stroke_arc(b, path.center, path.radius, path.start_angle, path.amplitude)
+  add_object(
+    b,
+    meshcat_line(
+      path_frames(arc_path(path.center, path.radius, path.start_angle, path.amplitude)),
+      line_material(b)))
 
 backend_stroke(b::MCAT, path::OpenPolygonalPath) =
-  	@remote(b, PolyLine(path.vertices))
+	add_object(b, meshcat_line(path.vertices, line_material(b)))
+
 backend_stroke(b::MCAT, path::ClosedPolygonalPath) =
-    @remote(b, ClosedPolyLine(path.vertices))
+  add_object(b, meshcat_line([path.vertices...,path.vertices[1]], line_material(b)))
+  #=
+
 backend_fill(b::MCAT, path::ClosedPolygonalPath) =
-    @remote(b, SurfaceClosedPolyLine(path.vertices))
+  add_object(b, meshcat_surface_polygon(path.vertices, material(b)))
+
+
 backend_fill(b::MCAT, path::RectangularPath) =
     let c = path.corner,
         dx = path.dx,
@@ -494,54 +429,20 @@ backend_stroke_arc(b::MCAT, center::Loc, radius::Real, start_angle::Real, amplit
   end
 backend_stroke_unite(b::MCAT, refs) = @remote(b, JoinCurves(refs))
 
-
-
-realize(b::MCAT, s::EmptyShape) =
-  MCATEmptyRef()
-realize(b::MCAT, s::UniversalShape) =
-  MCATUniversalRef()
 realize(b::MCAT, s::Point) =
   @remote(b, Point(s.position))
-
+=#
 realize(b::MCAT, s::Line) =
-  let pts = map(in_world, s.vertices),
-      r = MCATlyJS.scatter3d(
-         x=map(cx, pts),
-         y=map(cy, pts),
-         z=map(cz, pts),
-         line_shape="linear",
-         marker_size=2,
-         autocolorscale=false,
-         showscale=false,
-         hoverinfo="skip")
-    MCATlyJS.addtraces!(connection(b), r)
-    MCATNativeRef(r)
-  end
+  stroke(open_polygonal_path(s.vertices), b)
 
 realize(b::MCAT, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
-    let pts = map_division(in_world, spline_path(s.points), length(s.points)*4),
-        r = MCATlyJS.scatter3d(
-           x=map(cx, pts),
-           y=map(cy, pts),
-           z=map(cz, pts),
-           line_shape="spline",
-           marker_size=2,
-           autocolorscale=false,
-           showscale=false,
-           hoverinfo="skip")
-      MCATlyJS.addtraces!(connection(b), r)
-      MCATNativeRef(r)
-    end
+    add_object(b, meshcat_line(path_frames(open_spline_path(s.points)), line_material(b)))
   elseif (s.v0 != false) && (s.v1 != false)
-    @remote(b, InterpSpline(s.points, s.v0, s.v1))
+    error("Finish this")
   else
-    @remote(b, InterpSpline(
-                     s.points,
-                     s.v0 == false ? s.points[2]-s.points[1] : s.v0,
-                     s.v1 == false ? s.points[end-1]-s.points[end] : s.v1))
+    error("Finish this")
   end
-  =#
 
 #=
 realize(b::MCAT, s::ClosedSpline) =
@@ -694,17 +595,8 @@ realize(b::MCAT, s::Box) =
 realize(b::MCAT, s::Cone) =
   add_object(b, meshcat_cone(s.cb, s.r, s.h, material(b)))
 
-#=
 realize(b::MCAT, s::ConeFrustum) =
-  let buf = buffer(b),
-      bot = in_world(s.cb),
-      top = in_world(s.cb + vz(s.h, s.cb.cs)),
-      mat = get_material(b, s)
-    write_MCAT_object(buf, "cone", mat, bot, s.rb, top, s.rt)
-    void_ref(b)
-  end
-
-=#
+  add_object(b, meshcat_cone_frustum(s.cb, s.rb, s.rt, s.h, material(b)))
 
 realize(b::MCAT, s::Cylinder) =
   send_setobject(connection(b), next_id(b), meshcat_cylinder(s.cb, s.r, s.h, material(b)))
@@ -830,17 +722,13 @@ realize(b::MCAT, s::SubtractionShape3D) =
     end
     void_ref(b)
   end
-
+=#
 # BIM
 
 realize_box(b::MCAT, mat, p, dx, dy, dz) =
-  let buf = buffer(b),
-      bot = in_world(p),
-      top = in_world(add_xyz(p, dx, dy, dz))
-    write_MCAT_object(buf, "box", mat, bot, top)
-    void_ref(b)
-  end
+  add_object(b, meshcat_box(p, dx, dy, dz, mat))
 
+#=
 realize_prism(b::MCAT, top, bot, side, path::PathSet, h::Real) =
   # PathSets require a different approach
   let buf = buffer(b),
@@ -975,88 +863,6 @@ realize(b::MCAT, s::Union{Door, Window}) =
   void_ref(b)
 
 ####################################################
-
-#=
-
-
-
-
-c = Cone(Point(1,2,3), Point(4,5,6), 2)
-vis = Visualizer()
-open(vis)
-
-shape_counter = 0
-
-
-
-add_object!(vis, Cone(Point(3,5,3), Point(4,5,6), 2))
-add_object!(vis, GeometryTypes.Cylinder(GeometryTypes.Point(-1.,-1.,-1.), GeometryTypes.Point(2., 3., 4.), 0.1))
-
-
-backend(meshcat)
-
-test_surface(surface_grid(map_division((u,v)->xyz(u,v,sin(u+v)), 0, 6pi, 20, 0, 6pi, 20)))
-
-
-
-
-
-using Khepri
-for i in 1:1000
-    setobject!(vis["cone"][string(i)],
-        Cone(Point(random_range(-100, 100),random_range(-100, 100),random_range(-100, 100)),
-             Point(random_range(-100, 100),random_range(-100, 100),random_range(-100, 100)),
-             random_range(1, 5)))
-         end
-
-for i in 1:2000
- setobject!(vis2["cone"][string(i)],
-     HyperEllipsoid(Point(random_range(-100, 100),random_range(-100, 100),random_range(-100, 100)),
-                    let r = random_range(1, 5); Vec(r, r, r) end))
-      end
-
-
-render(vis)
-
-
-vis2 = Visualizer()
-render(vis2)
-p4 = polyhedron(v, CDDLib.Library())
-
-# Project that polyhedron down to 3 dimensions for visualization
-v1 = [1, -1,  0,  0]
-v2 = [1,  1, -2,  0]
-v3 = [1,  1,  1, -3]
-p3 = project(p4, [v1 v2 v3])
-
-# Show the result
-setobject!(vis, Polyhedra.Mesh(p3))
-
-
-
-p1 = Point(3, 1)
-p2 = Point(1, 3)
-p3 = Point(4, 4)
-
-l1 = Line(p1, p2)
-l2 = Line(p2, p3)
-ls1 = LineString([l1, l2])
-ls2 = LineString([p1, p2, p3])
-
-pl = Polygon(Point{2, Int}[(3, 1), (4, 4), (2, 4), (1, 2), (3, 1)])
-
-rect = Rect(Vec(0.0, 0.0), Vec(1.0, 1.0))
-
-rect_faces = decompose(TriangleFace{Int}, rect)
-rect_vertices = decompose(Point{2, Float64}, rect)
-
-mesh = Mesh(rect_vertices, rect_faces)
-
-vis = Visualizer()
-open(vis)
-
-setobject!(vis, pl)
-=#
 
 #=
 set_backend_family(default_wall_family(), meshcat,
