@@ -10,6 +10,7 @@ using IntervalSets
 using Dierckx
 using PyCall
 using MeshCat
+using PlotlyJS
 
 import Base.show, Base.zero, Base.iterate
 import Base.convert
@@ -31,7 +32,7 @@ include("Revit.jl")
 #include("ArchiCAD.jl")
 include("Radiance.jl")
 include("POVRay.jl")
-#include("Notebook.jl")
+include("Notebook.jl")
 include("MeshCat.jl")
 include("Grasshopper.jl")
 include("Unity.jl")
