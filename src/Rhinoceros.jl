@@ -573,9 +573,9 @@ realize(b::RH, s::UnionMirror) =
 backend_surface_grid(b::RH, points, closed_u, closed_v, smooth_u, smooth_v) =
   let (nu, nv) = size(points),
       order(n) = min(max(2*floor(Int,n/30) + 1, 2), 5)
-    @remote(b, SurfaceFromGrid(nv, nu,
+    @remote(b, SurfaceFromGrid(nu, nv,
                                reshape(permutedims(points), :),
-                               closed_v, closed_u,
+                               closed_u, closed_v,
                                smooth_u ? order(nu) : 1,
                                smooth_v ? order(nv) : 1))
   end
