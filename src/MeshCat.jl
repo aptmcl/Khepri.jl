@@ -342,11 +342,6 @@ set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::MCAT) =
     #  b.lens = lens
   end
 
-send_setproperty(connection(meshcat), "/Cameras/default/rotated/<object>", "position", [10,0,10])
-send_setproperty(connection(meshcat), "/Cameras/default/rotated/<object>", "quaternion", [pi/2,0,0,0])
-
-
-
 get_view(b::MCAT) =
   b.camera, b.target, b.lens
 
