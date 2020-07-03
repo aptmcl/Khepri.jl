@@ -201,10 +201,14 @@ family(f::FamilyInstance) = f.family
 export family_in_layer
 const family_in_layer = Parameter(false)
 
+use_family_in_layer(b::Backend) = family_in_layer()
+
 with_family_in_layer(f::Function, backend::Backend, family::Family) =
-  family_in_layer() ?
-    with(f, current_layer, realize(backend, family)) :
+  use_family_in_layer(backend) ?
+    with(f, current_layer, layer_from_family(realize(backend, family), family)) :
     f()
+
+layer_from_family(f, backend) = f
 
 macro deffamily(name, parent, fields...)
   name_str = string(name)
@@ -342,7 +346,9 @@ backend_slab(b::Backend, profile, openings, thickness, family) =
       mattop = get_material(b, backfamily.top_material),
       matbot = get_material(b, backfamily.bottom_material),
       matside = get_material(b, backfamily.side_material)
-    realize_prism(b, mattop, matbot, matside, path_set(profile, openings...), thickness)
+    realize_prism(
+      b, mattop, matbot, matside,
+      isempty(openings) ? profile : path_set(profile, openings...), thickness)
   end
 
 # Delegate on the lower-level pyramid frustum
@@ -540,7 +546,7 @@ closed_path_for_height(path, h) =
     closed_polygonal_path([ps..., reverse(map(p -> p+vz(h), ps))...])
   end
 
-subtract_paths(b::LazyBackend, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path) =
+subtract_paths(b::Backend, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path) =
   let idxs = closest_vertices_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path))
     closed_polygonal_path(
       inject_polygon_vertices_at_indexes(path_vertices(c_r_w_path), path_vertices(c_r_op_path), idxs)),
@@ -548,8 +554,41 @@ subtract_paths(b::LazyBackend, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path)
       inject_polygon_vertices_at_indexes(path_vertices(c_l_w_path), path_vertices(c_l_op_path), idxs))
   end
 
-realize_polygon(b::LazyBackend, mat, path::Path, acw=true) =
+realize_polygon(b::Backend, mat, path::Path, acw=true) =
   realize_polygon(b, mat, path_vertices(path), acw)
+
+# A poor's man approach to deal with Z-fighting
+const support_z_fighting_factor = 0.999
+const wall_z_fighting_factor = 0.998
+
+backend_wall(b::Backend, w_path, w_height, l_thickness, r_thickness, family) =
+  path_length(w_path) < path_tolerance() ?
+    realize(b, empty_shape()) : # not beatiful
+    let w_paths = subpaths(w_path),
+        r_w_paths = subpaths(offset(w_path, -r_thickness)),
+        l_w_paths = subpaths(offset(w_path, l_thickness)),
+        w_height = w_height*wall_z_fighting_factor,
+        prevlength = 0,
+        material = realize(b, family).material,
+        refs = []
+      for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
+        let currlength = prevlength + path_length(w_seg_path),
+            c_r_w_path = closed_path_for_height(r_w_path, w_height),
+            c_l_w_path = closed_path_for_height(l_w_path, w_height)
+          push!(refs, realize_pyramid_frustum(b, c_l_w_path, c_r_w_path, material))
+          prevlength = currlength
+        end
+      end
+      [refs...]
+    end
+
+realize_pyramid_frustum(b::Backend, bot_path::Path, top_path::Path, material) =
+  realize_pyramid_frustum(b, path_vertices(bot_path), path_vertices(top_path), material)
+
+realize_pyramid_frustum(b::Backend, bot_vs::Locs, top_vs::Locs, material) =
+  realize_pyramid_frustum(b, material, material, material, bot_vs, top_vs)
+
+
 
 #=
 Walls can be joined. That is very important because the wall needs to have
@@ -821,6 +860,17 @@ realize(b::Backend, s::Column) =
     end
   end
 
+realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
+  backend_cylinder(b, cb, profile.radius, length*support_z_fighting_factor, realize(b, s.family).material)
+
+realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
+  let profile_u0 = profile.corner,
+      c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
+      # need to test whether it is rotation on center or on axis
+      o = loc_from_o_phi(c, s.angle)
+    backend_right_cuboid(b, o, profile.dx, profile.dy, length, realize(b, s.family).material)
+  end
+
 # Tables and chairs
 
 @deffamily(table_family, Family,
@@ -1003,6 +1053,8 @@ struct BackendWallFamily{Material} <: BackendFamily
 end
 
 backend_get_family_ref(b::Backend, f::Family, bf::BackendFamily) = bf
+# When using family_in_layer(true), we can have default behavior
+layer_from_family(f::BackendMaterialFamily, backend) = f.material
 
 
 #=

@@ -399,8 +399,8 @@ realize(b::Unity, s::IrregularPyramidFrustum) =
 realize(b::Unity, s::IrregularPrism) =
   @remote(b, PyramidFrustum(s.bs, map(p -> (p + s.v), s.bs)))
 
-realize(b::Unity, s::RightCuboid) =
-  @remote(b, RightCuboid(s.cb, vz(1, s.cb.cs), vx(1, s.cb.cs), s.height, s.width, s.h, s.angle))
+backend_right_cuboid(b::Unity, cb, width, height, h, angle) =
+  @remote(b, RightCuboid(cb, vz(1, cb.cs), vx(1, cb.cs), height, width, h, angle))
 
 
 #unity"public GameObject Box2(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz)"
@@ -416,8 +416,11 @@ realize(b::Unity, s::ConeFrustum) =
     regular_polygon_vertices(64, s.cb, s.rb),
     regular_polygon_vertices(64, s.cb + vz(s.h, s.cb.cs), s.rt)))
 
-realize(b::Unity, s::Cylinder) =
-  @remote(b, Cylinder(s.cb, s.r, s.cb + vz(s.h, s.cb.cs)))
+backend_cylinder(b::Unity, cb, r, h) =
+  @remote(b, Cylinder(cb, r, add_z(cb, h)))
+
+backend_cylinder(b::Unity, cb, r, h, material) =
+  @remote(b, CylinderWithMaterial(cb, r, add_z(cb, h), material))
 
 #=
 backend_extrusion(b::Unity, s::Shape, v::Vec) =
@@ -705,10 +708,7 @@ backend_slab(b::Unity, profile, holes, thickness, family) =
     @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, realize(b, family)))
   end
 
-# A poor's man approach to deal with Z-fighting
-const support_z_fighting_factor = 0.999
-const wall_z_fighting_factor = 0.998
-
+## HACK: Is this still needed? backend_cylinder takes care of this, doesn't it?
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   @remote(b, BeamCircSection(
     cb,
@@ -780,32 +780,7 @@ backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
 realize(b::Unity, w::Window) = void_ref(b)
 realize(b::Unity, w::Door) = void_ref(b)
 
-
-backend_wall(b::Unity, w_path, w_height, l_thickness, r_thickness, family) =
-  path_length(w_path) < path_tolerance() ?
-    UnityEmptyRef() :
-    let w_paths = subpaths(w_path),
-        r_w_paths = subpaths(offset(w_path, -r_thickness)),
-        l_w_paths = subpaths(offset(w_path, l_thickness)),
-        w_height = w_height*wall_z_fighting_factor,
-        prevlength = 0,
-        material = realize(b, family),
-        refs = UnityNativeRef[]
-      for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-        let currlength = prevlength + path_length(w_seg_path),
-            c_r_w_path = closed_path_for_height(r_w_path, w_height),
-            c_l_w_path = closed_path_for_height(l_w_path, w_height)
-          push!(refs, realize_pyramid_frustum(b, c_l_w_path, c_r_w_path, material))
-          prevlength = currlength
-        end
-      end
-      refs
-    end
-
-realize_pyramid_frustum(b::Unity, bot_path::Path, top_path::Path, material) =
-  realize_pyramid_frustum(b, path_vertices(bot_path), path_vertices(top_path), material)
-
-realize_pyramid_frustum(b::Unity, bot_vs, top_vs, material) =
+realize_pyramid_frustum(b::Unity, bot_vs::Locs, top_vs::Locs, material) =
     UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, material)))
 
 #

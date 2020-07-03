@@ -343,7 +343,9 @@ backend_stroke(b::ACAD, path::ArcPath) =
 backend_stroke(b::ACAD, path::OpenPolygonalPath) =
   	@remote(b, PolyLine(path.vertices))
 backend_stroke(b::ACAD, path::ClosedPolygonalPath) =
-    @remote(b, ClosedPolyLine(path.vertices))
+    backend_polygon(b, path.vertices)
+backend_polygon(b::ACAD, vs::Locs) =
+  @remote(b, ClosedPolyLine(vs))
 backend_fill(b::ACAD, path::ClosedPolygonalPath) =
     @remote(b, SurfaceClosedPolyLine(path.vertices))
 backend_fill(b::ACAD, path::RectangularPath) =
@@ -374,8 +376,6 @@ backend_fill(b::ACAD, path::ClosedSplinePath) =
 
 backend_fill_curves(b::ACAD, refs::ACADIds) = @remote(b, SurfaceFromCurves(refs))
 backend_fill_curves(b::ACAD, ref::ACADId) = @remote(b, SurfaceFromCurves([ref]))
-
-backend_stroke_line(b::ACAD, vs) = @remote(b, PolyLine(vs))
 
 backend_stroke_arc(b::ACAD, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
   let p = in_world(add_pol(center, radius, start_angle)),
@@ -592,34 +592,13 @@ realize(b::ACAD, s::Sphere) =
 
 realize(b::ACAD, s::Torus) =
   @remote(b, Torus(s.center, vz(1, s.center.cs), s.re, s.ri))
-realize(b::ACAD, s::Cuboid) =
-  @remote(b, IrregularPyramidFrustum([s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3]))
-realize(b::ACAD, s::RegularPyramidFrustum) =
-    @remote(b, IrregularPyramidFrustum(
-                                regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                                regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed)))
-realize(b::ACAD, s::RegularPyramid) =
-  @remote(b, IrregularPyramid(
-                          regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                          add_z(s.cb, s.h)))
-realize(b::ACAD, s::IrregularPyramid) =
-  @remote(b, IrregularPyramid(s.bs, s.t))
-realize(b::ACAD, s::RegularPrism) =
-  let ps = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-    @remote(b, IrregularPyramidFrustum(
-                                   ps,
-                                   map(p -> add_z(p, s.h), ps)))
-  end
-realize(b::ACAD, s::IrregularPyramidFrustum) =
-    @remote(b, IrregularPyramidFrustum(s.bs, s.ts))
 
-realize(b::ACAD, s::IrregularPrism) =
-  @remote(b, IrregularPyramidFrustum(
-                              s.bs,
-                              map(p -> (p + s.v), s.bs)))
-## FIXME: deal with the rotation angle
-realize(b::ACAD, s::RightCuboid) =
-  @remote(b, CenteredBox(s.cb, s.width, s.height, s.h))
+backend_pyramid(b::ACAD, bs, t) =
+  @remote(b, IrregularPyramid(s.bs, s.t))
+backend_pyramid_frustum(b::ACAD, bs, ts) =
+    @remote(b, IrregularPyramidFrustum(bs, ts))
+backend_right_cuboid(b::ACAD, cb, width, height, h) =
+  @remote(b, CenteredBox(cb, width, height, h))
 realize(b::ACAD, s::Box) =
   @remote(b, Box(s.c, s.dx, s.dy, s.dz))
 realize(b::ACAD, s::Cone) =
@@ -815,6 +794,7 @@ backend_slab(b::ACAD, profile, holes, thickness, family) =
     foldl((r0, r1)->subtract_ref(b, r0, r1), holes_bodies, init=main_body)
   end
 
+#=
 realize_beam_profile(b::ACAD, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   @remote(b, Cylinder(cb, profile.radius, add_z(cb, length)))
 
@@ -834,6 +814,7 @@ realize_beam_profile(b::ACAD, s::FreeColumn, profile::RectangularPath, cb::Loc, 
       o = loc_from_o_phi(c, s.angle)
     @remote(b, CenteredBox(o, profile.dx, profile.dy, length))
   end
+=#
 
 backend_wall(b::ACAD, path, height, l_thickness, r_thickness, family) =
   @remote(b,

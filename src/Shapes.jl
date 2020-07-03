@@ -542,11 +542,21 @@ rectangle(p::Loc, q::Loc) =
 @defproxy(surface_ellipse, Shape2D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1)
 @defproxy(surface_polygon, Shape2D, vertices::Locs=[u0(), ux(), uy()])
 surface_polygon(v0, v1, vs...) = surface_polygon([v0, v1, vs...])
+realize(b::Backend, s::SurfacePolygon) =
+  backend_surface_polygon(b, s.vertices)
 @defproxy(surface_regular_polygon, Shape2D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=true)
+realize(b::Backend, s::SurfaceRegularPolygon) =
+  backend_surface_polygon(b, regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 @defproxy(surface_rectangle, Shape2D, corner::Loc=u0(), dx::Real=1, dy::Real=1)
 surface_rectangle(p::Loc, q::Loc) =
   let v = in_cs(q - p, p.cs)
     surface_rectangle(p, v.x, v.y)
+  end
+realize(b::Backend, s::SurfaceRectangle) =
+  let c = s.corner,
+      dx = s.dx,
+      dy = s.dy
+    backend_surface_polygon(b, [c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy), c])
   end
 @defproxy(surface, Shape2D, frontier::Shapes1D=[circle()])
 surface(c0::Shape, cs...) = surface([c0, cs...])
@@ -590,17 +600,31 @@ text_centered(str::String="", center::Loc=u0(), height::Real=1) =
 # might be just delete them)
 @defproxy(unknown, Shape3D, baseref::Any=required())
 
-
 @defproxy(sphere, Shape3D, center::Loc=u0(), radius::Real=1)
 @defproxy(torus, Shape3D, center::Loc=u0(), re::Real=1, ri::Real=1/2)
 @defproxy(cuboid, Shape3D,
   b0::Loc=u0(),        b1::Loc=add_x(b0,1), b2::Loc=add_y(b1,1), b3::Loc=add_x(b2,-1),
   t0::Loc=add_z(b0,1), t1::Loc=add_x(t0,1), t2::Loc=add_y(t1,1), t3::Loc=add_x(t2,-1))
+realize(b::Backend, s::Cuboid) =
+  backend_pyramid_frustum(b, [s.b0, s.b1, s.b2, s.b3], [s.t0, s.t1, s.t2, s.t3])
 
 @defproxy(regular_pyramid_frustum, Shape3D, edges::Integer=4, cb::Loc=u0(), rb::Real=1, angle::Real=0, h::Real=1, rt::Real=1, inscribed::Bool=true)
 regular_pyramid_frustum(edges::Integer, cb::Loc, rb::Real, angle::Real, ct::Loc, rt::Real=1, inscribed::Bool=true) =
   let (c, h) = position_and_height(cb, ct)
     regular_pyramid_frustum(edges, c, rb, angle, h, rt, inscribed)
+  end
+realize(b::Backend, s::RegularPyramidFrustum) =
+  backend_pyramid_frustum(
+    b,
+    regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+    regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed))
+backend_pyramid_frustum(b::Backend, bot_vs::Locs, top_vs::Locs) =
+  let refs = [backend_surface_polygon(b, reverse(bot_vs))]
+    push!(refs, backend_surface_polygon(b, top_vs))
+    for (v1, v2, v3, v4) in zip(bot_vs, circshift(bot_vs, -1), circshift(top_vs, -1), top_vs)
+      push!(refs, backend_surface_polygon(b, [v1, v2, v3, v4]))
+    end
+    refs
   end
 
 @defproxy(regular_pyramid, Shape3D, edges::Integer=3, cb::Loc=u0(), rb::Real=1, angle::Real=0, h::Real=1, inscribed::Bool=true)
@@ -608,24 +632,53 @@ regular_pyramid(edges::Integer, cb::Loc, rb::Real, angle::Real, ct::Loc, inscrib
   let (c, h) = position_and_height(cb, ct)
     regular_pyramid(edges, c, rb, angle, h, inscribed)
   end
+realize(b::Backend, s::RegularPyramid) =
+  backend_pyramid(
+    b,
+    regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
+    add_z(s.cb, s.h))
+
+backend_pyramid(b::Backend, bot_vs::Locs, top::Loc) =
+  let refs = [backend_surface_polygon(b, reverse(bot_vs))]
+    for (v1, v2, v3) in zip(bot_vs, circshift(bot_vs, -1), repeated(top))
+      push!(refs, backend_surface_polygon(b, [v1, v2, v3]))
+    end
+    refs
+  end
 
 @defproxy(irregular_pyramid_frustum, Shape3D, bs::Locs=[ux(), uy(), uxy()], ts::Locs=[uxz(), uyz(), uxyz()])
+realize(b::Backend, s::IrregularPyramidFrustum) =
+  backend_pyramid_frustum(b, s.bs, s.ts)
+
 @defproxy(irregular_pyramid, Shape3D, bs::Locs=[ux(), uy(), uxy()], t::Loc=uz())
+realize(b::Backend, s::IrregularPyramid) =
+  backend_pyramid(b, s.bs, s.t)
 
 @defproxy(regular_prism, Shape3D, edges::Integer=3, cb::Loc=u0(), r::Real=1, angle::Real=0, h::Real=1, inscribed::Bool=true)
 regular_prism(edges::Integer, cb::Loc, r::Real, angle::Real, ct::Loc, inscribed::Bool=true) =
   let (c, h) = position_and_height(cb, ct)
     regular_prism(edges, c, r, angle, h, inscribed)
   end
+realize(b::Backend, s::RegularPrism) =
+  let ps = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
+    backend_pyramid_frustum(b, ps, map(p -> add_z(p, s.h), ps))
+  end
+
 @defproxy(irregular_prism, Shape3D, bs::Locs=[ux(), uy(), uxy()], v::Vec=vz(1))
 irregular_prism(bs::Locs, h::Real) =
   irregular_prism(bs, vz(h))
+realize(b::Backend, s::IrregularPrism) =
+  backend_pyramid_frustum(b, s.bs, map(p -> (p + s.v), s.bs))
 
-@defproxy(right_cuboid, Shape3D, cb::Loc=u0(), width::Real=1, height::Real=1, h::Real=1, angle::Real=0)
+@defproxy(right_cuboid, Shape3D, cb::Loc=u0(), width::Real=1, height::Real=1, h::Real=1)
 right_cuboid(cb::Loc, width::Real, height::Real, ct::Loc, angle::Real=0; backend::Backend=current_backend()) =
-  let (c, h) = position_and_height(cb, ct)
-    right_cuboid(c, width, height, h, angle, backend=backend)
+  let (c, h) = position_and_height(cb, ct),
+      o = angle == 0 ? c : loc_from_o_phi(c, angle)
+    right_cuboid(o, width, height, h, backend=backend)
   end
+realize(b::Backend, s::RightCuboid) =
+  backend_right_cuboid(b, s.cb, s.width, s.height, s.h)
+
 @defproxy(box, Shape3D, c::Loc=u0(), dx::Real=1, dy::Real=dx, dz::Real=dy)
 box(c0::Loc, c1::Loc) =
   let v = in_cs(c1, c0)-c0
@@ -646,6 +699,8 @@ cylinder(cb::Loc, r::Real, ct::Loc) =
   let (c, h) = position_and_height(cb, ct)
     cylinder(c, r, h)
   end
+realize(b::Backend, s::Cylinder) =
+  backend_cylinder(b, s.cb, s.r, s.h)
 
 @defproxy(extrusion, Shape3D, profile::Shape=point(), v::Vec=vz(1))
 extrusion(profile, h::Real) =
@@ -793,6 +848,19 @@ stroke(path::Path, backend::Backend=current_backend()) = backend_stroke(backend,
 stroke(path::Path, color::RGB, backend::Backend=current_backend()) = backend_stroke_color(backend, path, color)
 # By default, we ignore the color
 backend_stroke_color(backend::Backend, path::Path, color::RGB) = backend_stroke(backend, path)
+
+backend_stroke(b::Backend, path::RectangularPath) =
+  let c = path.corner,
+      dx = path.dx,
+      dy = path.dy
+    backend_stroke_line(b, (c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy), c))
+  end
+
+backend_stroke(b::Backend, path::OpenPolygonalPath) =
+	backend_stroke_line(b, path.vertices)
+
+backend_stroke(b::Backend, path::ClosedPolygonalPath) =
+  backend_stroke_line(b, [path.vertices...,path.vertices[1]])
 
 # The default implementation for stroking segmented path in the backend relies on two
 # dedicated functions backend_stroke_arc and backend_stroke_line

@@ -184,7 +184,7 @@ struct OpenSplinePath <: OpenPath
     interpolator
 end
 open_spline_path(vertices=[u0(), x(), xy(), y()], v0=false, v1=false) =
-  OpenSplinePath(vertices, v0, v1, curve_interpolator(vertices))
+  OpenSplinePath(vertices, v0, v1, curve_interpolator(vertices, false))
 
 struct ClosedSplinePath <: ClosedPath
     vertices::Locs
@@ -192,7 +192,7 @@ struct ClosedSplinePath <: ClosedPath
 end
 closed_spline_path(vertices=[u0(), x(), xy(), y()]) =
   let vertices = ensure_no_repeated_locations(vertices)
-    ClosedSplinePath(vertices, curve_interpolator(vertices))
+    ClosedSplinePath(vertices, curve_interpolator(vertices, true))
   end
 
 spline_path(vertices::Locs) =
@@ -202,7 +202,7 @@ spline_path(vertices::Locs) =
 spline_path(v::Loc, vs...) = spline_path([v, vs...])
 
 
-location_at(path::OpenSplinePath, ϕ::Real) =
+location_at(path::Union{OpenSplinePath,ClosedSplinePath}, ϕ::Real) =
   let interpol = path.interpolator,
       f = interpol(ϕ),
       d1 = derivative(interpol, ϕ), #Interpolations.gradient(interpolator, ϕ)[1],
@@ -780,8 +780,11 @@ curve_interpolator(pts::Locs) =
     end
 =#
 
-curve_interpolator(pts::Locs) =
-  ParametricSpline([pt.raw[i] for i in 1:3, pt in in_world.(pts)], k=length(pts)<=3 ? 2 : 3)
+curve_interpolator(pts::Locs, isperiodic::Bool) =
+  ParametricSpline(
+    [pt.raw[i] for i in 1:3, pt in in_world.(isperiodic ? [pts..., pts[1]] : pts)],
+    k=length(pts)<=3 ? 2 : 3,
+    periodic=isperiodic)
 
 convert(::Type{ClosedPolygonalPath}, path::ClosedPathSequence) =
   let paths = path.paths,

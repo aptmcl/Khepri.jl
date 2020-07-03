@@ -404,8 +404,8 @@ realize(b::RH, s::IrregularPrism) =
     @remote(b, IrregularPyramidFrustum(s.bs,
                                        map(p -> p + s.v, s.bs)))
 
-realize(b::RH, s::RightCuboid) =
-    @remote(b, XYCenteredBox(s.cb, vx(1, s.cb.cs), vy(1, s.cb.cs), s.width, s.height, s.h))
+backend_right_cuboid(b::RH, cb, width, height, h, angle) =
+  @remote(b, XYCenteredBox(cb, vx(1, cb.cs), vy(1, cb.cs), width, height, h))
 
 realize(b::RH, s::Box) =
     @remote(b, Box(s.c, vx(1,s.c.cs), vy(1,s.c.cs), s.dx, s.dy, s.dz))
@@ -616,6 +616,7 @@ backend_slab(b::RH, profile, holes, thickness, family) =
             r->@remote(b, Extrusion(r, vz(thickness))),
             ensure_ref(b, backend_fill(b, profile)))
 
+#=
 #Beams are aligned along the top axis.
 realize(b::RH, s::Beam) =
   let profile = s.family.profile
@@ -646,6 +647,7 @@ realize(b::RH, s::Column) =
       o = loc_from_o_phi(s.cb + vz(base_height), s.angle)
     @remote(b, XYCenteredBox(o, vx(1, o.cs), vy(1, o.cs), profile.dx, profile.dy, height))
   end
+=#
 
 backend_wall(b::RH, path, height, l_thickness, r_thickness, family) =
     @remote(b, PathWall(backend_stroke(b, offset(path, l_thickness - r_thickness)), #offset(path, (l_thickness - r_thickness)/2)),
