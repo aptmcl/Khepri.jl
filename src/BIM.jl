@@ -569,7 +569,7 @@ backend_wall(b::Backend, w_path, w_height, l_thickness, r_thickness, family) =
         l_w_paths = subpaths(offset(w_path, l_thickness)),
         w_height = w_height*wall_z_fighting_factor,
         prevlength = 0,
-        material = realize(b, family).material,
+        material = realize(b, family),
         refs = []
       for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
         let currlength = prevlength + path_length(w_seg_path),
