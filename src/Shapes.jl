@@ -677,7 +677,7 @@ right_cuboid(cb::Loc, width::Real, height::Real, ct::Loc, angle::Real=0; backend
     right_cuboid(o, width, height, h, backend=backend)
   end
 realize(b::Backend, s::RightCuboid) =
-  backend_right_cuboid(b, s.cb, s.width, s.height, s.h)
+  backend_right_cuboid(b, s.cb, s.width, s.height, s.h, nothing)
 
 @defproxy(box, Shape3D, c::Loc=u0(), dx::Real=1, dy::Real=dx, dz::Real=dy)
 box(c0::Loc, c1::Loc) =

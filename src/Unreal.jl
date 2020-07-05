@@ -657,7 +657,7 @@ unreal"public Actor Slab(Vector3[] contour, Vector3[][] holes, float h, Material
 =#
 backend_slab(b::Unreal, profile, holes, thickness, family) =
   let bot_vs = path_vertices(profile)
-    @remote(b, Primitive__Slab(bot_vs, map(path_vertices, holes), thickness,realize(b, family)))
+    @remote(b, Primitive__Slab(bot_vs, map(path_vertices, holes), thickness, family))
   end
 
 #=
@@ -707,32 +707,7 @@ realize(b::Unreal, s::Panel) =
       realize(b, s.family)))
   end
 
-#
-  backend_wall(b::Unreal, w_path, w_height, l_thickness, r_thickness, family) =
-    path_length(w_path) < path_tolerance() ?
-      UnrealEmptyRef() :
-      let w_paths = subpaths(w_path),
-          r_w_paths = subpaths(offset(w_path, -r_thickness)),
-          l_w_paths = subpaths(offset(w_path, l_thickness)),
-          w_height = w_height*wall_z_fighting_factor,
-          prevlength = 0,
-          material = realize(b, family),
-          refs = UnrealNativeRef[]
-        for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-          let currlength = prevlength + path_length(w_seg_path),
-              c_r_w_path = closed_path_for_height(r_w_path, w_height),
-              c_l_w_path = closed_path_for_height(l_w_path, w_height)
-            push!(refs, realize_pyramid_frustum(b, c_l_w_path, c_r_w_path, material))
-            prevlength = currlength
-          end
-        end
-        refs
-      end
-
-  realize_pyramid_frustum(b::Unreal, bot_path::Path, top_path::Path, material) =
-    realize_pyramid_frustum(b, path_vertices(bot_path), path_vertices(top_path), material)
-
-  realize_pyramid_frustum(b::Unreal, bot_vs, top_vs, material) =
+  realize_pyramid_frustum(b::Unreal, bot_vs::Locs, top_vs::Locs, material) =
       UnrealNativeRef(@remote(b, Primitive__PyramidFrustumWithMaterial(bot_vs, top_vs, material)))
 
   #
@@ -859,7 +834,7 @@ unreal"public Vector3 ViewCamera()"
 unreal"public Vector3 ViewTarget()"
 unreal"public float ViewLens()"
 =#
-set_view(camera::Loc, target::Loc, lens::Real, b::Unreal) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Unreal) =
   let c = connection(b)
     @remote(b, Primitive__SetView(camera, target, lens))
   end

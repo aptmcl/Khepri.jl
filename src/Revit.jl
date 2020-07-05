@@ -186,11 +186,11 @@ switch_to_backend(from::Backend, to::RVT) =
     end
 
 #=
-backend_get_family(b::RVT, f::TableFamily) =
+realize(b::RVT, f::TableFamily) =
     RVTCreateRectangularTableFamily(connection(b), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
-backend_get_family(b::RVT, f::ChairFamily) =
+realize(b::RVT, f::ChairFamily) =
     RVTCreateChairFamily(connection(b), f.length, f.width, f.height, f.seat_height, f.thickness)
-backend_get_family(b::RVT, f::TableChairFamily) =
+realize(b::RVT, f::TableChairFamily) =
     RVTCreateRectangularTableAndChairsFamily(connection(b),
         ref(f.table_family), ref(f.chair_family),
         f.table_family.length, f.table_family.width,

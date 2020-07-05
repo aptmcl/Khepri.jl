@@ -14,6 +14,11 @@ not BIM tools.
 A third problem is related to level of detail. Even in the same backend, we might
 need to represent BIM elements at different levels of detail.
 
+To solve these problems, we will use a protocol to realize BIM objects. To avoid
+confusion, we need to ensure a series of invariants, namely, that entities are
+portable above a certain level and non-portable below that level. As an example,
+a Slab and a SlabFamily are portable entities.
+
 We will start with the simplest of BIM elements, namely, levels, slabs, walls,
 windows and doors.
 =#
@@ -197,6 +202,19 @@ abstract type FamilyInstance <: Family end
 family(f::Family) = f
 family(f::FamilyInstance) = f.family
 
+#=
+Caching of families is more complex than caching of shapes because families
+are created independently of the current backend and then they are lazily
+instantiated, possibly multiples times as the current backend is being changed.
+=#
+
+family_ref(s::BIMShape) =
+   family_ref(backend(s), s.family)
+family_ref(b::Backend, f::Family) =
+  get!(f.ref, b) do
+    realize(b, f)
+  end
+
 # Default implementation in CAD tools classify BIM elements in layers
 export family_in_layer
 const family_in_layer = Parameter(false)
@@ -205,10 +223,10 @@ use_family_in_layer(b::Backend) = family_in_layer()
 
 with_family_in_layer(f::Function, backend::Backend, family::Family) =
   use_family_in_layer(backend) ?
-    with(f, current_layer, layer_from_family(realize(backend, family), family)) :
+    with(f, current_layer, layer_from_family(backend, family_ref(backend, family))) :
     f()
 
-layer_from_family(f, backend) = f
+layer_from_family(backend, f) = f
 
 macro deffamily(name, parent, fields...)
   name_str = string(name)
@@ -241,15 +259,15 @@ macro deffamily(name, parent, fields...)
       $(struct_fields...)
       based_on::Union{Family, Nothing}
       implemented_as::IdDict{<:Backend, <:Family}
-      ref::Parameter{Any}
+      ref::IdDict{<:Backend, Any}
     end
     $(constructor_name)($(opt_params...);
                         $(key_params...),
                         based_on=nothing,
                         implemented_as=IdDict{Backend, Family}()) =
-      $(struct_name)($(field_names...), based_on, implemented_as, Parameter{Any}(nothing))
+      $(struct_name)($(field_names...), based_on, implemented_as, IdDict{Backend, Any}())
     $(instance_name)(family:: Family, implemented_as=copy(family.implemented_as); $(instance_params...)) =
-      $(struct_name)($(field_names...), family, implemented_as, Parameter{Any}(nothing))
+      $(struct_name)($(field_names...), family, implemented_as, IdDict{Backend, Any}())
     $(default_name) = Parameter{$struct_name}($(constructor_name)())
     $(predicate_name)(v::$(struct_name)) = true
     $(predicate_name)(v::Any) = false
@@ -299,23 +317,19 @@ copy_struct(s::T) where T = T([getfield(s, k) for k ∈ fieldnames(T)]...)
 set_backend_family(family::Family, backend::Backend, backend_family::Family) =
   begin
     family.implemented_as[backend]=backend_family
-    family.ref(nothing) #force recreation
+    delete!(family.ref, backend) #force recreation
   end
 
-# Finally, we can implement a generic backend caching mechanism for families
-
-backend_get_family(b::Backend, f::Family) =
+realize(b::Backend, f::Family) =
   backend_get_family_ref(b, f, backend_family(b, f))
 
-realize(b::Backend, f::Family) =
-  backend_get_family(b, f)
-#=
-  isnothing(f.ref()) ?
-    f.ref(backend_get_family(b, f)) :
-    f.ref()
-=#
-
 export backend_family, set_backend_family
+
+
+#=
+We can now define specific families for slabs, beams, etc., the corresponding
+specific building elements and even, when possible, default implementations.
+=#
 
 @deffamily(slab_family, Family,
     thickness::Real=0.2,
@@ -342,10 +356,7 @@ realize_slab(b::Backend, contour::ClosedPath, holes::Vector{<:ClosedPath}, level
     end
 
 backend_slab(b::Backend, profile, openings, thickness, family) =
-  let backfamily = realize(b, family),
-      mattop = get_material(b, backfamily.top_material),
-      matbot = get_material(b, backfamily.bottom_material),
-      matside = get_material(b, backfamily.side_material)
+  let (mattop, matbot, matside) = slab_materials(b, family_ref(b, family))
     realize_prism(
       b, mattop, matbot, matside,
       isempty(openings) ? profile : path_set(profile, openings...), thickness)
@@ -358,6 +369,10 @@ realize_prism(b::Backend, top, bot, side, path::Path, h::Real) =
 # If we don't know how to process a path, we convert it to a sequence of vertices
 realize_frustum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
   realize_pyramid_frustum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
+# and then, if we don't know what to do with the materials, we simply ignore them
+realize_pyramid_frustum(b::Backend, bot_mat, top_mat, side_mat, bot_vs::Locs, top_vs::Locs) =
+  backend_pyramid_frustum(b, bot_vs, top_vs)
+
 
 #
 export add_slab_opening
@@ -415,7 +430,7 @@ realize(b::Backend, s::Panel) =
   end
 
 backend_panel(b::Backend, bot::Locs, top::Locs, family) =
-  let mat = get_material(b, realize(b, family).material)
+  let mat = panel_material(b, family_ref(b, family))
     realize_pyramid_frustum(b, mat, mat, mat, bot, top)
   end
 
@@ -498,13 +513,12 @@ realize(::HasBooleanOps{false}, b::Backend, w::Wall) =
       l_w_paths = subpaths(offset(w_path, l_thickness)),
       openings = [w.doors..., w.windows...],
       prevlength = 0,
-      matright = get_material(b, realize(b, w.family).right_material),
-      matleft = get_material(b, realize(b, w.family).left_material)
+      (matright, matleft) = wall_materials(b, family_ref(b, w.family))
     for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
       let currlength = prevlength + path_length(w_seg_path),
           c_r_w_path = closed_path_for_height(r_w_path, w_height),
           c_l_w_path = closed_path_for_height(l_w_path, w_height)
-        realize_frustum(b, matleft, matright, matright, c_l_w_path, c_r_w_path, false)
+        realize_frustum(b, matright, matleft, matright, c_l_w_path, c_r_w_path, false)
         openings = filter(openings) do op
           if prevlength <= op.loc.x < currlength ||
              prevlength <= op.loc.x + op.family.width <= currlength # contained (at least, partially)
@@ -524,7 +538,7 @@ realize(::HasBooleanOps{false}, b::Backend, w::Wall) =
                                        path_end(op_at_end ? l_w_path : l_op_path)]),
                 c_r_op_path = closed_path_for_height(translate(fixed_r_op_path, vz(op.loc.y)), op_height),
                 c_l_op_path = closed_path_for_height(translate(fixed_l_op_path, vz(op.loc.y)), op_height)
-              realize_frustum(b, matleft, matright, matright, c_r_op_path, c_l_op_path, false)
+              realize_frustum(b, matright, matleft, matright, c_r_op_path, c_l_op_path, false)
               c_r_w_path, c_l_w_path = subtract_paths(b, c_r_w_path, c_l_w_path, c_r_op_path, c_l_op_path)
               # preserve if not totally contained
               ! (op.loc.x >= prevlength && op.loc.x + op.family.width <= currlength)
@@ -564,30 +578,30 @@ const wall_z_fighting_factor = 0.998
 backend_wall(b::Backend, w_path, w_height, l_thickness, r_thickness, family) =
   path_length(w_path) < path_tolerance() ?
     realize(b, empty_shape()) : # not beatiful
-    let w_paths = subpaths(w_path),
-        r_w_paths = subpaths(offset(w_path, -r_thickness)),
-        l_w_paths = subpaths(offset(w_path, l_thickness)),
-        w_height = w_height*wall_z_fighting_factor,
-        prevlength = 0,
-        material = realize(b, family),
-        refs = []
-      for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
-        let currlength = prevlength + path_length(w_seg_path),
-            c_r_w_path = closed_path_for_height(r_w_path, w_height),
-            c_l_w_path = closed_path_for_height(l_w_path, w_height)
-          push!(refs, realize_pyramid_frustum(b, c_l_w_path, c_r_w_path, material))
-          prevlength = currlength
-        end
-      end
-      [refs...]
+    let (matright, matleft) = wall_materials(b, family_ref(b, family))
+      backend_wall_with_materials(b, w_path, w_height, l_thickness, r_thickness, matright, matleft)
     end
 
-realize_pyramid_frustum(b::Backend, bot_path::Path, top_path::Path, material) =
-  realize_pyramid_frustum(b, path_vertices(bot_path), path_vertices(top_path), material)
+backend_wall_with_materials(b::Backend, w_path, w_height, l_thickness, r_thickness, matright, matleft) =
+  let w_paths = subpaths(w_path),
+      r_w_paths = subpaths(offset(w_path, -r_thickness)),
+      l_w_paths = subpaths(offset(w_path, l_thickness)),
+      w_height = w_height*wall_z_fighting_factor,
+      prevlength = 0,
+      refs = []
+    for (w_seg_path, r_w_path, l_w_path) in zip(w_paths, r_w_paths, l_w_paths)
+      let currlength = prevlength + path_length(w_seg_path),
+          c_r_w_path = closed_path_for_height(r_w_path, w_height),
+          c_l_w_path = closed_path_for_height(l_w_path, w_height)
+        push!(refs, realize_pyramid_frustum(b, matright, matleft, matleft, c_l_w_path, c_r_w_path))
+        prevlength = currlength
+      end
+    end
+    [refs...]
+  end
 
-realize_pyramid_frustum(b::Backend, bot_vs::Locs, top_vs::Locs, material) =
-  realize_pyramid_frustum(b, material, material, material, bot_vs, top_vs)
-
+realize_pyramid_frustum(b::Backend, bot_mat, top_mat, side_mat, bot_path::Path, top_path::Path) =
+  realize_pyramid_frustum(b, bot_mat, top_mat, side_mat, path_vertices(bot_path), path_vertices(top_path))
 
 
 #=
@@ -783,9 +797,10 @@ curtain_wall_path(b::Backend, s::CurtainWall, panel_family::PanelFamily) =
   end
 
 backend_curtain_wall(b::Backend, s, path::Path, bottom::Real, height::Real, l_thickness::Real, r_thickness::Real, kind::Symbol) =
-  let family = getproperty(s.family, kind)
+  let family = getproperty(s.family, kind),
+      mat = get_material(b, family_ref(b, family))
     with_family_in_layer(b, family) do
-      backend_wall(b, translate(path, vz(bottom)), height, l_thickness, r_thickness, family)
+      backend_wall_with_materials(b, translate(path, vz(bottom)), height, l_thickness, r_thickness, mat, mat)
     end
   end
 #
@@ -861,14 +876,14 @@ realize(b::Backend, s::Column) =
   end
 
 realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
-  backend_cylinder(b, cb, profile.radius, length*support_z_fighting_factor, realize(b, s.family).material)
+  backend_cylinder(b, cb, profile.radius, length*support_z_fighting_factor, get_material(b, family_ref(b, s.family)))
 
 realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   let profile_u0 = profile.corner,
       c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
       # need to test whether it is rotation on center or on axis
       o = loc_from_o_phi(c, s.angle)
-    backend_right_cuboid(b, o, profile.dx, profile.dy, length, realize(b, s.family).material)
+    backend_right_cuboid(b, o, profile.dx, profile.dy, length, get_material(b, family_ref(b, s.family)))
   end
 
 # Tables and chairs
@@ -904,7 +919,7 @@ realize(b::Backend, s::Table) =
   end
 
 backend_rectangular_table(b::Backend, p, angle, f) =
-  realize_table(b, get_material(b, realize(b, f).material),
+  realize_table(b, get_material(b, family_ref(b, f)),
                 loc_from_o_phi(p, angle), f.length, f.width, f.height, f.top_thickness, f.leg_thickness)
 
 realize_table(b::Backend, mat, p::Loc, length::Real, width::Real, height::Real,
@@ -928,7 +943,7 @@ realize(b::Backend, s::Chair) =
   end
 
 backend_chair(b::Backend, p, angle, f) =
-  let mat = get_material(b, realize(b, f).material)
+  let mat = get_material(b, family_ref(b, f))
     realize_chair(b, mat, loc_from_o_phi(p, angle), f.length, f.width, f.height, f.seat_height, f.thickness)
   end
 
@@ -1029,32 +1044,45 @@ realize(b::Backend, s::TrussBar) =
 # Some backends (e.g., Radiance and POVRay) can specify different materials to different parts of a family.
 # For example, a slab might have different materials for the top, the bottom, and the sides
 
-abstract type BackendFamily <: Family end
+abstract type BackendFamily{Material} <: Family end
 
-struct BackendMaterialFamily{Material} <: BackendFamily
+struct BackendMaterialFamily{Material} <: BackendFamily{Material}
   material::Material
 end
 
-struct BackendSlabFamily{Material} <: BackendFamily
+struct BackendSlabFamily{Material} <: BackendFamily{Material}
   top_material::Material
   bottom_material::Material
   side_material::Material
 end
 
-struct BackendRoofFamily{Material} <: BackendFamily
+struct BackendRoofFamily{Material} <: BackendFamily{Material}
   top_material::Material
   bottom_material::Material
   side_material::Material
 end
 
-struct BackendWallFamily{Material} <: BackendFamily
+struct BackendWallFamily{Material} <: BackendFamily{Material}
   right_material::Material
   left_material::Material
 end
 
 backend_get_family_ref(b::Backend, f::Family, bf::BackendFamily) = bf
+
+# By default, the material is the realization of the family
+get_material(b::Backend, f) = f
+panel_material(b::Backend, f) = f
+wall_materials(b::Backend, f) = (f, f)
+slab_materials(b::Backend, f) = (f, f, f)
+
+# BackendFamily can do better
+get_material(b::Backend, f::BackendMaterialFamily) = f.material
+panel_material(b::Backend, f::BackendMaterialFamily) = f.material
+wall_materials(b::Backend, f::BackendWallFamily) = (f.right_material, f.left_material)
+slab_materials(b::Backend, f::Union{BackendSlabFamily,BackendRoofFamily}) = (f.top_material, f.bottom_material, f.side_material)
+
 # When using family_in_layer(true), we can have default behavior
-layer_from_family(f::BackendMaterialFamily, backend) = f.material
+layer_from_family(b::Backend, f::BackendMaterialFamily) = f.material
 
 
 #=

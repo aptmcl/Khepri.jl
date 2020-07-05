@@ -399,9 +399,10 @@ realize(b::Unity, s::IrregularPyramidFrustum) =
 realize(b::Unity, s::IrregularPrism) =
   @remote(b, PyramidFrustum(s.bs, map(p -> (p + s.v), s.bs)))
 
-backend_right_cuboid(b::Unity, cb, width, height, h, angle) =
-  @remote(b, RightCuboid(cb, vz(1, cb.cs), vx(1, cb.cs), height, width, h, angle))
-
+backend_right_cuboid(b::Unity, cb, width, height, h, angle, material) =
+  isnothing(material) ?
+    @remote(b, RightCuboid(cb, vz(1, cb.cs), vx(1, cb.cs), height, width, h, angle)) :
+    @remote(b, RightCuboidWithMaterial(cb, vz(1, cb.cs), vx(1, cb.cs), height, width, h, angle, material))
 
 #unity"public GameObject Box2(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz)"
 
@@ -658,20 +659,16 @@ abstract type UnityFamily <: Family end
 
 struct UnityMaterialFamily <: UnityFamily
   name::String
-  parameter_map::Dict{Symbol,String}
-  ref::Parameter{Any}
 end
 
-unity_material_family(name, pairs...) = UnityMaterialFamily(name, Dict(pairs...), Parameter{Any}(nothing))
+unity_material_family(name, pairs...) = UnityMaterialFamily(name)
 backend_get_family_ref(b::Unity, f::Family, uf::UnityMaterialFamily) = @remote(b, LoadMaterial(uf.name))
 
 struct UnityResourceFamily <: UnityFamily
   name::String
-  parameter_map::Dict{Symbol,String}
-  ref::Parameter{Any}
 end
 
-unity_resource_family(name, pairs...) = UnityResourceFamily(name, Dict(pairs...), Parameter{Any}(nothing))
+unity_resource_family(name, pairs...) = UnityResourceFamily(name)
 backend_get_family_ref(b::Unity, f::Family, uf::UnityResourceFamily) = @remote(b, LoadResource(uf.name))
 
 set_backend_family(default_wall_family(), unity, unity_material_family("Default/Materials/Plaster"))
@@ -694,18 +691,17 @@ set_backend_family(default_curtain_wall_family().transom_frame, unity, unity_mat
 set_backend_family(default_curtain_wall_family().mullion_frame, unity, unity_material_family("Default/Materials/Steel"))
 
 backend_rectangular_table(b::Unity, c, angle, family) =
-    @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
+    @remote(b, InstantiateBIMElement(family_ref(b, family), c, -angle))
 
 backend_chair(b::Unity, c, angle, family) =
-    @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
+    @remote(b, InstantiateBIMElement(family_ref(b, family), c, -angle))
 
 backend_rectangular_table_and_chairs(b::Khepri.Unity, c, angle, family) =
-    @remote(b, InstantiateBIMElement(realize(b, family), c, -angle))
-
+    @remote(b, InstantiateBIMElement(family_ref(b, family), c, -angle))
 
 backend_slab(b::Unity, profile, holes, thickness, family) =
   let bot_vs = path_vertices(profile)
-    @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, realize(b, family)))
+    @remote(b, Slab(bot_vs, map(path_vertices, holes), thickness, family_ref(b, family)))
   end
 
 ## HACK: Is this still needed? backend_cylinder takes care of this, doesn't it?
@@ -714,7 +710,7 @@ realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::Circul
     cb,
     profile.radius,
     add_z(cb, length*support_z_fighting_factor), #We reduce height just a bit to avoid Z-fighting
-    realize(b, s.family)))
+    family_ref(b, s.family)))
 
 realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   let profile_u0 = profile.corner,
@@ -723,7 +719,7 @@ realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::Rectan
       c, vz(1, c.cs), vx(1, c.cs), profile.dy, profile.dx,
       length*support_z_fighting_factor,
       -s.angle,
-      realize(b, s.family)))
+      family_ref(b, s.family)))
   end
 
 realize(b::Unity, s::Panel) =
@@ -736,7 +732,7 @@ realize(b::Unity, s::Panel) =
     @remote(b, Panel(
       map(p -> p - n, verts),
       n*2,
-      realize(b, s.family)))
+      family_ref(b, s.family)))
   end
 
 #=
@@ -780,15 +776,15 @@ backend_wall_path(b::Unity, path::Path, height, l_thickness, r_thickness) =
 realize(b::Unity, w::Window) = void_ref(b)
 realize(b::Unity, w::Door) = void_ref(b)
 
-realize_pyramid_frustum(b::Unity, bot_vs::Locs, top_vs::Locs, material) =
-    UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, material)))
+realize_pyramid_frustum(b::Unity, top_mat, bot_mat, side_mat, bot_vs::Locs, top_vs::Locs) =
+    UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, side_mat)))
 
 #
 
 realize(b::Unity, s::TrussNode) =
-    @remote(b, SphereWithMaterial(s.p, s.family.radius, realize(b, s.family)))
+    @remote(b, SphereWithMaterial(s.p, s.family.radius, family_ref(b, s.family)))
 realize(b::Unity, s::TrussBar) =
-    @remote(b, CylinderWithMaterial(s.p0, s.family.radius, s.p1, realize(b, s.family)))
+    @remote(b, CylinderWithMaterial(s.p0, s.family.radius, s.p1, family_ref(b, s.family)))
 
 ############################################
 #=
@@ -803,12 +799,11 @@ set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Unity) =
   end
 
 get_view(b::Unity) =
-    (@remote(b, ViewCamera()), @remote(b, ViewTarget()), @remote(b, ViewLens()))
+  (@remote(b, ViewCamera()), @remote(b, ViewTarget()), @remote(b, ViewLens()))
 
 zoom_extents(b::Unity) = @remote(b, ZoomExtents())
 
 view_top(b::Unity) = @remote(b, ViewTop())
-
 
 delete_all_shapes(b::Unity) = @remote(b, DeleteAll())
 

@@ -183,7 +183,7 @@ Three.js uses 2D locations and 3D locations
 abstract type Meshcat2D end
 
 convert(::Type{Meshcat2D}, p::Loc) = (cx(p),cy(p))
-meshcat_2d(p::Loc) = (cx(p),cy(p))
+meshcat_2d(p::Loc) = let z =  @assert(abs(cz(p)) < 1e-10); (cx(p),cy(p)) end
 meshcat_3d(p::Loc) = (cx(p),cy(p),cz(p))
 meshcat_line_curve_2d(v1::Loc, v2::Loc) =
   (type="LineCurve", v1=meshcat_2d(v1), v2=meshcat_2d(v2))
@@ -881,7 +881,7 @@ realize(b::MCAT, s::Sphere) =
 realize(b::MCAT, s::Torus) =
   add_object(b, meshcat_torus(s.center, s.re, s.ri, material(b)))
 
-backend_right_cuboid(b::MCAT, cb, width, height, h, material=material(b)) =
+backend_right_cuboid(b::MCAT, cb, width, height, h, material) =
   add_object(b, meshcat_box(add_xy(cb, -width/2, -height/2), width, height, h, material))
 
 realize(b::MCAT, s::Box) =
@@ -1129,23 +1129,19 @@ realize(b::MCAT, s::Union{Door, Window}) =
   void_ref(b)
 
 ####################################################
-MeshcatMaterial = Any
+MeshcatMaterial = NamedTuple
 
-const MeshcatMaterialFamily = BackendMaterialFamily{MeshcatMaterial}
 meshcat_material_family(mat::MeshcatMaterial) =
-  MeshcatMaterialFamily(mat)
+  BackendMaterialFamily(mat)
 
-const MeshcatSlabFamily = BackendSlabFamily{MeshcatMaterial}
 meshcat_slab_family(top::MeshcatMaterial, bot::MeshcatMaterial=top, side::MeshcatMaterial=bot) =
-  MeshcatSlabFamily(top, bot, side)
+  BackendSlabFamily(top, bot, side)
 
-const MeshcatRoofFamily = BackendRoofFamily{MeshcatMaterial}
 meshcat_roof_family(top::MeshcatMaterial, bot::MeshcatMaterial=top, side::MeshcatMaterial=bot) =
-  MeshcatRoofFamily(top, bot, side)
+  BackendRoofFamily(top, bot, side)
 
-const MeshcatWallFamily = BackendWallFamily{MeshcatMaterial}
 meshcat_wall_family(right::MeshcatMaterial, left::MeshcatMaterial=right) =
-  MeshcatWallFamily(right, left)
+  BackendWallFamily(right, left)
 
 export meshcat_material_family,
        meshcat_slab_family,
@@ -1181,11 +1177,6 @@ set_backend_family(default_curtain_wall_family().panel, meshcat, meshcat_materia
 set_backend_family(default_curtain_wall_family().boundary_frame, meshcat, meshcat_material_family(meshcat_generic_metal))
 set_backend_family(default_curtain_wall_family().transom_frame, meshcat, meshcat_material_family(meshcat_generic_metal))
 set_backend_family(default_curtain_wall_family().mullion_frame, meshcat, meshcat_material_family(meshcat_generic_metal))
-
-
-get_material(b::MCAT, m) = m
-backend_get_family_ref(b::MCAT, f::Family, bf::MeshcatMaterialFamily) = bf
-
 
 realize_slab(b::MCAT, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::Family) =
   let base = vz(level.height + slab_family_elevation(b, family)),

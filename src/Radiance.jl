@@ -163,7 +163,7 @@ radiance_string(m::RadianceMaterial) =
 write_rad_material(io::IO, material::RadianceMaterial) =
   write(io, radiance_string(material))
 
-#Base.show(io::IO, mat::RadianceMaterial) =
+#show(io::IO, mat::RadianceMaterial) =
 #  write_rad_material(io, mat)
 
 radiance_material(name::String, type::String;
@@ -192,6 +192,11 @@ radiance_dielectric_material(name::String; args...) =
   radiance_material(name, "dielectric"; args...)
 
 #Some pre-defined materials
+# Also, see:
+# https://archbpswiki.bwk.tue.nl/bpswiki/index.php?title=Radiance
+# http://www.artifice.com/radiance/rad_materials.html
+
+
 radiance_material_white = radiance_plastic_material("white", gray=1.0) #
 radiance_generic_ceiling_70 = radiance_plastic_material("GenericCeiling_70", gray=0.7)
 radiance_generic_ceiling_80 = radiance_plastic_material("GenericCeiling_80", gray=0.8)
@@ -204,6 +209,7 @@ radiance_outside_facade_30 = radiance_plastic_material("OutsideFacade_30", gray=
 radiance_outside_facade_35 = radiance_plastic_material("OutsideFacade_35", gray=0.35)
 radiance_generic_glass_80 = radiance_glass_material("Glass_80", gray=0.8)
 radiance_generic_metal = radiance_metal_material("SheetMetal_80", gray=0.8)
+radiance_light_wood = radiance_plastic_material("LightWood", red=0.5, green=0.3, blue=0.2)
 
 default_radiance_material = Parameter(radiance_generic_metal)
 
@@ -219,6 +225,7 @@ export radiance_material_white,
        radiance_outside_facade_35,
        radiance_generic_glass_80,
        radiance_generic_metal,
+       radiance_light_wood,
        default_radiance_material
 
 ####################################################
@@ -608,9 +615,8 @@ end
 
 #
 
-set_view(camera::Loc, target::Loc, lens::Real, b::Radiance) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::Radiance) =
   begin
-#    set_view(camera, target, lens, autocad)
     b.camera = camera
     b.target = target
     b.lens = lens
@@ -874,36 +880,16 @@ In some cases it might be the same material, but in others, such
 as slabs, outside walls, etc, we will have different materials.
 =#
 
-abstract type RadianceFamily <: Family end
-
-struct RadianceMaterialFamily <: RadianceFamily
-  material::RadianceMaterial
-end
-
 radiance_material_family(mat::RadianceMaterial) =
-  RadianceMaterialFamily(mat)
-
-struct RadianceSlabFamily <: RadianceFamily
-  top_material::RadianceMaterial
-  bottom_material::RadianceMaterial
-  side_material::RadianceMaterial
-end
+  BackendMaterialFamily(mat)
 
 radiance_slab_family(top::RadianceMaterial, bot::RadianceMaterial=top, side::RadianceMaterial=bot) =
-  RadianceSlabFamily(top, bot, side)
+  BackendSlabFamily(top, bot, side)
 
 radiance_roof_family = radiance_slab_family
 
-
-struct RadianceWallFamily <: RadianceFamily
-  right_material::RadianceMaterial
-  left_material::RadianceMaterial
-end
-
 radiance_wall_family(right::RadianceMaterial, left::RadianceMaterial=right) =
-  RadianceWallFamily(right, left)
-
-backend_get_family_ref(b::Radiance, f::Family, rf::RadianceFamily) = rf
+  BackendWallFamily(right, left)
 
 export radiance_material_family,
        radiance_slab_family,
@@ -965,6 +951,13 @@ realize(b::Radiance, s::Beam) =
 
 realize(b::Radiance, w::Window) = nothing
 realize(b::Radiance, w::Door) = nothing
+
+# HACK: JUST FOR TESTING
+realize(b::Radiance, s::Thicken) =
+  realize(b, s.shape)
+
+realize(b::Radiance, s::EmptyShape) = void_ref(b)
+realize(b::Radiance, s::UniversalShape) = void_ref(b)
 
 #=
 
@@ -1126,4 +1119,35 @@ export_sensors(path::Path, sensors=radiance_sensors()) =
       end
     end
     ptspath
+  end
+
+#=
+
+  1. Go to https://www.energyplus.net/weather
+  2. Click on the location
+  3. Copy the link "Download Weather File"
+
+  ;;E.g., for Anchorage, USA, we get:
+
+  https://www.energyplus.net/weather-download/north_and_central_america_wmo_region_4/USA/AK/USA_AK_Anchorage.Intl.AP.702730_TMY3/USA_AK_Anchorage.Intl.AP.702730_TMY3.epw
+
+=#
+
+epw_weather_file = Parameter{AbstractString}("")
+
+epw_weather_file(download("https://www.energyplus.net/weather-download/europe_wmo_region_6/PRT//PRT_Lisboa.085360_INETI/PRT_Lisboa.085360_INETI.epw"))
+epw_weather_file(download("https://www.energyplus.net/weather-download/north_and_central_america_wmo_region_4/USA/AK/USA_AK_Anchorage.Intl.AP.702730_TMY3/USA_AK_Anchorage.Intl.AP.702730_TMY3.epw"))
+
+process_weather_file(epwpath::AbstractString=epw_weather_file()) =
+  let weapath = path_replace_suffix(epwpath, ".wea"),
+      wea_line(io, rx) = match(rx, readline(io)).captures[1]
+    run(`$(radiance_cmd("epw2wea")) $(epwpath) $(weapath)`)
+    open(weapath) do s
+      (wea_line(s, r"place (.+)"),
+       wea_line(s, r"latitude (.+)"),
+       wea_line(s, r"longitude (.+)"),
+       wea_line(s, r"time_zone (.+)"),
+       wea_line(s, r"site_elevation (.+)"),
+       weapath)
+    end
   end

@@ -649,4 +649,29 @@ used_materials(b::Plot) =
   unique(map(f -> realize(s.family, b), b.shapes))
 
 ####################################################
+
+
+export export_to_jupyter
+export_to_jupyter(b::Jupyter=current_backend()) =
+  let camera = in_world(b.camera),
+      target = in_world(b.target),
+      (width, height) = render_size(),
+      layout =
+    PlotlyJS.Layout(autosize=true, width=width, height=height,
+                    margin=attr(l=0, r=0, b=0, t=0),
+                    camera_center_x=target.x,
+                    camera_center_y=target.y,
+                    camera_center_z=target.z,
+                    camera_eye_x=camera.x,
+                    camera_eye_y=camera.y,
+                    camera_eye_z=camera.z,
+                    scene_aspectmode="data",
+                    scene_xaxis_showticklabels=false,
+                    scene_yaxis_showticklabels=false,
+                    scene_zaxis_showticklabels=false,
+                    )
+    PlotlyJS.plot([Khepri.ref(s).value for s in b.shapes if !is_empty_shape(s)], layout)
+  end
+
+
 =#

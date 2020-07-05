@@ -249,11 +249,13 @@ struct POVRayDefinition <: POVRayMaterial
   description::String
 end
 
+convert_to_povray_identifier(name) = replace(name, " " => "_")
+
 write_povray_definition(io::IO, d::POVRayDefinition) =
-  write(io, "#declare $(d.name) =\n  $(d.kind) $(d.description)\n")
+  write(io, "#declare $(convert_to_povray_identifier(d.name)) =\n  $(d.kind) $(d.description)\n")
 
 show(io::IO, ::MIMEPOVRay, d::POVRayDefinition) =
-  write(io, "$(d.kind) { $(d.name) }")
+  write(io, "$(d.kind) { $(convert_to_povray_identifier(d.name)) }")
 
 struct POVRayInclude <: POVRayMaterial
   filename::AbstractString
@@ -455,7 +457,7 @@ const povray =
          Dict{Shape,POVRayMaterial}(),
          Dict{POVRayMaterial,POVRayMaterial}(),
          povray_realistic_sky_string(DateTime(2020, 9, 21, 10, 0, 0), 39, 9, 0, 5, true),
-         povray_ground_string(z(0), rgb(1,1,1)),
+         povray_ground_string(z(0), rgb(0.8,0.8,0.8)),
          LazyParameter(IOBuffer, IOBuffer),
          xyz(10,10,10),
          xyz(0,0,0),
@@ -469,7 +471,7 @@ get_material(b::POVRay, s::Shape) = get_material(b, get(b.shape_material, s, def
 
 #
 
-set_view(camera::Loc, target::Loc, lens::Real, b::POVRay) =
+set_view(camera::Loc, target::Loc, lens::Real, aperture::Real, b::POVRay) =
   begin
     b.camera = camera
     b.target = target
@@ -649,7 +651,7 @@ realize(b::POVRay, s::SweepPath) =
     void_ref(b)
   end
 
-#
+# HACK: JUST FOR TESTING
 realize(b::POVRay, s::Thicken) =
   realize(b, s.shape)
 
@@ -840,6 +842,11 @@ set_backend_family(default_panel_family(), povray, povray_material_family(povray
 set_backend_family(default_table_family(), povray, povray_material_family(povray_wood))
 set_backend_family(default_chair_family(), povray, povray_material_family(povray_wood))
 set_backend_family(default_table_chair_family(), povray, povray_material_family(povray_wood))
+set_backend_family(default_truss_node_family(), povray, povray_material_family(povray_metal))
+set_backend_family(default_truss_bar_family(), povray, povray_material_family(povray_metal))
+
+
+use_family_in_layer(b::POVRay) = true
 
 # Layers
 
@@ -946,8 +953,8 @@ render_view(path::String, b::POVRay) =
     @info povpath
     export_to_povray(povpath)
     film_active() ?
-      run(`$(povray_cmd()) +A Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
-      run(`$(povray_cmd()) +A Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
+      run(`$(povray_cmd()) +A +HR Width=$(render_width()) Height=$(render_height()) -D /EXIT /RENDER $(povpath)`, wait=true) :
+      run(`$(povray_cmd()) +A +HR Width=$(render_width()) Height=$(render_height()) /RENDER $(povpath)`, wait=false)
   end
 
 export clay_model

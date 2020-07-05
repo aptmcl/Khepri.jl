@@ -387,24 +387,11 @@ realize(b::RH, s::Cuboid) =
 realize(b::RH, s::RegularPyramidFrustum) =
     @remote(b, IrregularPyramidFrustum(regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
                                        regular_polygon_vertices(s.edges, add_z(s.cb, s.h), s.rt, s.angle, s.inscribed)))
-realize(b::RH, s::RegularPyramid) =
-    @remote(b, IrregularPyramid(regular_polygon_vertices(s.edges, s.cb, s.rb, s.angle, s.inscribed),
-                                add_z(s.cb, s.h)))
-realize(b::RH, s::IrregularPyramidFrustum) =
-  @remote(b, IrregularPyramidFrustum(s.bs, s.ts))
-
-realize(b::RH, s::IrregularPyramid) =
-    @remote(b, IrregularPyramid(s.bs, s.t))
-realize(b::RH, s::RegularPrism) =
-    let cbs = regular_polygon_vertices(s.edges, s.cb, s.r, s.angle, s.inscribed)
-        @remote(b, IrregularPyramidFrustum(cbs,
-                                           map(p -> add_z(p, s.h), cbs)))
-    end
-realize(b::RH, s::IrregularPrism) =
-    @remote(b, IrregularPyramidFrustum(s.bs,
-                                       map(p -> p + s.v, s.bs)))
-
-backend_right_cuboid(b::RH, cb, width, height, h, angle) =
+backend_pyramid(b::RH, bs::Locs, t::Loc) =
+  @remote(b, IrregularPyramid(bs, t))
+backend_pyramid_frustum(b::RH, bs::Locs, ts::Locs) =
+  @remote(b, IrregularPyramidFrustum(bs, ts))
+backend_right_cuboid(b::RH, cb, width, height, h, material) =
   @remote(b, XYCenteredBox(cb, vx(1, cb.cs), vy(1, cb.cs), width, height, h))
 
 realize(b::RH, s::Box) =
@@ -591,11 +578,11 @@ realize(b::RH, s::Thicken) =
 
 # Families
 
-backend_get_family(b::RH, f::TableFamily) =
+realize(b::RH, f::TableFamily) =
     @remote(b, CreateRectangularTableFamily(f.length, f.width, f.height, f.top_thickness, f.leg_thickness))
-backend_get_family(b::RH, f::ChairFamily) =
+realize(b::RH, f::ChairFamily) =
     @remote(b, CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness))
-backend_get_family(b::RH, f::TableChairFamily) =
+realize(b::RH, f::TableChairFamily) =
     @remote(b, CreateRectangularTableAndChairsFamily(
         realize(b, f.table_family), realize(b, f.chair_family),
         f.table_family.length, f.table_family.width,
@@ -801,7 +788,7 @@ generate_captured_shape(s::Shape, b::RH) =
 
 generate_captured_shapes(ss::Shapes, b::RH) =
   begin
-    print("captured_shapes(autocad, [")
+    print("captured_shapes(rhino, [")
     for s in ss
       print(ref(s).value)
       print(", ")
@@ -818,3 +805,44 @@ all_shapes_in_layer(layer, b::RH) =
 
 render_view(path::String, b::RH) =
   @remote(b, Render(render_width(), render_height(), path))
+
+
+#=
+BIM families for Rhino
+=#
+
+abstract type RhinoFamily <: Family end
+
+struct RhinoLayerFamily <: RhinoFamily
+  name::String
+  color::RGB
+  ref::Parameter{Any}
+end
+
+rhino_layer_family(name, color::RGB=rgb(1,1,1)) =
+  RhinoLayerFamily(name, color, Parameter{Any}(nothing))
+
+backend_get_family_ref(b::RH, f::Family, af::RhinoLayerFamily) =
+  backend_create_layer(b, af.name, true, af.color)
+
+set_backend_family(default_wall_family(), rhino, rhino_layer_family("Wall"))
+set_backend_family(default_slab_family(), rhino, rhino_layer_family("Slab"))
+set_backend_family(default_roof_family(), rhino, rhino_layer_family("Roof"))
+set_backend_family(default_beam_family(), rhino, rhino_layer_family("Beam"))
+set_backend_family(default_column_family(), rhino, rhino_layer_family("Column"))
+set_backend_family(default_door_family(), rhino, rhino_layer_family("Door"))
+set_backend_family(default_panel_family(), rhino, rhino_layer_family("Panel"))
+
+set_backend_family(default_table_family(), rhino, rhino_layer_family("Table"))
+set_backend_family(default_chair_family(), rhino, rhino_layer_family("Chair"))
+set_backend_family(default_table_chair_family(), rhino, rhino_layer_family("TableChairs"))
+
+set_backend_family(default_curtain_wall_family(), rhino, rhino_layer_family("CurtainWall"))
+set_backend_family(default_curtain_wall_family().panel, rhino, rhino_layer_family("CurtainWall-Panel"))
+set_backend_family(default_curtain_wall_family().boundary_frame, rhino, rhino_layer_family("CurtainWall-Boundary"))
+set_backend_family(default_curtain_wall_family().transom_frame, rhino, rhino_layer_family("CurtainWall-Transom"))
+set_backend_family(default_curtain_wall_family().mullion_frame, rhino, rhino_layer_family("CurtainWall-Mullion"))
+#current_backend(rhino)
+
+set_backend_family(default_truss_node_family(), rhino, rhino_layer_family("TrussNodes"))
+set_backend_family(default_truss_bar_family(), rhino, rhino_layer_family("TrussBars"))

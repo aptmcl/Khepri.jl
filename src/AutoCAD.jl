@@ -297,9 +297,7 @@ acad_layer_family(name, color::RGB=rgb(1,1,1)) =
   ACADLayerFamily(name, color, Parameter{Any}(nothing))
 
 backend_get_family_ref(b::ACAD, f::Family, af::ACADLayerFamily) =
-  let to255(x) = round(UInt8, x*255)
-    @remote(b, CreateLayer(af.name, true, to255(red(af.color)), to255(green(af.color)), to255(blue(af.color))))
-  end
+  backend_create_layer(b, af.name, true, af.color)
 
 set_backend_family(default_wall_family(), autocad, acad_layer_family("Wall"))
 set_backend_family(default_slab_family(), autocad, acad_layer_family("Slab"))
@@ -593,11 +591,12 @@ realize(b::ACAD, s::Sphere) =
 realize(b::ACAD, s::Torus) =
   @remote(b, Torus(s.center, vz(1, s.center.cs), s.re, s.ri))
 
-backend_pyramid(b::ACAD, bs, t) =
-  @remote(b, IrregularPyramid(s.bs, s.t))
-backend_pyramid_frustum(b::ACAD, bs, ts) =
+backend_pyramid(b::ACAD, bs::Locs, t::Loc) =
+  @remote(b, IrregularPyramid(bs, t))
+backend_pyramid_frustum(b::ACAD, bs::Locs, ts::Locs) =
     @remote(b, IrregularPyramidFrustum(bs, ts))
-backend_right_cuboid(b::ACAD, cb, width, height, h) =
+
+backend_right_cuboid(b::ACAD, cb, width, height, h, material) =
   @remote(b, CenteredBox(cb, width, height, h))
 realize(b::ACAD, s::Box) =
   @remote(b, Box(s.c, s.dx, s.dy, s.dz))
@@ -766,11 +765,11 @@ backend_frame_at(b::ACAD, c::Shape1D, t::Real) = @remote(b, CurveFrameAt(ref(c).
 backend_frame_at(b::ACAD, s::Shape2D, u::Real, v::Real) = @remote(b, SurfaceFrameAt(ref(s).value, u, v))
 
 # BIM
-backend_get_family(b::ACAD, f::TableFamily) =
+realize(b::ACAD, f::TableFamily) =
     @remote(b, CreateRectangularTableFamily(f.length, f.width, f.height, f.top_thickness, f.leg_thickness))
-backend_get_family(b::ACAD, f::ChairFamily) =
+realize(b::ACAD, f::ChairFamily) =
     @remote(b, CreateChairFamily(f.length, f.width, f.height, f.seat_height, f.thickness))
-backend_get_family(b::ACAD, f::TableChairFamily) =
+realize(b::ACAD, f::TableChairFamily) =
     @remote(b, CreateRectangularTableAndChairsFamily(
         realize(b, f.table_family), realize(b, f.chair_family),
         f.table_family.length, f.table_family.width,
