@@ -38,7 +38,11 @@ export empty_path,
        join_paths,
        subtract_paths,
        path_vertices,
-       path_frames
+       path_frames,
+       mirrored_path,
+       mirrored_on_x,
+       mirrored_on_y,
+       mirrored_on_z
 
 path_tolerance = Parameter(1e-10)
 coincident_path_location(p1::Loc, p2::Loc) = distance(p1, p2) < path_tolerance()
@@ -168,12 +172,13 @@ ensure_no_repeated_locations(locs) =
 
 path_start(path::PolygonalPath) = path.vertices[1]
 path_end(path::OpenPolygonalPath) = path.vertices[end]
-path_end(path::ClosedPolygonalPath) = path.vertices[1]
+path_end(path::ClosedPath) = path_start(path)
 
 join_paths(p1::OpenPolygonalPath, p2::OpenPolygonalPath) =
-  coincident_path_location(path_end(p1), path_start(p2)) ?
-    polygonal_path([p1.vertices..., p2.vertices...]) :
-    error("Paths are non contiguous")
+  polygonal_path([p1.vertices...,
+                  (coincident_path_location(path_end(p1), path_start(p2)) ?
+                     p2.vertices[2:end] :
+                     p2.vertices)...])
 
 # Splines
 
@@ -911,4 +916,15 @@ top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width
 
 ## Utility operations
 
-mirror(path::Path, p::Loc, v::Vec) = error("Mush be finished")
+Base.reverse(path::OpenPolygonalPath) =
+  open_polygonal_path(reverse(path_vertices(path)))
+
+mirrored_path(path::Path, p::Loc, v::Vec) =
+  error("Mush be finished")
+
+mirrored_on_x(path::OpenPolygonalPath) =
+  join_paths(path, open_polygonal_path(reverse(map(p->xyz(p.x, -p.y, -p.z, p.cs), path_vertices(path)))))
+mirrored_on_y(path::OpenPolygonalPath) =
+  join_paths(path, open_polygonal_path(reverse(map(p->xyz(-p.x, p.y, -p.z, p.cs), path_vertices(path)))))
+mirrored_on_z(path::OpenPolygonalPath) =
+  join_paths(path, open_polygonal_path(reverse(map(p->xyz(-p.x, -p.y, p.z, p.cs), path_vertices(path)))))
