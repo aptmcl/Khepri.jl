@@ -1059,6 +1059,9 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
 realize(b::Backend, s::SurfaceGrid) =
   backend_surface_grid(b, s.points, s.closed_u, s.closed_v, s.smooth_u, s.smooth_v)
 
+@defproxy(mesh, Shape2D, vertices::Locs=[u0(), ux(), uy()], faces::Vector{Vector{Int}}=[[0,1,2]])
+realize(b::Backend, s::Mesh) =
+  backend_mesh(b, s.vertices, s.faces)
 
 
 

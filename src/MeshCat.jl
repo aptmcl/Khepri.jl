@@ -931,6 +931,9 @@ realize(b::MCAT, s::SurfaceGrid) =
 
 smooth_pts(pts) = in_world.(path_frames(open_spline_path(pts)))
 
+backend_mesh(b::MCAT, vertices, faces) =
+  add_object(b, meshcat_mesh(vertices, faces, material(b)))
+
 #=
 realize(b::MCAT, s::SweepPath) =
   let vertices = in_world.(path_vertices(s.profile)),
