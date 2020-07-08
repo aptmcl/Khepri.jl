@@ -973,7 +973,6 @@ frame_at(s::Shape2D, u::Real, v::Real) = backend_frame_at(backend(s), s, u, v)
 frame_at(s::SurfaceRectangle, u::Real, v::Real) = add_xy(s.corner, u, v)
 frame_at(s::SurfaceCircle, u::Real, v::Real) = add_pol(s.center, u, v)
 
-import Base.union
 export union, intersection, subtraction
 #=
 We do some pre-filtering to deal with the presence of empty shapes or to simplify one-arg cases.

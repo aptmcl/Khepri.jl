@@ -15,6 +15,7 @@ using PlotlyJS
 import Base.show, Base.zero, Base.iterate
 import Base.convert
 import Base.getindex, Base.firstindex, Base.lastindex, Base.broadcastable
+import Base.union
 
 include("Parameters.jl")
 include("Utils.jl")
