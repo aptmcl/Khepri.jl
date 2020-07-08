@@ -1567,3 +1567,91 @@ show_truss_deformation(results;
       end
     end
   end
+
+export max_displacement
+max_displacement(results) =
+  let disps = displacements(nodes(results)),
+      disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
+    max(map(norm∘disp, robot.truss_node_data))
+  end
+
+#=
+Change view, save image
+https://forums.autodesk.com/t5/robot-structural-analysis-forum/api-command-vba-projection-capture-of-a-view/m-p/3188566/highlight/true#M937
+
+Public Sub CreeVueRM()
+' définition d'une vue
+
+robapp.Interactive = True
+robapp.Visible = True
+robapp.Window.Activate
+
+
+robapp.Project.CalcEngine.Calculate ' calculate model
+
+
+
+Dim mavueRobot As IRobotView3 ' this is important to set IRobotView3 if you want to make screen capture of this view
+
+Set mavueRobot = robapp.Project.ViewMngr.GetView(1) ' it seems CreateView makes this strange affect, use GetView instead
+
+mavueRobot.Selection.Get(I_OT_CASE).FromText ("3") ' selecting case for results display
+mavueRobot.Redraw (True)
+
+mavueRobot.Projection = I_VP_3DXYZ
+
+' displaying map
+mavueRobot.ParamsFeMap.CurrentResult = I_VFMRT_GLOBAL_DISPLACEMENT_Z
+
+mavueRobot.Visible = True
+mavueRobot.Redraw (True)
+
+robapp.Project.ViewMngr.Refresh
+
+' making screen capture
+Dim ScPar As RobotViewScreenCaptureParams
+Set ScPar = robapp.CmpntFactory.Create(I_CT_VIEW_SCREEN_CAPTURE_PARAMS)
+
+ScPar.Name = "My screen capture"
+ScPar.UpdateType = I_SCUT_UPDATED_UPON_PRINTING
+mavueRobot.MakeScreenCapture ScPar
+
+
+
+robapp.Project.PrintEngine.SaveReportToOrganizer
+
+
+End Sub
+
+
+
+
+Dim ScPar As RobotViewScreenCaptureParams
+Set ScPar = robapp.CmpntFactory.Create(I_CT_VIEW_SCREEN_CAPTURE_PARAMS)
+
+
+
+ScPar.Name = "My screen capture"
+ScPar.UpdateType = I_SCUT_CURRENT_VIEW
+ScPar.Resolution = I_VSCR_4096
+mavueRobot.MakeScreenCapture ScPar
+
+
+
+robapp.Project.PrintEngine.AddScToReport "My screen capture"
+
+robapp.Project.PrintEngine.SaveReportToOrganizer
+
+
+
+' saving printout \ report to file
+
+robapp.Project.PrintEngine.SaveReportToFile "c:\Autodesk\output\rr.rtf", I_OFF_RTF_JPEG
+
+
+
+'or directly opening printout in Word
+
+robapp.Project.PrintEngine.ExternalPreviewReport EPF_MS_OFFICE
+
+=#
