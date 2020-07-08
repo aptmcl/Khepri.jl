@@ -921,17 +921,16 @@ meshcat_faces(si, sj, closed_u, closed_v) =
   end
 
 realize(b::MCAT, s::SurfaceGrid) =
-  let pts = in_world.(s.points),
+  let pts = s.points,
       si = size(pts, 1),
       sj = size(pts, 2),
-      pts =
       idxs = meshcat_faces(si, sj, s.closed_u, s.closed_v)
     add_object(b, meshcat_mesh(reshape(permutedims(pts),:), idxs, material(b)))
   end
 
 smooth_pts(pts) = in_world.(path_frames(open_spline_path(pts)))
 
-backend_mesh(b::MCAT, vertices, faces) =
+backend_surface_mesh(b::MCAT, vertices, faces) =
   add_object(b, meshcat_mesh(vertices, faces, material(b)))
 
 #=

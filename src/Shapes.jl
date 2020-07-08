@@ -582,6 +582,9 @@ map_division(f::Function, s::Shape2D, nu::Int, nv::Int, backend::Backend=current
 
 
 
+
+
+
 path_vertices(s::Shape1D) = path_vertices(shape_path(s))
 shape_path(s::Circle) = circular_path(s.center, s.radius)
 shape_path(s::Spline) = open_spline_path(s.points, s.v0, s.v1)
@@ -928,6 +931,14 @@ backend_stroke(b::Backend, path::Union{OpenPathSequence,ClosedPathSequence}) =
 backend_fill(b::Backend, path::ClosedPathSequence) =
     backend_fill_curves(b, map(path->backend_stroke(b, path), path.paths))
 
+backend_stroke(b::Backend, m::Mesh) =
+  let vs = m.vertices
+    for face in m.faces
+      backend_stroke_line(b, vs[face.+1]) #1-indexed
+    end
+  end
+backend_fill(b::Backend, m::Mesh) =
+  backend_surface_mesh(b, m.vertices, m.faces)
 
 #####################################################################
 ## Conversions
@@ -1059,9 +1070,9 @@ map_division(f::Function, s::SurfaceGrid, nu::Int, nv::Int, backend::Backend=cur
 realize(b::Backend, s::SurfaceGrid) =
   backend_surface_grid(b, s.points, s.closed_u, s.closed_v, s.smooth_u, s.smooth_v)
 
-@defproxy(mesh, Shape2D, vertices::Locs=[u0(), ux(), uy()], faces::Vector{Vector{Int}}=[[0,1,2]])
-realize(b::Backend, s::Mesh) =
-  backend_mesh(b, s.vertices, s.faces)
+@defproxy(surface_mesh, Shape2D, vertices::Locs=[u0(), ux(), uy()], faces::Vector{Vector{Int}}=[[0,1,2]])
+realize(b::Backend, s::SurfaceMesh) =
+  backend_surface_mesh(b, s.vertices, s.faces)
 
 
 

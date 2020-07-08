@@ -928,3 +928,21 @@ mirrored_on_y(path::OpenPolygonalPath) =
   join_paths(path, open_polygonal_path(reverse(map(p->xyz(-p.x, p.y, -p.z, p.cs), path_vertices(path)))))
 mirrored_on_z(path::OpenPolygonalPath) =
   join_paths(path, open_polygonal_path(reverse(map(p->xyz(-p.x, -p.y, p.z, p.cs), path_vertices(path)))))
+
+export mesh
+struct Mesh <: Path
+  vertices::Locs
+  faces::Vector{Vector{Int}}
+end
+mesh(vertices::Locs=[u0(), ux(), uy()], faces::Vector{Vector{Int}}=[[0,1,2]]) =
+  Mesh(vertices, faces)
+
+union(m::Mesh, ms...) =
+  length(ms) == 0 ?
+    m :
+    let n = length(m.vertices)
+      union(
+        mesh(vcat(m.vertices, ms[1].vertices),
+            vcat(m.faces, [face.+n for face in ms[1].faces])),
+        ms[2:end]...)
+    end
