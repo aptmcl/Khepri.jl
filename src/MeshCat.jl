@@ -921,10 +921,12 @@ meshcat_faces(si, sj, closed_u, closed_v) =
   end
 
 realize(b::MCAT, s::SurfaceGrid) =
-  let pts = s.points,
-      si = size(pts, 1),
+  backend_surface_grid(b, s.points, s.closed_u, s.closed_v, s.smooth_u, s.smooth_v)
+
+backend_surface_grid(b::MCAT, pts, closed_u, closed_v, smooth_u, smooth_v) =
+  let si = size(pts, 1),
       sj = size(pts, 2),
-      idxs = meshcat_faces(si, sj, s.closed_u, s.closed_v)
+      idxs = meshcat_faces(si, sj, closed_u, closed_v)
     add_object(b, meshcat_mesh(reshape(permutedims(pts),:), idxs, material(b)))
   end
 
