@@ -725,7 +725,7 @@ backend_sweep(b::Backend, path::Union{Shape,Path}, profile::Union{Shape,Path}, r
       frames = map_division(identity, path, 100) #rotation_minimizing_frames(path_frames(path))
     backend_surface_grid(
       b,
-      [xyz(cx(p), cy(p), cz(p), frame.cs) for frame in frames, p in vertices],
+      [xyz(cx(p), cy(p), cz(p), frame.cs) for p in vertices, frame in frames],
       is_closed_path(profile),
       is_closed_path(path),
       is_smooth_path(profile),
