@@ -175,10 +175,11 @@ path_end(path::OpenPolygonalPath) = path.vertices[end]
 path_end(path::ClosedPath) = path_start(path)
 
 join_paths(p1::OpenPolygonalPath, p2::OpenPolygonalPath) =
-  polygonal_path([p1.vertices...,
-                  (coincident_path_location(path_end(p1), path_start(p2)) ?
-                     p2.vertices[2:end] :
-                     p2.vertices)...])
+    coincident_path_location(p1.vertices[end], p2.vertices[1]) ?
+      collinear_points(p1.vertices[end-1], p1.vertices[end], p2.vertices[2]) ?
+        polygonal_path([p1.vertices[1:end-1]..., p2.vertices[2:end]...]) :
+        polygonal_path([p1.vertices[1:end-1]..., p2.vertices...]) :
+      polygonal_path([p1.vertices..., p2.vertices...])
 
 # Splines
 
@@ -903,7 +904,8 @@ is_smooth_path(path::Union{ArcPath,CircularPath,SplinePath}) = true
 ##Profiles are just predefined paths used for sections, usually centered at the origin
 export rectangular_profile,
        circular_profile,
-       top_aligned_rectangular_profile
+       top_aligned_rectangular_profile,
+       i_profile, plus_profile
 
 rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   centered_rectangular_path(u0(), width, height)
@@ -913,6 +915,27 @@ circular_profile(Radius::Real=1; radius::Real=Radius) =
 
 top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   rectangular_path(xy(-width/2,-height), width, height)
+
+i_profile(Width::Real=0.1, Height::Real=Width; width::Real=Width, height::Real=Height, web_thickness::Real=width/5, flange_thickness::Real=width/10) =
+    let w2 = width/2,
+        h2 = height/2,
+        wt2 = web_thickness/2,
+        ft = flange_thickness
+      mirrored_on_x(
+        mirrored_on_y(
+          open_polygonal_path([
+            x(wt2), xy(wt2, h2-ft), xy(w2, h2-ft), xy(w2, h2), y(h2)])))
+    end
+
+plus_profile(Width::Real=0.1, Height::Real=Width; width::Real=Width, height::Real=Height, thickness::Real=width/5) =
+    let w2 = width/2,
+        h2 = height/2,
+        t2 = thickness/2
+      mirrored_on_x(
+        mirrored_on_y(
+          open_polygonal_path([
+            x(w2), xy(w2, t2), xy(t2, t2), xy(t2, h2), y(h2)])))
+    end
 
 ## Utility operations
 

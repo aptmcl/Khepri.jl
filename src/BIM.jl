@@ -886,6 +886,14 @@ realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::Rect
     backend_right_cuboid(b, o, profile.dx, profile.dy, length, get_material(b, family_ref(b, s.family)))
   end
 
+realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::ClosedPolygonalPath, cb::Loc, length::Real) =
+  let ps = path_vertices(profile),
+      bot_vs = [add_xy(cb, p.x, p.y) for p in ps],
+      top_vs = [add_xyz(cb, p.x, p.y, length) for p in ps],
+      mat = get_material(b, family_ref(b, s.family))
+    realize_pyramid_frustum(b, mat, mat, mat, bot_vs, top_vs)
+  end
+
 # Tables and chairs
 
 @deffamily(table_family, Family,
