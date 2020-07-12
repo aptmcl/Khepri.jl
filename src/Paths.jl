@@ -905,6 +905,7 @@ is_smooth_path(path::Union{ArcPath,CircularPath,SplinePath}) = true
 export rectangular_profile,
        circular_profile,
        top_aligned_rectangular_profile,
+       bottom_aligned_rectangular_profile,
        i_profile, plus_profile
 
 rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
@@ -915,6 +916,9 @@ circular_profile(Radius::Real=1; radius::Real=Radius) =
 
 top_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
   rectangular_path(xy(-width/2,-height), width, height)
+
+bottom_aligned_rectangular_profile(Width::Real=1, Height::Real=1; width::Real=Width, height::Real=Height) =
+  rectangular_path(xy(-width/2, 0), width, height)
 
 i_profile(Width::Real=0.1, Height::Real=Width; width::Real=Width, height::Real=Height, web_thickness::Real=width/5, flange_thickness::Real=width/10) =
     let w2 = width/2,
