@@ -594,7 +594,7 @@ realize(b::ACAD, s::Torus) =
 backend_pyramid(b::ACAD, bs::Locs, t::Loc) =
   @remote(b, IrregularPyramid(bs, t))
 backend_pyramid_frustum(b::ACAD, bs::Locs, ts::Locs) =
-    @remote(b, IrregularPyramidFrustum(bs, ts))
+  @remote(b, IrregularPyramidFrustum(bs, ts))
 
 backend_right_cuboid(b::ACAD, cb, width, height, h, material) =
   @remote(b, CenteredBox(cb, width, height, h))
@@ -604,8 +604,8 @@ realize(b::ACAD, s::Cone) =
   @remote(b, Cone(add_z(s.cb, s.h), s.r, s.cb))
 realize(b::ACAD, s::ConeFrustum) =
   @remote(b, ConeFrustum(s.cb, s.rb, s.cb + vz(s.h, s.cb.cs), s.rt))
-realize(b::ACAD, s::Cylinder) =
-  @remote(b, Cylinder(s.cb, s.r, s.cb + vz(s.h, s.cb.cs)))
+backend_cylinder(b::ACAD, cb::Loc, r::Real, h::Real) =
+  @remote(b, Cylinder(cb, r, add_z(cb, h)))
 
 backend_extrusion(b::ACAD, s::Shape, v::Vec) =
     and_mark_deleted(
@@ -1150,6 +1150,9 @@ highlight_shape(s::Shape, b::ACAD) =
 highlight_shapes(ss::Shapes, b::ACAD) =
   @remote(b, SelectShapes(collect_ref(ss)))
 
+pre_selected_shapes_from_set(ss::Shapes) =
+  length(ss) == 0 ? [] : pre_selected_shapes_from_set(ss, backend(ss[1]))
+
 # HACK: This must be implemented for all backends
 pre_selected_shapes_from_set(ss::Shapes, b::Backend) = []
 
@@ -1157,7 +1160,6 @@ pre_selected_shapes_from_set(ss::Shapes, b::ACAD) =
   let refs = map(id -> @remote(b, GetHandleFromShape(id)), @remote(b, GetPreSelectedShapes()))
     filter(s -> @remote(b, GetHandleFromShape(ref(s).value)) in refs, ss)
   end
-
 disable_update(b::ACAD) =
   @remote(b, DisableUpdate())
 

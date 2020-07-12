@@ -1248,12 +1248,15 @@ end
 @defop select_solids(prompt::String="Select solids")
 @defop select_shape(prompt::String="Select a shape")
 @defop select_shapes(prompt::String="Select shapes")
-@defop highlight_shapes(shapes::Shapes)
 @defshapeop highlight_shape()
 @defshapeop register_for_changes()
 @defshapeop unregister_for_changes()
 @defshapeop waiting_for_changes()
 @defop changed_shape(shapes::Shapes)
+
+export highlight_shapes
+highlight_shapes(shapes::Shapes) =
+  highlight_shapes(shapes, shapes == [] ? current_backend() : backend(shapes[1]))
 
 capture_shape(s=select_shape("Select shape to be captured")) =
   if s != nothing
@@ -1342,7 +1345,7 @@ select_many_with_prompt(prompt::String, b::Backend, f::Function) =
   end
 
 export render_view
-render_view(name::String) =
+render_view(name::String="View") =
   let path = prepare_for_saving_file(render_pathname(name))
     render_view(path, current_backend())
     path

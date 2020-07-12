@@ -878,6 +878,9 @@ realize(b::Backend, s::Column) =
 realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::CircularPath, cb::Loc, length::Real) =
   backend_cylinder(b, cb, profile.radius, length*support_z_fighting_factor, get_material(b, family_ref(b, s.family)))
 
+backend_cylinder(b::Backend, c::Loc, r::Real, h::Real, material) =
+  backend_cylinder(b, c, r, h)
+
 realize_beam_profile(b::Backend, s::Union{Beam,FreeColumn,Column}, profile::RectangularPath, cb::Loc, length::Real) =
   let profile_u0 = profile.corner,
       c = add_xy(cb, profile_u0.x + profile.dx/2, profile_u0.y + profile.dy/2),
@@ -1079,18 +1082,22 @@ backend_get_family_ref(b::Backend, f::Family, bf::BackendFamily) = bf
 
 # By default, the material is the realization of the family
 get_material(b::Backend, f) = f
-panel_material(b::Backend, f) = f
-wall_materials(b::Backend, f) = (f, f)
-slab_materials(b::Backend, f) = (f, f, f)
+panel_material(b::Backend, f) = get_material(b, f)
+wall_materials(b::Backend, f) = (get_material(b, f), get_material(b, f))
+slab_materials(b::Backend, f) = (get_material(b, f), get_material(b, f), get_material(b, f))
 
 # BackendFamily can do better
-get_material(b::Backend, f::BackendMaterialFamily) = f.material
-panel_material(b::Backend, f::BackendMaterialFamily) = f.material
-wall_materials(b::Backend, f::BackendWallFamily) = (f.right_material, f.left_material)
-slab_materials(b::Backend, f::Union{BackendSlabFamily,BackendRoofFamily}) = (f.top_material, f.bottom_material, f.side_material)
+get_material(b::Backend, f::BackendMaterialFamily) = get_material(b, f.material)
+panel_material(b::Backend, f::BackendMaterialFamily) = get_material(b, f.material)
+wall_materials(b::Backend, f::BackendWallFamily) =
+  (get_material(b, f.right_material), get_material(b, f.left_material))
+slab_materials(b::Backend, f::Union{BackendSlabFamily,BackendRoofFamily}) =
+  (get_material(b, f.top_material),
+   get_material(b, f.bottom_material),
+   get_material(b, f.side_material))
 
 # When using family_in_layer(true), we can have default behavior
-layer_from_family(b::Backend, f::BackendMaterialFamily) = f.material
+layer_from_family(b::Backend, f::BackendMaterialFamily) = get_material(b, f.material)
 
 
 #=
