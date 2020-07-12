@@ -24,6 +24,25 @@ export encode_String, decode_String,
        encode_object, decode_object,
        encode_object_array, decode_object_array
 
+struct BackendError
+  msg::String
+  backtrace
+end
+
+show(io::IO, e::BackendError) =
+  print(io, "Backend Error: $(e.msg)")
+
+backend_error(c::IO) =
+  throw(BackendError(decode_String(c), backtrace()))
+
+## To present errors in the backends that call back to Julia
+exception_backtrace(e) = backtrace()
+exception_backtrace(e::BackendError) = e.backtrace
+
+export errormsg
+errormsg(e) =
+  sprint((io, e) -> showerror(io, e, exception_backtrace(e), backtrace=true), e)
+
 encode_String(c::IO, v::AbstractString) = begin
   str = string(v)
   size = length(str)
@@ -69,7 +88,7 @@ encode_Guid(c::IO, v::Guid) = write(c, v)
 decode_Guid(c::IO) =
   let guid = read(c, 16)
       if is_empty_guid(guid)
-        error("Backend Error: $(decode_String(c))")
+        backend_error(c)
       else
         guid
       end
@@ -98,7 +117,7 @@ encode_bool(c::IO, v::Bool) = encode_byte(c, v ? UInt8(1) : UInt8(0))
 decode_bool(c::IO) =
   let i = decode_byte(c)
     if i == 127
-      error("Backend Error: $(decode_String(c))")
+      backend_error(c)
     else
       i == 1
     end
@@ -117,7 +136,7 @@ encode_double(c::IO, v::Real) = write(c, convert(Float64, v))
 decode_double(c::IO) =
     let d = read(c, Float64)
         if isnan(d)
-            error("Backend Error: $(decode_String(c))")
+            backend_error(c)
         else
             d
         end
@@ -132,7 +151,7 @@ encode_float(c::IO, v::Real) = write(c, convert(Float32, v))
 decode_float(c::IO) =
     let d = read(c, Float32)
         if isnan(d)
-            error("Backend Error: $(decode_String(c))")
+            backend_error(c)
         else
             convert(Float64, d)
         end
@@ -146,7 +165,7 @@ end
 decode_int_or_error_numbered(err_num) = (c::IO) ->
   let i = decode_int(c)
     if i == err_num
-      error("Backend Error: $(decode_String(c))")
+      backend_error(c)
     else
       i
     end
@@ -166,7 +185,7 @@ decode_int_or_nothing(c::IO) =
 decode_long_or_error_numbered(err_num) = (c::IO) ->
   let i = decode_long(c)
     if i == err_num
-      error("Backend Error: $(decode_String(c))")
+      backend_error(c)
     else
       i
     end
@@ -299,7 +318,7 @@ decode_Frame3d(c::IO) =
 decode_void(c::IO) = begin
   v = decode_byte(c)
   if v == 127
-    error("Backend Error: $(decode_String(c))")
+    backend_error(c)
   end
 end
 

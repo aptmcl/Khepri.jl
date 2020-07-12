@@ -1,7 +1,7 @@
 decode_id(c::IO) =
   let id = decode_int(c)
     if id == -1
-      error("Backend Error: $(decode_String(c))")
+      backend_error(c)
     else
       id
     end
