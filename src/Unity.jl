@@ -417,10 +417,10 @@ realize(b::Unity, s::ConeFrustum) =
     regular_polygon_vertices(64, s.cb, s.rb),
     regular_polygon_vertices(64, s.cb + vz(s.h, s.cb.cs), s.rt)))
 
-backend_cylinder(b::Unity, cb, r, h) =
+backend_cylinder(b::Unity, cb::Loc, r::Real, h::Real) =
   @remote(b, Cylinder(cb, r, add_z(cb, h)))
 
-backend_cylinder(b::Unity, cb, r, h, material) =
+backend_cylinder(b::Unity, cb::Loc, r::Real, h::Real, material) =
   @remote(b, CylinderWithMaterial(cb, r, add_z(cb, h), material))
 
 #=
