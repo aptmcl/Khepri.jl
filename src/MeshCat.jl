@@ -893,7 +893,7 @@ realize(b::MCAT, s::Cone) =
 realize(b::MCAT, s::ConeFrustum) =
   add_object(b, meshcat_cone_frustum(s.cb, s.rb, s.rt, s.h, material(b)))
 
-backend_cylinder(b::MCAT, cb, r, h, material=material(b)) =
+backend_cylinder(b::MCAT, cb::Loc, r::Real, h::Real, material=material(b)) =
   send_setobject(connection(b), next_id(b), meshcat_cylinder(cb, r, h, material))
 
 
