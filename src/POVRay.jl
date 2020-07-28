@@ -52,10 +52,10 @@ write_povray_object(f::Function, io::IO, type, material, args...) =
       show(io, mime, arg)
     end
     write(io, '\n')
+    if ! isnothing(material)
+      write_povray_material(io, material)
+    end
     let res = f()
-      if ! isnothing(material)
-        write_povray_material(io, material)
-      end
       write(io, "}\n")
       res
     end
@@ -80,6 +80,15 @@ write_povray_material(io::IO, material) =
     write(io, "  ")
     write_povray_value(io, material)
     write(io, '\n')
+  end
+
+write_povray_matrix(io::IO, p::Loc) =
+  let t = (translated_cs(p.cs, p.x, p.y, p.z).transform)
+    write_povray_param(io, "matrix",
+      [t[1,1], t[3,1], t[2,1],
+       t[1,2], t[3,2], t[2,2],
+       t[1,3], t[3,3], t[2,3],
+       t[1,4], t[3,4], t[2,4]])
   end
 
 write_povray_camera(io::IO, camera, target, lens) =
@@ -300,9 +309,36 @@ povray_material(name::String;
   finish { specular $(specularity) roughness $(roughness) }
 }""")
 
-povray_glass_material(name::String; args...) =
-  povray_definition(name, "material", """{
-  texture { NBglass } interior { ior 1.5 fade_distance 1.0 fade_power 2}}
+#=
+IMAGE_MAP:
+  pigment {
+    image_map {
+      [BITMAP_TYPE] "bitmap[.ext]" [gamma GAMMA] [premultiplied BOOL]
+      [IMAGE_MAP_MODS...]
+      }
+  [PIGMENT_MODFIERS...]
+  }
+ IMAGE_MAP:
+  pigment {
+   image_map {
+     FUNCTION_IMAGE
+     }
+  [PIGMENT_MODFIERS...]
+  }
+ BITMAP_TYPE:
+   exr | gif | hdr | iff | jpeg | pgm | png | ppm | sys | tga | tiff
+ IMAGE_MAP_MODS:
+   map_type Type | once | interpolate Type |
+   filter Palette, Amount | filter all Amount |
+   transmit Palette, Amount | transmit all Amount
+ FUNCTION_IMAGE:
+   function I_WIDTH, I_HEIGHT { FUNCTION_IMAGE_BODY }
+ FUNCTION_IMAGE_BODY:
+   PIGMENT | FN_FLOAT | pattern { PATTERN [PATTERN_MODIFIERS] }
+=#
+povray_image_map_material(name::String; image_map, map_type=0) =
+  povray_definition(name, "texture", """{
+  pigment { image_map $(image_map) map_type $(map_type) }
   }""")
 
 ####################################################
@@ -519,14 +555,7 @@ realize(b::POVRay, s::Sphere) =
 realize(b::POVRay, s::Torus) =
   let buf = buffer(b)
     write_povray_object(buf, "torus", get_material(b, s), s.re, s.ri) do
-      let p = in_world(s.center),
-          t = s.center.cs.transform
-        write_povray_object(buf, "matrix", nothing,
-                            [t[1,1], t[2,1], t[3,1],
-                             t[1,2], t[2,2], t[3,2],
-                             t[1,3], t[2,3], t[3,3],
-                             p.x, p.y, p.z])
-      end
+      write_povray_matrix(buf, s.center)
     end
     void_ref(b)
   end
@@ -564,10 +593,12 @@ realize(b::ACAD, s::RightCuboid) =
 
 realize(b::POVRay, s::Box) =
   let buf = buffer(b),
-      bot = in_world(s.c),
-      top = in_world(s.c + vxyz(s.dx, s.dy, s.dz, s.c.cs)),
+      #bot = in_world(s.c),
+      #top = in_world(s.c + vxyz(s.dx, s.dy, s.dz, s.c.cs)),
       mat = get_material(b, s)
-    write_povray_object(buf, "box", mat, bot, top)
+    write_povray_object(buf, "box", mat, [0,0,0], [s.dx, s.dy, s.dz]) do
+      write_povray_matrix(buf, s.c)
+    end
     void_ref(b)
   end
 
@@ -591,10 +622,12 @@ realize(b::POVRay, s::ConeFrustum) =
 
 realize(b::POVRay, s::Cylinder) =
   let buf = buffer(b),
-      bot = in_world(s.cb),
-      top = in_world(s.cb + vz(s.h, s.cb.cs)),
+      #bot = in_world(s.cb),
+      #top = in_world(s.cb + vz(s.h, s.cb.cs)),
       mat = get_material(b, s)
-    write_povray_object(buf, "cylinder", mat, bot, top, s.r)
+    write_povray_object(buf, "cylinder", mat, [0,0,0], [0,0,s.h], s.r) do
+      write_povray_matrix(buf, s.cb)
+    end
     void_ref(b)
   end
 
@@ -895,9 +928,6 @@ realize(b::POVRay, s::Beam) =
 =#
 realize(b::POVRay, s::Union{Door, Window}) =
   void_ref(b)
-
-used_materials(b::POVRay) =
-  unique(map(f -> realize(s.family, b), b.shapes))
 
 ####################################################
 
