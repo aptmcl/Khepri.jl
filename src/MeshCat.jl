@@ -616,7 +616,7 @@ Base.show(
 
 export display_view
 display_view(b::Backend=current_backend()) = error("Needs specialization")
-display_view(b::MCAT) = display(MCATViewer(connection(b)))
+display_view(b::MCAT) = MCATViewer(connection(b))
 
 const meshcat_root_path = "/Khepri"
 
@@ -639,7 +639,11 @@ reset_backend(b::MCAT) =
   end
 
 new_backend(b::MCAT) =
-  reset(b.connection)
+  begin
+    reset(b.connection)
+    display_view(b)
+  end
+
 #
 
 #=
