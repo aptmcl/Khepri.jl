@@ -26,6 +26,7 @@ include("BIM.jl")
 include("Geometry.jl")
 include("Encoders.jl")
 include("Primitives.jl")
+#=
 include("Tikz.jl")
 include("AutoCAD.jl")
 include("Rhinoceros.jl")
@@ -33,13 +34,18 @@ include("Revit.jl")
 #include("ArchiCAD.jl")
 include("Radiance.jl")
 include("POVRay.jl")
+=#
 include("Notebook.jl")
 include("MeshCat.jl")
+#=
 include("Grasshopper.jl")
 include("Unity.jl")
 include("Unreal.jl")
+=#
 include("Camera.jl")
+#=
 const com = PyNULL()
 include("Robot.jl")
+=#
 include("BIMFamilies.jl")
 end
