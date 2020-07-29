@@ -55,7 +55,10 @@ reset_backend(b::PLOT) =
   end
 
 new_backend(b::PLOT) =
-  reset(b.connection)
+  begin
+    reset(b.connection)
+    b.connection()
+  end
 
 #
 
