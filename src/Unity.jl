@@ -72,6 +72,11 @@ unity_api = @remote_functions :CS """
 public void SetApplyMaterials(bool apply)
 public void SetApplyColliders(bool apply)
 public GameObject SurfacePolygon(Vector3[] ps)
+public GameObject SurfacePolygonNamed(String name, Vector3[] ps, Material material)
+public GameObject SurfacePolygonWithMaterial(Vector3[] ps, Material material)
+public GameObject SurfaceMeshNamed(String name, Vector3[] vertices, int[] triangles, Material material)
+public GameObject SurfaceMeshWithMaterial(Vector3[] vertices, int[] triangles, Material material)
+public GameObject SurfaceMesh(Vector3[] vertices, int[] triangles)
 public GameObject Text(string txt, Vector3 position, Vector3 vx, Vector3 vy, string fontName, int fontSize)
 public GameObject Sphere(Vector3 center, float radius)
 public GameObject SphereWithMaterial(Vector3 center, float radius, Material material)
@@ -179,6 +184,13 @@ const unity = Unity(LazyParameter(TCPSocket, create_Unity_connection), unity_api
 
 backend_name(b::Unity) = "Unity"
 
+(backend::Unity)(; apply_materials=true, apply_colliders=true) =
+  begin
+    @remote(backend, SetApplyMaterials(apply_materials))
+    @remote(backend, SetApplyColliders(apply_colliders))
+    backend
+  end
+
 realize(b::Unity, s::EmptyShape) =
   UnityEmptyRef()
 realize(b::Unity, s::UniversalShape) =
@@ -255,8 +267,10 @@ realize(b::Unity, s::Rectangle) =
      add_x(s.corner, s.dx),
      add_xy(s.corner, s.dx, s.dy),
      add_y(s.corner, s.dy)]))
+=#
 realize(b::Unity, s::SurfaceCircle) =
-  @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
+  @remote(b, SurfacePolygon(regular_polygon_vertices(64, s.center, s.radius, 0, true)))
+#=
 realize(b::Unity, s::SurfaceArc) =
     #@remote(b, SurfaceArc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude))
     if s.radius == 0
@@ -285,21 +299,21 @@ realize(b::Unity, s::SurfaceArc) =
 =#
 
 realize(b::Unity, s::SurfacePolygon) =
-  @remote(b, SurfacePolygon(reverse(s.vertices)))
+  @remote(b, SurfacePolygon(s.vertices))
 
 backend_fill(b::Unity, path::ClosedPolygonalPath) =
   @remote(b, SurfacePolygon(path.vertices))
 
-#=
 realize(b::Unity, s::SurfaceRegularPolygon) =
-  @remote(b, SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
+  @remote(b, SurfacePolygon(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
 realize(b::Unity, s::SurfaceRectangle) =
-  @remote(b, SurfaceClosedPolyLine(
+  @remote(b, SurfacePolygon(
     connection(b),
     [s.corner,
      add_x(s.corner, s.dx),
      add_xy(s.corner, s.dx, s.dy),
-     add_y(s.corner, s.dy)])
+     add_y(s.corner, s.dy)]))
+#=
 realize(b::Unity, s::Surface) =
   let #ids = map(r->@remote(b, NurbSurfaceFrom(connection(b),r), @remote(b, SurfaceFromCurves(collect_ref(s.frontier))))
       ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
@@ -595,31 +609,30 @@ backend_surface_grid(b::Unity, points, closed_u, closed_v, smooth_u, smooth_v) =
   let ptss = points,
       s1 = size(ptss,1),
       s2 = size(ptss,2),
-      sstp = reverse(ptss, dims=1),
       refs = UnityId[]
     if smooth_u && smooth_v
-      push!(refs, @remote(b, SurfaceFromGrid(s2, s1, reshape(sstp,:), closed_u, closed_v, 2)))
       push!(refs, @remote(b, SurfaceFromGrid(s2, s1, reshape(ptss,:), closed_u, closed_v, 2)))
     elseif smooth_u
       for i in 1:(closed_v ? s1 : s1-1)
-        push!(refs, @remote(b, SurfaceFromGrid(s2, 2, reshape(sstp[[i,i%s1+1],:],:), closed_u, false, 2)))
         push!(refs, @remote(b, SurfaceFromGrid(s2, 2, reshape(ptss[[i,i%s1+1],:],:), closed_u, false, 2)))
       end
     elseif smooth_v
       for i in 1:(closed_u ? s2 : s2-1)
-        push!(refs, @remote(b, SurfaceFromGrid(2, s1, reshape(sstp[:,[i,i%s1+1]],:), false, closed_v, 2)))
         push!(refs, @remote(b, SurfaceFromGrid(2, s1, reshape(ptss[:,[i,i%s1+1]],:), false, closed_v, 2)))
       end
     else
       for i in 1:(closed_v ? s1 : s1-1)
         for j in 1:(closed_u ? s2 : s2-1)
-          push!(refs, @remote(b, SurfaceFromGrid(2, 2, reshape(sstp[[i,i%s1+1],[j,j%s2+1]],:), false, false, 2)))
           push!(refs, @remote(b, SurfaceFromGrid(2, 2, reshape(ptss[[i,i%s1+1],[j,j%s2+1]],:), false, false, 2)))
         end
       end
     end
     refs
   end
+
+backend_surface_mesh(b::Unity, vertices, faces) =
+  @remote(b, SurfaceMesh(vertices, vcat(faces...)))
+
 
 #=
 realize(b::Unity, s::Thicken) =
