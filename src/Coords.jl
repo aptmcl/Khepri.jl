@@ -37,7 +37,8 @@ export Loc, Locs, LocOrZ,
        translating_current_cs,
        regular_polygon_vertices,
        norm,
-       angle_between
+       angle_between,
+       rotate_vector
 
 #=
 Some useful terminology:
@@ -124,6 +125,22 @@ rotated_around_p_v_cs(cs::CS, a::Real, b::Real, c::Real, u::Real, v::Real, w::Re
           m31 m32 m33 m32;
           0 0 0 1]))
   end
+
+rotate_vector(vector, axis, angle) =
+  let s = sin(angle),
+      c = cos(angle),
+      x = (c + axis.x^2*(1 - c))*vector.x +
+          (axis.x*axis.y*(1 - c) - axis.z*s)*vector.y +
+          (axis.x*axis.z*(1 - c) + axis.y*s)*vector.z,
+      y = (axis.y*axis.x*(1 - c) + axis.z*s)*vector.x +
+          (c + axis.y^2*(1 - c))*vector.y +
+          (axis.y*axis.z*(1 - c) - axis.x*s)*vector.z,
+      z = (axis.z*axis.x*(1 - c) - axis.y*s)*vector.x +
+          (axis.z*axis.y*(1 - c) + axis.x*s)*vector.y +
+          (c + axis.z^2*(1 - c))*vector.z
+    vxyz(x,y,z)
+  end
+
 
 global const world_cs = CS(Mat4f(I))
 global const current_cs = Parameter(world_cs)
