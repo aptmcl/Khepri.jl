@@ -1159,8 +1159,8 @@ process_bars(bars, processed_nodes) =
     no_deformation_name::String="No deformation",
     no_deformation_color::RGB=rgb(0, 1, 0))
 
-#
-backend_show_truss_deformation(b::Backend,
+#HACK using LazyBackend just to avoid redefinitions.
+backend_show_truss_deformation(b::LazyBackend,
     results::Any,
     visualizer::Backend,
     node_radius::Real, bar_radius::Real, factor::Real,
