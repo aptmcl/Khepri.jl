@@ -1010,57 +1010,15 @@ create_node_support_label(name, ux, uy, uz, rx, ry, rz) =
       RZ(support_data, rz ? 1 : 0)
   end)
 
-# Nodes
-Base.@kwdef struct TrussNodeSupport
-    ux::Bool=false
-    uy::Bool=false
-    uz::Bool=false
-    rx::Bool=false
-    ry::Bool=false
-    rz::Bool=false
-    created::Parameter{Bool}=Parameter(false)
-end
-
-truss_node_support = TrussNodeSupport
 truss_node_support_label(s) =
   let k(v) = v ? "x" : "f"
     "Support$(k(s.ux))$(k(s.uy))$(k(s.uz))$(k(s.rx))$(k(s.ry))$(k(s.rz))"
-  end
-
-reset_node_support_label(support) =
-  support.created(false)
-ensure_node_support_label(support) =
-  if ! support.created()
-    create_node_support(support)
-    support.created(true)
   end
 
 create_node_support(s) =
   create_node_support_label(truss_node_support_label(s),
                             s.ux, s.uy, s.uz,
                             s.rx, s.ry, s.rz)
-
-struct TrussNodeData
-    id::Int
-    loc::Loc
-    family::Any
-    load::Any
-end
-
-truss_node_data(id::Int, loc::Loc, family::Any, load::Vec) =
-  TrussNodeData(id, loc, family, load)
-
-#
-struct TrussBarData
-    id::Int
-    node1::TrussNodeData
-    node2::TrussNodeData
-    rotation::Double
-    family::Any
-end
-
-truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Real, family::Any) =
-  TrussBarData(id, node0, node1, rotation, family)
 
 # Cladding
 
@@ -1315,44 +1273,9 @@ void_ref(b::ROBOT) = ROBOTNativeRef(-1)
 
 const robot = ROBOT()
 
-# Shoule we merge coincident nodes?
-const merge_coincident_truss_nodes = Parameter(true)
-const coincident_truss_nodes_distance = Parameter(1e-6)
-
-save_shape!(b::ROBOT, s::TrussNode) =
-  # We are allowed to replace a node that we just created with one that already exists
-  let epsilon = coincident_truss_nodes_distance(),
-      p = s.p
-    for n in b.truss_nodes
-      if distance(n.p, p) < epsilon
-        merge_coincident_truss_nodes() || error("Coincident nodes $(s) and $(n) at $(p)")
-        return n
-      end
-    end
-    b.realized(false)
-    push!(b.truss_nodes, s)
-    s
-  end
-
-# Shoule we merge coincident nodes?
-const merge_coincident_truss_bars = Parameter(true)
-
-save_shape!(b::ROBOT, s::TrussBar) =
-  # We are allowed to replace a bar that we just created with one that already exists
-  let epsilon = coincident_truss_nodes_distance(),
-      p0 = s.p0,
-      p1 = s.p1
-    for b in b.truss_bars
-      if (distance(b.p0, p0) < epsilon && distance(b.p1, p1) < epsilon) ||
-         (distance(b.p0, p1) < epsilon && distance(b.p1, p0) < epsilon)
-        merge_coincident_truss_bars() || error("Coincident bars $(s) and $(n) at $(p0) and $(p1)")
-        return b
-      end
-    end
-    b.realized(false)
-    push!(b.truss_bars, s)
-    s
-  end
+# Robot needs to merge nodes and bars
+save_shape!(b::ROBOT, s::TrussNode) = maybe_merged_node(b, s)
+save_shape!(b::ROBOT, s::TrussBar) = maybe_merged_bar(b, s)
 
 # Robot does not need layers
 with_family_in_layer(f::Function, backend::ROBOT, family::Family) = f()
@@ -1426,25 +1349,6 @@ realize(b::ROBOT, s::TrussBar) =
 
 realize(b::ROBOT, s::Panel) =
   error("BUM")
-
-process_nodes(nodes) =
-  [truss_node_data(i, in_world(node.p), node.family, vz(0))
-   for (i, node) in enumerate(nodes)]
-
-process_bars(bars, processed_nodes) =
-  let epsilon = coincident_truss_nodes_distance(),
-      node_data_near(loc) =
-        for nd in processed_nodes
-          distance(loc, nd.loc) < epsilon && return nd
-        end
-    [truss_bar_data(
-      i,
-      node_data_near(in_world(bar.p0)),
-      node_data_near(in_world(bar.p1)),
-      bar.angle,
-      bar.family)
-     for (i, bar) in enumerate(bars)]
-  end
 
 ##################################################################
 # Robot analysis
@@ -1526,55 +1430,13 @@ new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
   end
 
 #
-show_truss_deformation(results;
-    backend=autocad,
-    node_radius=0.08, bar_radius=0.02, factor=100,
-    deformation_name="Deformation",
-    deformation_color=rgb(1, 0, 0),
-    no_deformation_name="No deformation",
-    no_deformation_color=rgb(0, 1, 0)) =
-  with(current_backend, backend) do
-    delete_all_shapes()
-    let deformation_layer = create_layer(deformation_name, color=deformation_color),
-        no_deformation_layer = create_layer(no_deformation_name, color=no_deformation_color),
-        disps = displacements(nodes(results)),
-        disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-      with(current_layer, no_deformation_layer) do
-        for node in robot.truss_node_data
-          p = node.loc
-          sphere(p, node_radius)
-        end
-        for bar in robot.truss_bar_data
-          let (node1, node2) = (bar.node1, bar.node2),
-              (p1, p2) = (node1.loc, node2.loc)
-            cylinder(p1, bar_radius, p2)
-          end
-        end
-      end
-      with(current_layer, deformation_layer) do
-        for node in robot.truss_node_data
-          d = disp(node)*factor
-          p = node.loc
-          sphere(p+d, node_radius)
-        end
-        for bar in robot.truss_bar_data
-          let (node1, node2) = (bar.node1, bar.node2),
-              (p1, p2) = (node1.loc, node2.loc),
-              (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
-            cylinder(p1+d1, bar_radius, p2+d2)
-          end
-        end
-      end
-    end
-  end
+backend_truss_analysis(b::ROBOT, load::Vec) =
+  new_robot_analysis(load, backend=b)
 
-export max_displacement
-max_displacement(results) =
-  let disps = displacements(nodes(results)),
-      disp(n) = node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
-    max(map(norm∘disp, robot.truss_node_data))
+node_displacement_function(b::ROBOT, results) =
+  let disps = displacements(nodes(results))
+    n -> node_displacement_vector(disps, n.id, I_LRT_NODE_DISPLACEMENT)
   end
-
 #=
 Change view, save image
 https://forums.autodesk.com/t5/robot-structural-analysis-forum/api-command-vba-projection-capture-of-a-view/m-p/3188566/highlight/true#M937

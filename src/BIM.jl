@@ -1024,6 +1024,17 @@ realize(b::Backend, s::Ieslight) =
 
 
 #################################
+# Node support
+Base.@kwdef struct TrussNodeSupport
+    ux::Bool=false
+    uy::Bool=false
+    uz::Bool=false
+    rx::Bool=false
+    ry::Bool=false
+    rz::Bool=false
+end
+
+truss_node_support = TrussNodeSupport
 
 @deffamily(truss_node_family, Family,
     radius::Real=0.2,
@@ -1044,6 +1055,156 @@ realize(b::Backend, s::TrussBar) =
     cylinder(s.p0, s.family.radius, s.p1)
   end
 
+truss_node_is_supported(n) =
+  let s = n.family.support
+    s != false && (s.ux || s.uy || s.uz || s.rx || s.ry || s.rz)
+  end
+
+
+# Should we merge coincident nodes?
+const merge_coincident_truss_nodes = Parameter(true)
+const coincident_truss_nodes_distance = Parameter(1e-6)
+
+maybe_merged_node(b::Backend, s::TrussNode) =
+  # We are allowed to replace a node that we just created with one that already exists
+  let epsilon = coincident_truss_nodes_distance(),
+      p = s.p
+    for n in b.truss_nodes
+      if distance(n.p, p) < epsilon
+        merge_coincident_truss_nodes() || error("Coincident nodes $(s) and $(n) at $(p)")
+        return n
+      end
+    end
+    b.realized(false)
+    push!(b.truss_nodes, s)
+    s
+  end
+
+# Should we merge coincident bars?
+const merge_coincident_truss_bars = Parameter(true)
+
+maybe_merged_bar(b::Backend, s::TrussBar) =
+  # We are allowed to replace a bar that we just created with one that already exists
+  let epsilon = coincident_truss_nodes_distance(),
+      p0 = s.p0,
+      p1 = s.p1
+    for b in b.truss_bars
+      if (distance(b.p0, p0) < epsilon && distance(b.p1, p1) < epsilon) ||
+         (distance(b.p0, p1) < epsilon && distance(b.p1, p0) < epsilon)
+        merge_coincident_truss_bars() || error("Coincident bars $(s) and $(n) at $(p0) and $(p1)")
+        return b
+      end
+    end
+    b.realized(false)
+    push!(b.truss_bars, s)
+    s
+  end
+
+
+# Many analysis tools prefer a simplified node-and-bar representation.
+# To merge nodes and bars we need a different structure. Maybe we should merge
+# this with the BIM information
+struct TrussNodeData
+    id::Int
+    loc::Loc
+    family::Any
+    load::Any
+end
+
+truss_node_data(id::Int, loc::Loc, family::Any, load::Vec) =
+  TrussNodeData(id, loc, family, load)
+
+#
+struct TrussBarData
+    id::Int
+    node1::TrussNodeData
+    node2::TrussNodeData
+    rotation::Real
+    family::Any
+end
+
+truss_bar_data(id::Int, node0::TrussNodeData, node1::TrussNodeData, rotation::Real, family::Any) =
+  TrussBarData(id, node0, node1, rotation, family)
+
+process_nodes(nodes, load=vz(0)) =
+  [truss_node_data(i, in_world(node.p), node.family, load)
+   for (i, node) in enumerate(nodes)]
+
+process_bars(bars, processed_nodes) =
+  let epsilon = coincident_truss_nodes_distance(),
+      node_data_near(loc) =
+        for nd in processed_nodes
+          distance(loc, nd.loc) < epsilon && return nd
+        end
+    [truss_bar_data(
+      i,
+      node_data_near(in_world(bar.p0)),
+      node_data_near(in_world(bar.p1)),
+      bar.angle,
+      bar.family)
+     for (i, bar) in enumerate(bars)]
+  end
+
+# Analysis
+@defopnamed truss_analysis(load::Vec=vz(-1e5))
+
+# To visualize results:
+
+@defopnamed show_truss_deformation(
+    displacement::Any=nothing,
+    visualizer::Backend=autocad,
+    node_radius::Real=0.08, bar_radius::Real=0.02, factor::Real=100,
+    deformation_name::String="Deformation",
+    deformation_color::RGB=rgb(1, 0, 0),
+    no_deformation_name::String="No deformation",
+    no_deformation_color::RGB=rgb(0, 1, 0))
+
+#
+backend_show_truss_deformation(b::Backend,
+    results::Any,
+    visualizer::Backend,
+    node_radius::Real, bar_radius::Real, factor::Real,
+    deformation_name::String, deformation_color::RGB,
+    no_deformation_name::String, no_deformation_color::RGB) =
+  with(current_backend, visualizer) do
+    delete_all_shapes()
+    let deformation_layer = create_layer(deformation_name, color=deformation_color),
+        no_deformation_layer = create_layer(no_deformation_name, color=no_deformation_color),
+        disp = node_displacement_function(b, results)
+      with(current_layer, no_deformation_layer) do
+        for node in b.truss_node_data
+          p = node.loc
+          sphere(p, node_radius)
+        end
+        for bar in b.truss_bar_data
+          let (node1, node2) = (bar.node1, bar.node2),
+              (p1, p2) = (node1.loc, node2.loc)
+            cylinder(p1, bar_radius, p2)
+          end
+        end
+      end
+      with(current_layer, deformation_layer) do
+        for node in b.truss_node_data
+          d = disp(node)*factor
+          p = node.loc
+          sphere(p+d, node_radius)
+        end
+        for bar in b.truss_bar_data
+          let (node1, node2) = (bar.node1, bar.node2),
+              (p1, p2) = (node1.loc, node2.loc),
+              (d1, d2) = (disp(node1)*factor, disp(node2)*factor)
+            cylinder(p1+d1, bar_radius, p2+d2)
+          end
+        end
+      end
+    end
+  end
+
+export max_displacement
+max_displacement(results, b::Backend=current_backend()) =
+  let disp = node_displacement_function(b, results)
+    max(map(norm∘disp, b.truss_node_data))
+  end
 ###################################
 # BIM
 @defop all_levels()
