@@ -9,8 +9,7 @@ export robot,
        nodes,
        added_nodes,
        added_bars,
-       robot_truss_bar_family,
-       show_truss_deformation
+       robot_truss_bar_family
 
 
 # generate code to test whether expr is in the given set of values
