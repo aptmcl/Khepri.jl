@@ -1203,7 +1203,7 @@ backend_show_truss_deformation(b::LazyBackend,
 export max_displacement
 max_displacement(results, b::Backend=current_backend()) =
   let disp = node_displacement_function(b, results)
-    max(map(norm∘disp, b.truss_node_data))
+    maximum(map(norm∘disp, b.truss_node_data))
   end
 ###################################
 # BIM
