@@ -1,4 +1,5 @@
-export frame3dd
+export frame3dd,
+       frame3DD_circular_tube_truss_bar_family
 
 Base.@kwdef struct Frame3DDBackend{K,T} <: LazyBackend{K,T}
   realized::Parameter{Bool}=Parameter(false)
@@ -47,6 +48,8 @@ Base.@kwdef struct Frame3DDTrussBarFamily <: Frame3DDFamily
   d   # mass density
 end
 
+truss_bar_family_cross_section_area(f::Frame3DDTrussBarFamily) = f.Ax
+
 #=
 Circular Tube (outer radius= Ro, inner radius = Ri):
 
@@ -57,7 +60,7 @@ Ixx = Iyy = (1/4) π ( Ro4 - Ri4 )
 =#
 
 frame3DD_circular_tube_truss_bar_family(rₒ, rᵢ; E, G, p, d) =
-  let Ax = π*(rₒ^2 - rᵢ^2),
+  let Ax = annulus_area(rₒ, rᵢ),
       Asyz = Ax/(0.54414 + 2.97294*(rᵢ/rₒ) - 1.51899*(rᵢ/rₒ)^2),
       Jxx = π/2*(rₒ^4 - rᵢ^4),
       Ixxyy = Jxx/2
@@ -92,7 +95,7 @@ frame3DD_circular_tube_truss_bar_family(rₒ, rᵢ; E, G, p, d) =
  @izz = "0.0237E+06"            # Izz (mm^4)
 =#
 
- set_backend_family(
+set_backend_family(
    default_truss_bar_family(),
    frame3dd,
    frame3DD_circular_tube_truss_bar_family(0.0213, 0.0213-0.0026,

@@ -1,4 +1,14 @@
 # Geometric Utilities
+# Areas
+
+export triangle_area, circle_area, annulus_area
+
+triangle_area(a, b, c) =
+  let s = (a + b + c)/2.0
+    sqrt(max(0.0, s*(s - a)*(s - b)*(s - c)))
+  end
+circle_area(r) = π*r^2
+annulus_area(rₒ, rᵢ) = π*(rₒ^2 - rᵢ^2)
 
 export show_cs
 
@@ -257,11 +267,6 @@ collinear_points(p0, pm, p1, epsilon=collinearity_tolerance()) =
       b = distance(pm, p1),
       c = distance(p1, p0)
     triangle_area(a, b, c) < epsilon
-  end
-
-triangle_area(a, b, c) =
-  let s = (a + b + c)/2.0
-    sqrt(max(0.0, s*(s - a)*(s - b)*(s - c)))
   end
 
 #=

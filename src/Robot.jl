@@ -1296,15 +1296,12 @@ backend_get_family_ref(b::ROBOT, f::Family, rf::RobotTrussBarFamily) =
     rf
   end
 
-# We need a few families by default
-export free_truss_node_family, fixed_truss_node_family, truss_node_support
-
-free_truss_node_family =
-  truss_node_family_element(default_truss_node_family(),
-                            support=truss_node_support())
-fixed_truss_node_family =
-  truss_node_family_element(default_truss_node_family(),
-                            support=truss_node_support(ux=true, uy=true, uz=true))
+truss_bar_family_cross_section_area(f::RobotTrussBarFamily) =
+  let section_data = f.section[4][1],
+      rₒ = section_data[2]/2,
+      rᵢ = rₒ - section_data[3]
+    annulus_area(rₒ, rᵢ)
+  end
 
 set_backend_family(
   default_truss_bar_family(),

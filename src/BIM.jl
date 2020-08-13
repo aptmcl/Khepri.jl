@@ -1041,7 +1041,22 @@ truss_node_support = TrussNodeSupport
     support::Any=false) #(Option node_support)
 
 @deffamily(truss_bar_family, Family,
-    radius::Real=0.03)
+    radius::Real=0.03,
+    inner_radius::Real=0)
+
+truss_bar_family_cross_section_area(f::TrussBarFamily) =
+  truss_bar_family_cross_section_area(back)
+
+# We need a few families by default
+export free_truss_node_family, fixed_truss_node_family, truss_node_support
+
+free_truss_node_family =
+  truss_node_family_element(default_truss_node_family(),
+                            support=truss_node_support())
+fixed_truss_node_family =
+  truss_node_family_element(default_truss_node_family(),
+                            support=truss_node_support(ux=true, uy=true, uz=true))
+
 
 @defproxy(truss_node, BIMShape, p::Loc=u0(), family::TrussNodeFamily=default_truss_node_family())
 @defproxy(truss_bar, BIMShape, p0::Loc=u0(), p1::Loc=u0(), angle::Real=0, family::TrussBarFamily=default_truss_bar_family())
@@ -1059,6 +1074,11 @@ truss_node_is_supported(n) =
   let s = n.family.support
     s != false && (s.ux || s.uy || s.uz || s.rx || s.ry || s.rz)
   end
+
+truss_bar_cross_section_area(s::TrussBar) =
+  truss_bar_family_cross_section_area(backend_family(backend(s), s.family))
+truss_bar_volume(s::TrussBar) =
+  truss_bar_cross_section_area(s)*distance(s.p0, s.p1)
 
 
 # Should we merge coincident nodes?
@@ -1099,7 +1119,6 @@ maybe_merged_bar(b::Backend, s::TrussBar) =
     push!(b.truss_bars, s)
     s
   end
-
 
 # Many analysis tools prefer a simplified node-and-bar representation.
 # To merge nodes and bars we need a different structure. Maybe we should merge
@@ -1147,6 +1166,11 @@ process_bars(bars, processed_nodes) =
 
 # Analysis
 @defopnamed truss_analysis(load::Vec=vz(-1e5))
+@defopnamed truss_bars_volume()
+
+#HACK using LazyBackend just to avoid redefinitions.
+backend_truss_bars_volume(b::LazyBackend) =
+  sum(truss_bar_volume, b.truss_bars)
 
 # To visualize results:
 
