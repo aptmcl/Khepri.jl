@@ -477,7 +477,7 @@ iterate(v::Loc) = iterate(v.raw)
 iterate(v::Loc, state) = iterate(v.raw, state)
 
 # Utilities
-export trig_center, trig_normal, quad_center, quad_normal, polygon_normal, iterate_quads
+export trig_center, trig_normal, quad_center, quad_normal, vertices_center, vertices_normal, iterate_quads
 
 trig_center(p0, p1, p2) =
   xyz((p0.x+p1.x+p2.x)/3, (p0.y+p1.y+p2.y)/3, (p0.z+p1.z+p2.z)/3, p0.cs)
