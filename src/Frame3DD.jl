@@ -99,10 +99,10 @@ set_backend_family(
    default_truss_bar_family(),
    frame3dd,
    frame3DD_circular_tube_truss_bar_family(0.0213, 0.0213-0.0026,
-     E=210000000000.0,
-     G=79000000000.0,
-     p=0.0,
-     d=789))
+     E=210000000000.0, # (Young's modulus)
+     G=81000000000.0, # (Kirchoff's or Shear modulus)
+     p=0.0, # Roll angle
+     d=77010.0)) # Density
 
 #
 delete_all_shapes(b::FR3DD) =
@@ -124,7 +124,6 @@ realize(b::FR3DD, s::Panel) =
 
 
 #new_truss_analysis(v=nothing; self_weight=false, backend=frame3dd) =
-using Printf
 displacements_from_frame3dd(b::FR3DD, filename, load) =
   let nodes = process_nodes(b.truss_nodes, load),
       bars = process_bars(b.truss_bars, nodes),
@@ -141,83 +140,63 @@ displacements_from_frame3dd(b::FR3DD, filename, load) =
     empty!(b.truss_bar_data)
     append!(b.truss_bar_data, bars)
     open(filename, "w") do io
-      @printf(io, "Frame analysis for Khepri\n\n");
-      @printf(io, "%% node data ...\n");
-      @printf(io, "%4d\t\t%% number of nodes  \n", length(nodes));
-      @printf(io, "%% J\t\tX\t\tY\t\tZ\t\tr\t\tnode coordinates \n");
+      println(io, "Frame analysis for Khepri");
+      println(io, "%% node data ...");
+      println(io, "$(length(nodes))\t\t%% number of nodes");
+      println(io, "%% J\t\tX\t\tY\t\tZ\t\tr\t\tnode coordinates");
       for n in nodes
         i = n.id
         p = n.loc
-        @printf(io, "%4d\t%14.6e\t%14.6e\t%14.6e\t%14.6e\n", i, p.x, p.y, p.z, 0);
+        println(io, "$(i)\t$(p.x)\t$(p.y)\t$(p.z)\t0")
       end
-      @printf(io, "\n");
-      @printf(io, "%% reaction data ...\n");
+      println(io, "");
+      println(io, "%% reaction data ...");
       #nR = count(has_support, nodes);
-      @printf(io, "%4d    %% number of nodes with reaction forces\n", length(supported_nodes));
-      @printf(io, "%% j\tRx\tRy\tRz\tRxx\tRyy\tRzz\n");
+      println(io, "$(length(supported_nodes))    %% number of nodes with reaction forces");
+      println(io, "%% j\tRx\tRy\tRz\tRxx\tRyy\tRzz");
       for n in supported_nodes
         s = n.family.support
-        @printf(io, "%4d\t%4d\t%4d\t%4d\t%4d\t%4d\t%4d\n", n.id, s.ux, s.uy, s.uz, s.rx, s.ry, s.rz)
+        print(io, "$(n.id),\t$(Int(s.ux)),\t$(Int(s.uy)),\t$(Int(s.uz))\t")
+        println(io, "$(Int(s.rx)),\t$(Int(s.ry)),\t$(Int(s.rz))")
       end
-      @printf(io, "\n")
-      @printf(io, "%% frame element section property data ...\n")
-      @printf(io, "%4d\t\t%% number of frame elements\n", length(bars))
-      @printf(io, "%% m\tn1\tn2\t\tAx\t\tAsy\t\tAsz\t\tJxx\t\tIyy\t\tIzz\t\tE\t\tG\t\tp\tdensity\n");
+      println(io, "")
+      println(io, "%% frame element section property data ...")
+      println(io, "$(length(bars))\t\t%% number of frame elements")
+      println(io, "%% m\tn1\tn2\t\tAx\t\tAsy\t\tAsz\t\tJxx\t\tIyy\t\tIzz\t\tE\t\tG\t\tp\tdensity");
       for bar in bars
         f = family_ref(b, bar.family)
-        @printf(io, "%4d\t%4d\t%4d\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\n",
-                bar.id, bar.node1.id, bar.node2.id,
-                f.Ax, f.Asy, f.Asz, f.Jxx, f.Iyy, f.Izz, f.E, f.G, f.p, f.d)
+        print(io, "$(bar.id),\t$(bar.node1.id),\t$(bar.node2.id),")
+        print(io, "\t$(f.Ax),\t$(f.Asy),\t$(f.Asz),")
+        print(io, "\t$(f.Jxx),\t$(f.Iyy),\t$(f.Izz),")
+        println(io, "\t$(f.E),\t$(f.G),\t$(f.p),\t$(f.d)")
       end
-      @printf(io, "\n");
-      @printf(io, "%4d\t\t%% 1: include shear deformation, 0: do not\n", shear );
-      @printf(io, "%4d\t\t%% 1: include geometric stiffness, 0: do not\n", geom );
-      @printf(io, "%14.6e\t%% exagerate deformations in plotting \n", exagg );
-      @printf(io, "%14.6e\t%% zoom scale factor for 3D plotting \n", scale );
-      @printf(io, "%14.6e\t%% x-axis increment for internal forces calc\n", dx );
-      @printf(io, "\n");
-      @printf(io, "%% static load data ...\n");
-      @printf(io, "%4d\t\t%% number of static load cases \n", 1);
-      @printf(io, "\t\t%% begin static load case 1 of 1 \n\n");
-      @printf(io, "%% gravitational acceleration for self-weight loading\n");
-      @printf(io, "%% gX         gY         gZ\n");
-      @printf(io, "  0.0        0.0        0.0\n\n");
-      @printf(io, "%4d\t\t%% number of loaded nodes\n", length(loaded_nodes));
-      @printf(io, "%% j\t\tFx\t\tFy\t\tFz\t\tMxx\t\tMyy\t\tMzz\n");
+      println(io, "\n");
+      println(io, "$(shear)\t\t%% 1: include shear deformation, 0: do not");
+      println(io, "$(geom)\t\t%% 1: include geometric stiffness, 0: do not");
+      println(io, "$(exagg)\t%% exagerate deformations in plotting");
+      println(io, "$(scale)\t%% zoom scale factor for 3D plotting");
+      println(io, "$(dx)\t%% x-axis increment for internal forces calc");
+      println(io, "\n");
+      println(io, "%% static load data ...");
+      println(io, "1\t\t%% number of static load cases");
+      println(io, "\t\t%% begin static load case 1 of 1");
+      println(io, "%% gravitational acceleration for self-weight loading");
+      println(io, "%% gX         gY         gZ");
+      println(io, "  0.0        0.0        0.0\n");
+      println(io, "$(length(loaded_nodes))\t\t%% number of loaded nodes");
+      println(io, "%% j\t\tFx\t\tFy\t\tFz\t\tMxx\t\tMyy\t\tMzz");
       for n in loaded_nodes
-        @printf(io, "%4d\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\n",
-                n.id, load.x, load.y, load.z, 0, 0, 0)
+        println(io, "$(n.id),\t$(load.x),\t$(load.y),\t$(load.z),\t0,\t0,\t0")
       end
-      @printf(io, "\n");
-      nU = 0 #sum(max(abs(U))~=0);
-      @printf(io, "%4d\t\t%% number of members with uniform distributed loads \n", nU);
-      #@printf(io, "%% j\t\tUx\t\tUy\t\tUz\n");
-      #idx = find(max(abs(U)));
-      for i=1:nU
-          m = idx(i);
-          @printf(io, "%4d\t%14.6e\t%14.6e\t%14.6e\n",
-                  m, U(1,m), U(2,m), U(3,m) );
-      end
-      nW = 0;
-      @printf(io, "%4d\t\t%% number of members with trapezoidal loads \n", nW);
-      nP = 0;
-      @printf(io, "%4d\t\t%% number of members with internal point loads \n", nP);
-      nT = 0;
-      @printf(io, "%4d\t\t%% number of members with temperature loads \n", nT);
-      nD = 0 #sum(max(abs(D))~=0);
-      @printf(io, "%4d\t\t%% number of nodes with prescribed displacements\n", nD);
-      #@printf(io, "%% j\t\tDx\t\tDy\t\tDz\t\tDxx\t\tDyy\t\tDzz\n");
-      #idx = find(max(abs(D)));
-      for i=1:nD
-          j = idx(i);
-          @printf(io, "%4d\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\t%14.6e\n",
-                  j, D(1,j), D(2,j), D(3,j), D(4,j), D(5,j), D(6,j));
-      end
-      @printf(io, "\n");
-      @printf(io, "\t\t%% end   static load case 1 of 1 \n\n");
-      @printf(io, "%% inertial load data ...\n");
-      nM = 0;
-      @printf(io, "%4d\t\t%% number of dynamic modes to analyze \n", nM);
+      println(io, "\n");
+      println(io, "0\t\t%% number of members with uniform distributed loads")
+      println(io, "0\t\t%% number of members with trapezoidal loads");
+      println(io, "0\t\t%% number of members with internal point loads");
+      println(io, "0\t\t%% number of members with temperature loads");
+      println(io, "0\t\t%% number of nodes with prescribed displacements");
+      println(io, "\t\t%% end   static load case 1 of 1\n");
+      println(io, "%% inertial load data ...");
+      println(io, "0\t\t%% number of dynamic modes to analyze");
     end
   end
 
@@ -230,13 +209,16 @@ frame3dd_simulation_path() =
 backend_truss_analysis(b::FR3DD, load::Vec) =
   # Ensure extension is FMM to force Matlab mode
   let simulation_folder = frame3dd_simulation_path(),
-      input_path = joinpath(simulation_folder, "IOdata.FMM"),
-      output_path = joinpath(simulation_folder, "IOdata.OUT"),
-      output_m_path = joinpath(simulation_folder, "IOdata_out.m")
-    @info input_path
+#      input_path = joinpath(simulation_folder, "IOdata.FMM"),
+#      output_path = joinpath(simulation_folder, "IOdata.OUT") ,
+#      output_m_path = joinpath(simulation_folder, "IOdata_out.m")
+       input_path = joinpath(simulation_folder, "IOdata.IN"),
+       output_path = joinpath(simulation_folder, "IOdata.OUT")
+    #@info input_path
     displacements_from_frame3dd(b, input_path, load)
     try
-      run(`$frame3dd_plugin -w -i $input_path -o $output_path`)
+      #run(`$frame3dd_plugin -w -i $input_path -o $output_path`)
+      run(`$frame3dd_plugin -i $input_path -o $output_path -q`)
     catch e
     end
     lines = readlines(output_path)
