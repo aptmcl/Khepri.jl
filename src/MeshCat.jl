@@ -405,7 +405,6 @@ meshcat_torus(p, re, ri, material) =
     meshcat_object_shapes("Mesh", geom, [], material, p)
   end
 
-
 meshcat_centered_cone(p, r, h, material) =
   let geom = (uuid=string(uuid1()),
               type="ConeBufferGeometry",
