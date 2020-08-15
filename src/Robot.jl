@@ -1312,14 +1312,14 @@ set_backend_family(
     Khepri.I_MT_STEEL,    # Type
     "Steel",              # Name
     "I'm really steel",   # Nuance
-    210000000000.0,       # E
-    0.3,                  # NU
-    81000000000.0,        # Kirchoff
-    77010.0,              # RO
-    1.2e-05,              # LX
-    0.04,                 # DumpCoef
-    235000000.0,          # RE
-    360000000.0],         # RT
+    210000000000.0,       # E (Young's modulus)
+    0.3,                  # NU (Poisson's ratio)
+    81000000000.0,        # G (Kirchoff's or Shear modulus)
+    77010.0,              # RO (Density)
+    1.2e-05,              # LX (Thermal expansion)
+    0.04,                 # DUMPCOEF (Damping coefficient)
+    235000000.0,          # RE (Design resistence)
+    360000000.0],         # RT (Limit tension resistance)
   section=[
     "Tube",               #name
     "ElasticIsotropic",   #material_name
