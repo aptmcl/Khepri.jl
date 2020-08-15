@@ -1,4 +1,5 @@
 export Shape,
+       Shapes,
        Path,
        backend,
        new_backend,
@@ -1350,6 +1351,12 @@ render_view(name::String="View") =
     render_view(path, current_backend())
     path
   end
+export save_view
+save_view(name::String="View") =
+  let path = prepare_for_saving_file(render_pathname(name))
+    save_view(path, current_backend())
+    path
+  end
 
 export realistic_sky
 realistic_sky(;
@@ -1380,3 +1387,15 @@ ground(level::Loc=z(0), color::RGB=rgb(0.25,0.25,0.25)) =
 abstract type Analysis end
 abstract type StructuralAnalysis <: Analysis end
 abstract type LightingAnalysis <: Analysis end
+
+
+###########################################################
+# Geometric properties
+
+# Axis-aligned Bounding Box
+
+# Centroid
+
+export centroid
+centroid(s::Sphere) = s.center
+centroid(s::Cylinder) = add_z(s.cb, s.h/2)

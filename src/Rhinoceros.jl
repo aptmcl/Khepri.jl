@@ -31,6 +31,7 @@ encode_TableChairFamily = encode_int
 decode_TableChairFamily = decode_int
 
 rhino_api = @remote_functions :CS """
+public void RunScript(string script)
 public void SetView(Point3d position, Point3d target, double lens, bool perspective, string style)
 public void View(Point3d position, Point3d target, double lens)
 public void ViewTop()
@@ -80,6 +81,7 @@ public Guid Scale(Guid id, Point3d p, double s)
 public Guid Rotate(Guid id, Point3d p, Vector3d n, double a)
 public Guid Mirror(Guid id, Point3d p, Vector3d n, bool copy)
 public void Render(int width, int height, string path)
+public void SaveView(int width, int height, string path)
 public bool IsPoint(RhinoObject e)
 public bool IsCircle(RhinoObject e)
 public bool IsPolyLine(RhinoObject e)
@@ -805,6 +807,9 @@ all_shapes_in_layer(layer, b::RH) =
 
 render_view(path::String, b::RH) =
   @remote(b, Render(render_width(), render_height(), path))
+
+save_view(path::String, b::RH) =
+  @remote(b, SaveView(render_width(), render_height(), path))
 
 
 #=
