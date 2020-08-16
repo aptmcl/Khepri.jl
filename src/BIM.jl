@@ -423,10 +423,12 @@ realize(b::Backend, s::Roof) =
 realize(b::Backend, s::Panel) =
   let pts = in_world.(s.vertices),
       n = vertices_normal(pts)*s.family.thickness/2
-    backend_panel(b,
-      map(p -> p - n, pts),
-      map(p -> p + n, pts),
-      s.family)
+    with_family_in_layer(b, s.family) do
+      backend_panel(b,
+        map(p -> p - n, pts),
+        map(p -> p + n, pts),
+        s.family)
+    end
   end
 
 backend_panel(b::Backend, bot::Locs, top::Locs, family) =
