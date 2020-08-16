@@ -5,6 +5,7 @@ Base.@kwdef struct Frame3DDBackend{K,T} <: LazyBackend{K,T}
   realized::Parameter{Bool}=Parameter(false)
   truss_nodes::Vector{<:TrussNode}=TrussNode[]
   truss_bars::Vector{<:TrussBar}=TrussBar[]
+  shapes::Vector{<:Shape}=Shape[] # This contains all the rest that is not treated yet
   truss_node_data::Vector{TrussNodeData}=TrussNodeData[]
   truss_bar_data::Vector{TrussBarData}=TrussBarData[]
 end
