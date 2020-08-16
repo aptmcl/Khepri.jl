@@ -318,8 +318,13 @@ set_backend_family(default_curtain_wall_family().transom_frame, autocad, acad_la
 set_backend_family(default_curtain_wall_family().mullion_frame, autocad, acad_layer_family("CurtainWall-Mullion"))
 #current_backend(autocad)
 
-set_backend_family(default_truss_node_family(), autocad, acad_layer_family("TrussNodes"))
-set_backend_family(default_truss_bar_family(), autocad, acad_layer_family("TrussBars"))
+set_backend_family(default_truss_node_family(), autocad, acad_layer_family("TrussNode"))
+set_backend_family(default_truss_bar_family(), autocad, acad_layer_family("TrussBar"))
+
+set_backend_family(fixed_truss_node_family, autocad, acad_layer_family("FixedTrussNode"))
+set_backend_family(free_truss_node_family, autocad, acad_layer_family("FreeTrussNode"))
+
+#use_family_in_layer(b::ACAD) = true
 
 backend_stroke_color(b::ACAD, path::Path, color::RGB) =
     let r = backend_stroke(b, path)
