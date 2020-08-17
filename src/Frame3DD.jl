@@ -215,12 +215,14 @@ backend_truss_analysis(b::FR3DD, load::Vec) =
 #      output_m_path = joinpath(simulation_folder, "IOdata_out.m")
        input_path = joinpath(simulation_folder, "IOdata.IN"),
        output_path = joinpath(simulation_folder, "IOdata.OUT")
-    #@info input_path
+    @info input_path
     displacements_from_frame3dd(b, input_path, load)
     try
       #run(`$frame3dd_plugin -w -i $input_path -o $output_path`)
       #run(`$frame3dd_plugin -i $input_path -o $output_path`)
-      run(`$frame3dd_plugin -i $input_path -o $output_path -q`)
+      withenv("FRAME3DD_OUTDIR"=>simulation_folder) do
+        run(`$frame3dd_plugin -i $input_path -o $output_path`)
+      end
     catch e
     end
     lines = readlines(output_path)
