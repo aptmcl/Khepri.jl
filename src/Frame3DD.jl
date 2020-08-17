@@ -129,7 +129,7 @@ displacements_from_frame3dd(b::FR3DD, filename, load) =
   let nodes = process_nodes(b.truss_nodes, load),
       bars = process_bars(b.truss_bars, nodes),
       supports = unique(filter(s -> s != false, map(n -> n.family.support, nodes))),
-      loaded_nodes = filter(n->n.family.support == false, nodes),
+      loaded_nodes = filter(!truss_node_is_supported, nodes),
       supported_nodes = filter(truss_node_is_supported, nodes),
       shear = 0,		     # 1: include shear deformation effects, 0: don't
       geom  = 0,		     # 1: include geometric stiffness effects, 0: don't
@@ -219,6 +219,7 @@ backend_truss_analysis(b::FR3DD, load::Vec) =
     displacements_from_frame3dd(b, input_path, load)
     try
       #run(`$frame3dd_plugin -w -i $input_path -o $output_path`)
+      #run(`$frame3dd_plugin -i $input_path -o $output_path`)
       run(`$frame3dd_plugin -i $input_path -o $output_path -q`)
     catch e
     end
