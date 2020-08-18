@@ -1369,7 +1369,7 @@ realize_structure(b::ROBOT) =
       struc = structure(project(application())),
       nds = nodes(struc),
       brs = bars(struc),
-      supports = unique(filter(s -> s != false, map(n -> n.family.support, ns))),
+      supports = unique(map(n -> n.family.support, filter(truss_node_is_supported, ns))),
       family_bars = Dict()
     empty!(b.truss_node_data)
     append!(b.truss_node_data, ns)
@@ -1382,7 +1382,7 @@ realize_structure(b::ROBOT) =
       let p = node.loc,
           support = node.family.support
         create_node(nds, node.id, p.x, p.y, p.z)
-        if support != false
+        if truss_node_is_supported(node)
           set_label(get_node(nds, node.id), I_LT_NODE_SUPPORT, truss_node_support_label(support))
         end
       end
