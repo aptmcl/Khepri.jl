@@ -99,7 +99,7 @@ frame3DD_circular_tube_truss_bar_family(rₒ, rᵢ; E, G, p, d) =
 set_backend_family(
    default_truss_bar_family(),
    frame3dd,
-   frame3DD_circular_tube_truss_bar_family(0.0213, 0.0213-0.0026,
+   frame3DD_circular_tube_truss_bar_family(0.0213/2, 0.0213/2-0.0026,
      E=210000000000.0, # (Young's modulus)
      G=81000000000.0, # (Kirchoff's or Shear modulus)
      p=0.0, # Roll angle
