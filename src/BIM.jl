@@ -1047,7 +1047,7 @@ truss_node_support = TrussNodeSupport
     inner_radius::Real=0)
 
 truss_bar_family_cross_section_area(f::TrussBarFamily) =
-  truss_bar_family_cross_section_area(back)
+  error("This should be computed by the backend family") #truss_bar_family_cross_section_area(back)
 
 # We need a few families by default
 export free_truss_node_family, fixed_truss_node_family, truss_node_support
