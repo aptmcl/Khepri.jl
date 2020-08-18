@@ -1415,8 +1415,7 @@ case_counter = Parameter(0)
 new_robot_analysis(v=nothing; self_weight=false, backend=robot) =
   let node_loads = Dict(v==nothing ?
                     [] :
-                    [v => findall(n->n.family.support == false,
-                                  backend.truss_nodes)])
+                    [v => findall(! truss_node_is_supported, backend.truss_nodes)])
     ensure_realized_structure(backend)
     case_counter(case_counter()+1)
     analyze_case(case_counter(),
