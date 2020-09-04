@@ -593,12 +593,12 @@ To visualize, we piggyback on Julia's display mechanisms
 
 display_meshcat(io, vis, (w, h) = render_size()) =
   let frame = vis.core
-    MeshCat.wait_for_server(frame)
     print(io, """
     <div style="height: $(h)px; width: $(w)px; overflow-x: auto; overflow-y: hidden; resize: both">
     <iframe src="$(MeshCat.url(frame))" style="width: 100%; height: 100%; border: none"></iframe>
     </div>
     """)
+    MeshCat.wait_for_server(frame)
   end
 
 struct MCATViewer
