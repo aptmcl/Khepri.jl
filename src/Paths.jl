@@ -217,7 +217,7 @@ location_at(path::Union{OpenSplinePath,ClosedSplinePath}, ϕ::Real) =
       t = vxyz(d1[1], d1[2], d1[3], world_cs),
       n = vxyz(d2[1], d2[2], d2[3], world_cs)#,
       #r = in_world(vy(1, u0.cs))
-    loc_from_o_vx_vy(p, n, cross(t, n))
+    norm(n) <= 1e-9 ? loc_from_o_vz(p, t) : loc_from_o_vx_vy(p, n, cross(t, n))
   end
 
 map_division(func::Function, path::OpenSplinePath, n::Integer) =
