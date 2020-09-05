@@ -1034,8 +1034,12 @@ realize(b::MCAT, s::SubtractionShape3D) =
 realize_box(b::MCAT, mat, p, dx, dy, dz) =
   add_object(b, meshcat_box(p, dx, dy, dz, mat))
 
-#=
 realize_prism(b::MCAT, top, bot, side, path::PathSet, h::Real) =
+  let p = path_start(path.paths[1]),
+      v = u0(p.cs)-p
+    add_object(b, meshcat_extrusion_z(translate(path, v), h, top, p))
+  end
+#=
   # PathSets require a different approach
   let buf = buffer(b),
       bot_vss = map(path_vertices, path.paths),
