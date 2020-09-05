@@ -14,6 +14,7 @@ export Loc, Locs, LocOrZ,
        pol_rho, pol_phi,
        cyl_rho,cyl_phi,cyl_z,
        sph_rho,sph_phi,sph_psi,
+       uvx,uvy,uvz,uvxy,uvyz,uvxz,uvxyz,
        vx,vy,vz,
        vxy,vxz,vyz,vpol,vcyl,vsph,
        add_x,add_y,add_z,add_xy,add_xz,add_yz,add_xyz,
@@ -403,13 +404,13 @@ max_loc(p::Loc, q::Loc) =
 
 distance(p::XYZ, q::XYZ) = norm((in_world(q)-in_world(p)).raw)
 
-u0(cs=current_cs()) = xyz(0,0,0,cs)
-ux(cs=current_cs()) = xyz(1,0,0,cs)
-uy(cs=current_cs()) = xyz(0,1,0,cs)
-uz(cs=current_cs()) = xyz(0,0,1,cs)
-uxy(cs=current_cs()) = xyz(1,1,0,cs)
-uyz(cs=current_cs()) = xyz(0,1,1,cs)
-uxz(cs=current_cs()) = xyz(1,0,1,cs)
+u0(cs=current_cs())   = xyz(0,0,0,cs)
+ux(cs=current_cs())   = xyz(1,0,0,cs)
+uy(cs=current_cs())   = xyz(0,1,0,cs)
+uz(cs=current_cs())   = xyz(0,0,1,cs)
+uxy(cs=current_cs())  = xyz(1,1,0,cs)
+uyz(cs=current_cs())  = xyz(0,1,1,cs)
+uxz(cs=current_cs())  = xyz(1,0,1,cs)
 uxyz(cs=current_cs()) = xyz(1,1,1,cs)
 
 x(x::Real=1,cs=current_cs()) = xyz(x,0,0,cs)
@@ -418,6 +419,14 @@ z(z::Real=1,cs=current_cs()) = xyz(0,0,z,cs)
 xy(x::Real=1,y::Real=1,cs=current_cs()) = xyz(x,y,0,cs)
 yz(y::Real=1,z::Real=1,cs=current_cs()) = xyz(0,y,z,cs)
 xz(x::Real=1,z::Real=1,cs=current_cs()) = xyz(x,0,z,cs)
+
+uvx(cs=current_cs())   = vxyz(1,0,0,cs)
+uvy(cs=current_cs())   = vxyz(0,1,0,cs)
+uvz(cs=current_cs())   = vxyz(0,0,1,cs)
+uvxy(cs=current_cs())  = vxyz(1,1,0,cs)
+uvyz(cs=current_cs())  = vxyz(0,1,1,cs)
+uvxz(cs=current_cs())  = vxyz(1,0,1,cs)
+uvxyz(cs=current_cs()) = vxyz(1,1,1,cs)
 
 vx(x::Real=1,cs=current_cs()) = vxyz(x,0,0,cs)
 vy(y::Real=1,cs=current_cs()) = vxyz(0,y,0,cs)
