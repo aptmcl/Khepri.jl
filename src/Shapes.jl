@@ -1182,9 +1182,7 @@ realize_and_delete_shapes(shape::Shape, shapes::Shapes) =
 realize(b::Backend, s::UnionShape) =
     unite_refs(b, map(ref, s.shapes))
 
-realize(b::Backend, s::SubtractionShape2D) =
-    subtract_ref(b, ref(s.shape), unite_refs(b, map(ref, s.shapes)))
-realize(b::Backend, s::SubtractionShape3D) =
+realize(b::Backend, s::Union{SubtractionShape2D,SubtractionShape3D}) =
     subtract_ref(b, ref(s.shape), unite_refs(b, map(ref, s.shapes)))
 
 function startSketchup(port)
