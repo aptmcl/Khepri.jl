@@ -33,6 +33,7 @@ export empty_path,
        path_start,
        path_end,
        path_domain,
+       planar_path_normal,
        subpath,
        subpaths,
        join_paths,
@@ -122,6 +123,7 @@ location_at(path::ArcPath, ϕ::Real) =
                      vpol(1, path.start_angle + ϕ + π, path.center.cs),
                      vz(1, path.center.cs))
   end
+planar_path_normal(path::ArcPath) = uvz(path.center.cs)
 
 ## Circular path
 struct CircularPath <: ClosedPath
@@ -135,6 +137,7 @@ location_at(path::CircularPath, ϕ::Real) =
   loc_from_o_vx_vy(add_pol(path.center, path.radius, ϕ),
                    vpol(1, ϕ + π, path.center.cs),
                    vz(1, path.center.cs))
+planar_path_normal(path::CircularPath) = uvz(path.center.cs)
 
 ## Rectangular path
 struct RectangularPath <: ClosedPath
@@ -142,19 +145,23 @@ struct RectangularPath <: ClosedPath
     dx::Real
     dy::Real
 end
-rectangular_path(corner::Loc=u0(), dx::Real=1, dy::Real=1) = RectangularPath(corner, dx, dy)
+rectangular_path(corner::Loc=u0(), dx::Real=1, dy::Real=1) =
+  RectangularPath(corner, dx, dy)
 centered_rectangular_path(p, dx, dy) =
   rectangular_path(p-vxy(dx/2, dy/2), dx, dy)
+planar_path_normal(path::RectangularPath) = uvz(path.corner.cs)
 
 struct OpenPolygonalPath <: OpenPath
     vertices::Locs
 end
-open_polygonal_path(vertices=[u0(), x(), xy(), y()]) = OpenPolygonalPath(vertices)
+open_polygonal_path(vertices=[u0(), x(), xy(), y()]) =
+  OpenPolygonalPath(vertices)
 
 struct ClosedPolygonalPath <: ClosedPath
     vertices::Locs
 end
-closed_polygonal_path(vertices=[u0(), x(), xy(), y()]) = ClosedPolygonalPath(ensure_no_repeated_locations(vertices))
+closed_polygonal_path(vertices=[u0(), x(), xy(), y()]) =
+  ClosedPolygonalPath(ensure_no_repeated_locations(vertices))
 
 PolygonalPath = Union{OpenPolygonalPath, ClosedPolygonalPath}
 
@@ -173,6 +180,7 @@ ensure_no_repeated_locations(locs) =
 path_start(path::PolygonalPath) = path.vertices[1]
 path_end(path::OpenPolygonalPath) = path.vertices[end]
 path_end(path::ClosedPath) = path_start(path)
+planar_path_normal(path::PolygonalPath) = vertices_normal(path_vertices(path))
 
 join_paths(p1::OpenPolygonalPath, p2::OpenPolygonalPath) =
     coincident_path_location(p1.vertices[end], p2.vertices[1]) ?
@@ -280,14 +288,25 @@ convert(::Type{ClosedSplinePath}, path::Path) =
 # 5. compute a sub path from a path, a length from the path begining and a length increment
 # 6. Produce the meta representation of a path
 
-translate(path::CircularPath, v::Vec) = circular_path(path.center + v, path.radius)
-translate(path::ArcPath, v::Vec) = arc_path(path.center + v, path.radius, path.start_angle, path.amplitude)
-translate(path::RectangularPath, v::Vec) = rectangular_path(path.corner + v, path.dx, path.dy)
-translate(path::OpenPolygonalPath, v::Vec) = open_polygonal_path(translate(path.vertices, v))
-translate(path::ClosedPolygonalPath, v::Vec) = closed_polygonal_path(translate(path.vertices, v))
-translate(path::OpenSplinePath, v::Vec) = open_spline_path(translate(path.vertices, v), path.v0, path.v1)
-translate(path::ClosedSplinePath, v::Vec) = closed_spline_path(translate(path.vertices, v))
+translate(path::PointPath, v::Vec) = PointPath(path.location + v)
+translate(path::CircularPath, v::Vec) = CircularPath(path.center + v, path.radius)
+translate(path::ArcPath, v::Vec) = ArcPath(path.center + v, path.radius, path.start_angle, path.amplitude)
+translate(path::RectangularPath, v::Vec) = RectangularPath(path.corner + v, path.dx, path.dy)
+translate(path::OpenPolygonalPath, v::Vec) = OpenPolygonalPath(translate(path.vertices, v))
+translate(path::ClosedPolygonalPath, v::Vec) = ClosedPolygonalPath(translate(path.vertices, v))
+translate(path::OpenSplinePath, v::Vec) = OpenSplinePath(translate(path.vertices, v), path.v0, path.v1)
+translate(path::ClosedSplinePath, v::Vec) = ClosedSplinePath(translate(path.vertices, v))
 translate(ps::Locs, v::Vec) = map(p->p+v, ps)
+
+in_cs(path::PointPath, cs::CS) = PointPath(in_cs(path.location, cs))
+in_cs(path::CircularPath, cs::CS) = CircularPath(in_cs(path.center, cs), path.radius)
+in_cs(path::ArcPath, cs::CS) = ArcPath(in_cs(path.center, cs), path.radius, path.start_angle, path.amplitude)
+in_cs(path::RectangularPath, cs::CS) = RectangularPath(in_cs(path.corner, cs), path.dx, path.dy)
+in_cs(path::OpenPolygonalPath, cs::CS) = OpenPolygonalPath(in_cs(path.vertices, cs))
+in_cs(path::ClosedPolygonalPath, cs::CS) = ClosedPolygonalPath(in_cs(path.vertices, cs))
+in_cs(path::OpenSplinePath, cs::CS) = OpenSplinePath(in_cs(path.vertices, cs), path.v0, path.v1)
+in_cs(path::ClosedSplinePath, cs::CS) = ClosedSplinePath(in_cs(path.vertices, cs))
+in_cs(ps::Locs, cs::CS) = map(p->in_cs(p, cs), ps)
 
 scale(path::RectangularPath, s::Real, p::Loc=u0()) =
   let v = path.corner - p
@@ -692,12 +711,19 @@ path_set(paths...) =
 # Operations on path containers
 translate(path::T, v::Vec) where T<:Union{PathSequence,PathSet} =
   T(translate.(path.paths, v))
+in_cs(path::T, cs::CS) where T<:Union{PathSequence,PathSet} =
+  T(in_cs.(path.paths, cs))
+planar_path_normal(path::T) where T<:Union{PathSequence,PathSet} =
+  planar_path_normal(path.paths[1])
 
 # Convertions from/to paths
 convert(::Type{OpenPath}, vs::Locs) =
   open_polygonal_path(vs)
 convert(::Type{ClosedPath}, vs::Locs) =
   closed_polygonal_path(vs)
+convert(::Type{Vector{<:ClosedPath}}, ps::Vector{<:Any}) =
+  ClosedPath[convert(ClosedPath, p) for p in ps]
+
 convert(::Type{Path}, vs::Locs) =
   coincident_path_location(vs[1], vs[end]) ?
     closed_polygonal_path(vs[1:end-1]) :
