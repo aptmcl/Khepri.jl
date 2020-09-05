@@ -364,13 +364,20 @@ backend_slab(b::Backend, profile, openings, thickness, family) =
 
 # Delegate on the lower-level pyramid frustum
 realize_prism(b::Backend, top, bot, side, path::Path, h::Real) =
-  realize_frustum(b, top, bot, side, path, translate(path, vz(h)))
+  realize_frustum(b, top, bot, side, path, translate(path, planar_path_normal(path)*h))
+
+realize_prism(b::Backend, top, bot, side, path::PathSet, h::Real) =
+  let v = planar_path_normal(path)*h,
+      refs = [ensure_ref(b, realize_frustum(b, top, bot, side, path, translate(path, v)))
+              for path in path.paths]
+    subtract_ref(b, refs[1], unite_refs(b, refs[2:end]))
+  end
 
 # If we don't know how to process a path, we convert it to a sequence of vertices
 realize_frustum(b::Backend, top, bot, side, bot_path::Path, top_path::Path, closed=true) =
   realize_pyramid_frustum(b, top, bot, side, path_vertices(bot_path), path_vertices(top_path), closed)
 # and then, if we don't know what to do with the materials, we simply ignore them
-realize_pyramid_frustum(b::Backend, bot_mat, top_mat, side_mat, bot_vs::Locs, top_vs::Locs) =
+realize_pyramid_frustum(b::Backend, bot_mat, top_mat, side_mat, bot_vs::Locs, top_vs::Locs, closed=true) =
   backend_pyramid_frustum(b, bot_vs, top_vs)
 
 
@@ -418,22 +425,21 @@ realize(b::Backend, s::Roof) =
 @deffamily(panel_family, Family,
     thickness::Real=0.02)
 
-@defproxy(panel, BIMShape, vertices::Locs=Loc[x(0), x(1), y(1)], level::Any=default_level(), family::Any=default_panel_family())
+@defproxy(panel, BIMShape, contour::ClosedPath=rectangular_path(),
+          level::Level=default_level(), family::PanelFamily=default_panel_family(),
+          openings::Vector{<:ClosedPath}=ClosedPath[])
 
 realize(b::Backend, s::Panel) =
-  let pts = in_world.(s.vertices),
-      n = vertices_normal(pts)*s.family.thickness/2
+  let thickness = s.family.thickness,
+      v = planar_path_normal(s.contour)*-thickness/2,
+      contour = translate(s.contour, v),
+      openings = map(c -> translate(c, v), s.openings),
+      mat = panel_material(b, family_ref(b, s.family))
     with_family_in_layer(b, s.family) do
-      backend_panel(b,
-        map(p -> p - n, pts),
-        map(p -> p + n, pts),
-        s.family)
+      realize_prism(
+        b, mat, mat, mat,
+        isempty(openings) ? contour : path_set(contour, openings...), thickness)
     end
-  end
-
-backend_panel(b::Backend, bot::Locs, top::Locs, family) =
-  let mat = panel_material(b, family_ref(b, family))
-    realize_pyramid_frustum(b, mat, mat, mat, bot, top)
   end
 
 #=
