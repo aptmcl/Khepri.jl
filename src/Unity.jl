@@ -83,6 +83,7 @@ public GameObject SphereWithMaterial(Vector3 center, float radius, Material mate
 public GameObject Pyramid(Vector3[] ps, Vector3 q)
 public GameObject PyramidFrustum(Vector3[] ps, Vector3[] qs)
 public GameObject PyramidFrustumWithMaterial(Vector3[] ps, Vector3[] qs, Material material)
+public GameObject ExtrudeContour(Vector3[] contour, Vector3[][] holes, Vector3 v, Material material)
 public GameObject RightCuboid(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle)
 public GameObject RightCuboidWithMaterial(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz, float angle, Material material)
 public GameObject Box(Vector3 position, Vector3 vx, Vector3 vy, float dx, float dy, float dz)
@@ -298,21 +299,12 @@ realize(b::Unity, s::SurfaceArc) =
 #realize(b::Unity, s::SurfaceEllipse) = @remote(b, Circle(connection(b),
 =#
 
-realize(b::Unity, s::SurfacePolygon) =
-  @remote(b, SurfacePolygon(s.vertices))
+backend_surface_polygon(b::Unity, vs::Locs) =
+  @remote(b, SurfacePolygon(vs))
 
 backend_fill(b::Unity, path::ClosedPolygonalPath) =
   @remote(b, SurfacePolygon(path.vertices))
 
-realize(b::Unity, s::SurfaceRegularPolygon) =
-  @remote(b, SurfacePolygon(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
-realize(b::Unity, s::SurfaceRectangle) =
-  @remote(b, SurfacePolygon(
-    connection(b),
-    [s.corner,
-     add_x(s.corner, s.dx),
-     add_xy(s.corner, s.dx, s.dy),
-     add_y(s.corner, s.dy)]))
 #=
 realize(b::Unity, s::Surface) =
   let #ids = map(r->@remote(b, NurbSurfaceFrom(connection(b),r), @remote(b, SurfaceFromCurves(collect_ref(s.frontier))))
@@ -735,19 +727,6 @@ realize_beam_profile(b::Unity, s::Union{Beam,FreeColumn,Column}, profile::Rectan
       family_ref(b, s.family)))
   end
 
-realize(b::Unity, s::Panel) =
-  let #p1 = s.vertices[1],
-      #p2 = s.vertices[2],
-      #p3 = s.vertices[3],
-      #n = vz(s.family.thickness, cs_from_o_vx_vy(p1, p2-p1, p3-p1))
-      verts = in_world.(s.vertices)
-      n = vertices_normal(verts)*(s.family.thickness/2)
-    @remote(b, Panel(
-      map(p -> p - n, verts),
-      n*2,
-      family_ref(b, s.family)))
-  end
-
 #=
 sweep_fractions(b, verts, height, l_thickness, r_thickness) =
   let p = add_z(verts[1], height/2),
@@ -791,6 +770,12 @@ realize(b::Unity, w::Door) = void_ref(b)
 
 realize_pyramid_frustum(b::Unity, top_mat, bot_mat, side_mat, bot_vs::Locs, top_vs::Locs) =
     UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, side_mat)))
+
+realize_prism(b::Unity, top, bot, side, path::PathSet, h::Real) =
+  let v = planar_path_normal(path)*h,
+      ptss = path_vertices.(path.paths)
+    @remote(b, ExtrudeContour(ptss[1], ptss[2:end], v, side))
+  end
 
 #
 
