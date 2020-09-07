@@ -34,7 +34,9 @@ show(io::IO, mime::MIMEPOVRay, v::Vector) =
   end
 show(io::IO, ::MIMEPOVRay, p::Union{Loc,Vec}) =
   # swap y with z to make it consistent with POVRay coordinate system
-  print(io, "<$(p.x), $(p.z), $(p.y)>")
+  let p = in_world(p)
+    print(io, "<$(p.x), $(p.z), $(p.y)>")
+  end
 show(io::IO, ::MIMEPOVRay, c::RGB) =
   print(io, "color rgb <$(Float64(red(c))), $(Float64(green(c))), $(Float64(blue(c)))>")
 show(io::IO, ::MIMEPOVRay, c::RGBA) =
@@ -548,7 +550,7 @@ backend_delete_shapes(b::POVRay, shapes::Shapes) =
 
 realize(b::POVRay, s::Sphere) =
   let mat = get_material(b, s)
-    write_povray_object(buffer(b), "sphere", mat, in_world(s.center), s.radius)
+    write_povray_object(buffer(b), "sphere", mat, s.center, s.radius)
     void_ref(b)
   end
 
@@ -593,8 +595,6 @@ realize(b::ACAD, s::RightCuboid) =
 
 realize(b::POVRay, s::Box) =
   let buf = buffer(b),
-      #bot = in_world(s.c),
-      #top = in_world(s.c + vxyz(s.dx, s.dy, s.dz, s.c.cs)),
       mat = get_material(b, s)
     write_povray_object(buf, "box", mat, [0,0,0], [s.dx, s.dy, s.dz]) do
       write_povray_matrix(buf, s.c)
@@ -604,8 +604,8 @@ realize(b::POVRay, s::Box) =
 
 realize(b::POVRay, s::Cone) =
   let buf = buffer(b),
-      bot = in_world(s.cb),
-      top = in_world(s.cb + vz(s.h, s.cb.cs)),
+      bot = s.cb,
+      top = s.cb + vz(s.h, s.cb.cs),
       mat = get_material(b, s)
     write_povray_object(buf, "cone", mat, bot, s.r, top, 0)
     void_ref(b)
@@ -613,8 +613,8 @@ realize(b::POVRay, s::Cone) =
 
 realize(b::POVRay, s::ConeFrustum) =
   let buf = buffer(b),
-      bot = in_world(s.cb),
-      top = in_world(s.cb + vz(s.h, s.cb.cs)),
+      bot = s.cb,
+      top = s.cb + vz(s.h, s.cb.cs),
       mat = get_material(b, s)
     write_povray_object(buf, "cone", mat, bot, s.rb, top, s.rt)
     void_ref(b)
@@ -622,8 +622,6 @@ realize(b::POVRay, s::ConeFrustum) =
 
 realize(b::POVRay, s::Cylinder) =
   let buf = buffer(b),
-      #bot = in_world(s.cb),
-      #top = in_world(s.cb + vz(s.h, s.cb.cs)),
       mat = get_material(b, s)
     write_povray_object(buf, "cylinder", mat, [0,0,0], [0,0,s.h], s.r) do
       write_povray_matrix(buf, s.cb)
@@ -634,8 +632,8 @@ realize(b::POVRay, s::Cylinder) =
 write_povray_mesh(buf::IO, mat, points, closed_u, closed_v, smooth_u, smooth_v) =
   let si = size(points, 1),
       sj = size(points, 2),
-      pts = in_world.(points),
-      vcs = in_world.(add_z.(points, 1) .- points),
+      pts = points,
+      vcs = add_z.(points, 1) .- points,
       idxs = quad_grid_indexes(si, sj, closed_u, closed_v)
 #    let ps = reshape(permutedims(pts), :)
 #      delete_all_shapes(autocad)
@@ -764,8 +762,8 @@ realize(b::POVRay, s::SubtractionShape3D) =
 
 realize_box(b::POVRay, mat, p, dx, dy, dz) =
   let buf = buffer(b),
-      bot = in_world(p),
-      top = in_world(add_xyz(p, dx, dy, dz))
+      bot = p,
+      top = add_xyz(p, dx, dy, dz)
     write_povray_object(buf, "box", mat, bot, top)
     void_ref(b)
   end
@@ -773,8 +771,9 @@ realize_box(b::POVRay, mat, p, dx, dy, dz) =
 realize_prism(b::POVRay, top, bot, side, path::PathSet, h::Real) =
   # PathSets require a different approach
   let buf = buffer(b),
+      v = planar_path_normal(path)*h,
       bot_vss = map(path_vertices, path.paths),
-      top_vss = map(path_vertices, translate(path, vz(h)).paths)
+      top_vss = map(path_vertices, translate(path, v).paths)
     write_povray_polygons(buf, bot, map(reverse, bot_vss))
     write_povray_polygons(buf, top, top_vss)
     for (bot_vs, top_vs) in zip(bot_vss, top_vss)
@@ -815,7 +814,7 @@ write_povray_polygons(io::IO, mat, vss) =
     mapreduce(length, +, vss) + length(vss),
     mapreduce(vs->[vs..., vs[1]], vcat, vss)...)
 
-# Polygons with holes need a PathSets in POVRay
+# Polygons with holes need PathSets in POVRay
 
 subtract_paths(b::POVRay, c_r_w_path::PathSet, c_l_w_path::PathSet, c_r_op_path, c_l_op_path) =
   path_set(c_r_w_path.paths..., c_r_op_path),
