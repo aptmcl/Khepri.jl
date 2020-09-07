@@ -769,12 +769,12 @@ realize(b::Unity, w::Window) = void_ref(b)
 realize(b::Unity, w::Door) = void_ref(b)
 
 realize_pyramid_frustum(b::Unity, top_mat, bot_mat, side_mat, bot_vs::Locs, top_vs::Locs) =
-    UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, side_mat)))
+  UnityNativeRef(@remote(b, PyramidFrustumWithMaterial(bot_vs, top_vs, top_mat)))
 
 realize_prism(b::Unity, top, bot, side, path::PathSet, h::Real) =
   let v = planar_path_normal(path)*h,
       ptss = path_vertices.(path.paths)
-    @remote(b, ExtrudeContour(ptss[1], ptss[2:end], v, side))
+    @remote(b, ExtrudeContour(ptss[1], ptss[2:end], v, top))
   end
 
 #
