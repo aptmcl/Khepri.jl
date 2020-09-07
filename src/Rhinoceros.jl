@@ -348,14 +348,8 @@ realize(b::RH, s::SurfaceEllipticArc) =
 realize(b::RH, s::SurfaceEllipse) =
   @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), s.radius_x, s.radius_y))
 
-realize(b::RH, s::SurfacePolygon) =
-  @remote(b, SurfaceClosedPolyLine(s.vertices))
-realize(b::RH, s::SurfaceRegularPolygon) =
-  @remote(b, SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
-realize(b::RH, s::SurfaceRectangle) =
-  let c = s.corner
-    @remote(b, SurfaceClosedPolyLine([c, add_x(c, s.dx), add_xy(c, s.dx, s.dy), add_y(c, s.dy)]))
-  end
+backend_surface_polygon(b::RH, vs::Locs) =
+  @remote(b, SurfaceClosedPolyLine(vs))
 #=
 realize(b::RH, s::Surface) =
   let ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
