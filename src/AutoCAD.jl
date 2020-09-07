@@ -486,16 +486,8 @@ realize(b::ACAD, s::SurfaceEllipse) =
   end
 
 
-realize(b::ACAD, s::SurfacePolygon) =
-  @remote(b, SurfaceClosedPolyLine(s.vertices))
-realize(b::ACAD, s::SurfaceRegularPolygon) =
-  @remote(b, SurfaceClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
-realize(b::ACAD, s::SurfaceRectangle) =
-  @remote(b, SurfaceClosedPolyLine(
-    [s.corner,
-     add_x(s.corner, s.dx),
-     add_xy(s.corner, s.dx, s.dy),
-     add_y(s.corner, s.dy)]))
+backend_surface_polygon(b::ACAD, vs::Locs) =
+  @remote(b, SurfaceClosedPolyLine(vs))
 realize(b::ACAD, s::Surface) =
   let #ids = map(r->@remote(b, NurbSurfaceFrom(r)), @remote(b, SurfaceFromCurves(collect_ref(s.frontier))))
       ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
