@@ -462,6 +462,16 @@ A wall contains doors and windows
           offset::Real=is_closed_path(path) ? 1/2 : 0, # offset is relative to the thickness
           doors::Shapes=Shape[], windows::Shapes=Shape[])
 
+# To deal with incremental creation, it is necessary to use transactions.
+export with_wall
+with_wall(f, args...) =
+  with_transaction() do
+    let w = wall(args...)
+      f(w)
+      w
+    end
+  end
+
 # The protocol starts by identifying the approach to use. It can be either
 # based on Boolean operations or on the construction of polygonal elements.
 # Then, for each approach, the appropriate implementation is selected.
@@ -676,7 +686,7 @@ l_thickness(w::Wall) = l_thickness(w.offset, w.family.thickness + w.family.left_
 
 @deffamily(window_family, Family,
   width::Real=1.0,
-  height::Real=2.0,
+  height::Real=1.0,
   thickness::Real=0.05)
 
 @defproxy(window, BIMShape, wall::Wall=required(), loc::Loc=u0(), flip_x::Bool=false, flip_y::Bool=false, family::WindowFamily=default_window_family())
