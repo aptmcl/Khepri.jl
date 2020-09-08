@@ -1036,8 +1036,9 @@ realize_box(b::MCAT, mat, p, dx, dy, dz) =
 
 realize_prism(b::MCAT, top, bot, side, path::PathSet, h::Real) =
   let p = path_start(path.paths[1]),
-      v = u0(p.cs)-p
-    add_object(b, meshcat_extrusion_z(translate(path, v), h, top, p))
+      n = planar_path_normal(path.paths[1]),
+      cs = cs_from_o_vz(p, n)
+    add_object(b, meshcat_extrusion_z(in_cs(path, cs), h, top, u0(cs)))
   end
 #=
   # PathSets require a different approach
