@@ -1193,6 +1193,6 @@ set_backend_family(default_curtain_wall_family().mullion_frame, meshcat, meshcat
 realize_slab(b::MCAT, contour::ClosedPath, holes::Vector{<:ClosedPath}, level::Level, family::Family) =
   let base = vz(level.height + slab_family_elevation(b, family)),
       thickness = slab_family_thickness(b, family),
-      material = get_material(b, realize(b, family).material)
-    add_object(b, meshcat_extrusion_z(path_set(contour, holes...), thickness, material, base))
+      (mattop, matbot, matside) = slab_materials(b, family_ref(b, family))
+    add_object(b, meshcat_extrusion_z(path_set(contour, holes...), thickness, mattop, base))
   end
