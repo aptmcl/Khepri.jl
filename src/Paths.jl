@@ -712,7 +712,7 @@ path_set(paths...) =
 translate(path::T, v::Vec) where T<:Union{PathSequence,PathSet} =
   T(translate.(path.paths, v))
 in_cs(path::T, cs::CS) where T<:Union{PathSequence,PathSet} =
-  T(in_cs.(path.paths, cs))
+  T(map(p->in_cs(p, cs), path.paths))
 planar_path_normal(path::T) where T<:Union{PathSequence,PathSet} =
   planar_path_normal(path.paths[1])
 
