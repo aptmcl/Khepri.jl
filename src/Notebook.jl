@@ -226,8 +226,8 @@ realize(b::ACAD, s::EllipticArc) =
   error("Finish this")
 =#
 
-realize(b::ACAD, s::Polygon) =
-  backend_line(p, [s.vertices..., s.vertices[1])
+realize(b::PLOT, s::Polygon) =
+  backend_line(p, [s.vertices..., s.vertices[1]])
 
 #=
 realize(b::ACAD, s::RegularPolygon) =
