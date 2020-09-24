@@ -152,8 +152,9 @@ realize(b::ACAD, s::Point) =
   @remote(b, Point(s.position))
 
 =#
-realize(b::PLOT, s::Line) =
-  let pts = map(in_world, s.vertices),
+
+backend_line(b::PLOT, vs::Locs) =
+  let pts = map(in_world, vs),
       r = PlotlyJS.scatter3d(
          x=map(cx, pts),
          y=map(cy, pts),
@@ -166,6 +167,9 @@ realize(b::PLOT, s::Line) =
     PlotlyJS.addtraces!(connection(b), r)
     PlotNativeRef(r)
   end
+
+realize(b::PLOT, s::Line) =
+  backend_line(p, s.vertices)
 
 realize(b::PLOT, s::Spline) = # This should be merged with opensplinepath
   if (s.v0 == false) && (s.v1 == false)
@@ -220,9 +224,12 @@ realize(b::ACAD, s::Ellipse) =
   end
 realize(b::ACAD, s::EllipticArc) =
   error("Finish this")
+=#
 
 realize(b::ACAD, s::Polygon) =
-  @remote(b, ClosedPolyLine(s.vertices))
+  backend_line(p, [s.vertices..., s.vertices[1])
+
+#=
 realize(b::ACAD, s::RegularPolygon) =
   @remote(b, ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
 realize(b::ACAD, s::Rectangle) =
@@ -541,12 +548,12 @@ realize_pyramid_frustum(b::Plot, top, bot, side, bot_vs::Locs, top_vs::Locs, clo
     void_ref(b)
   end
 
-realize_polygon(b::Plot, mat, path::PathSet, acw=true) =
+backend_surface_polygon(b::Plot, mat, path::PathSet, acw=true) =
   acw ?
     write_Plot_polygons(buffer(b), mat, map(path_vertices, path.paths)) :
     write_Plot_polygons(buffer(b), mat, map(reverse ∘ path_vertices, path.paths))
 
-realize_polygon(b::Plot, mat, vs::Locs, acw=true) =
+backend_surface_polygon(b::Plot, mat, vs::Locs, acw=true) =
   let buf = buffer(b)
     write_Plot_polygon(buf, mat, acw ? vs : reverse(vs))
   end
