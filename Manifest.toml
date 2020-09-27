@@ -82,10 +82,6 @@ version = "1.0.0"
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
-[[DelimitedFiles]]
-deps = ["Mmap"]
-uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
-
 [[Dierckx]]
 deps = ["Dierckx_jll"]
 git-tree-sha1 = "1fa89a5c6836f3fc2d1008c2314b5649db336a83"
@@ -214,11 +210,6 @@ git-tree-sha1 = "a7999edc634307964d5651265ebf7c2e14b4ef91"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.0+2"
 
-[[LaTeXStrings]]
-git-tree-sha1 = "de44b395389b84fd681394d4e8d39ef14e3a2ea8"
-uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
-version = "1.1.0"
-
 [[Lazy]]
 deps = ["MacroTools"]
 git-tree-sha1 = "ead48f10ad295afe72046ab0f2b9d704466452a0"
@@ -345,18 +336,6 @@ version = "1.2.0"
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-
-[[PlotlyBase]]
-deps = ["Base64", "Dates", "DelimitedFiles", "DocStringExtensions", "JSON", "LaTeXStrings", "Logging", "Pkg", "Requires", "Statistics", "UUIDs"]
-git-tree-sha1 = "b33809ab5a35bf41d1fd7c851b52e32004392933"
-uuid = "a03496cd-edff-5a9b-9e67-9cda94a718b5"
-version = "0.4.1"
-
-[[PlotlyJS]]
-deps = ["Blink", "DelimitedFiles", "JSExpr", "JSON", "Markdown", "Pkg", "PlotlyBase", "REPL", "Reexport", "Requires", "WebIO"]
-git-tree-sha1 = "d55517585b572623b61857dadf74e6f53812c2fb"
-uuid = "f0f68f2c-4968-5e81-91da-67840de0976a"
-version = "0.14.0"
 
 [[Printf]]
 deps = ["Unicode"]
