@@ -8,9 +8,9 @@ using StaticArrays
 using LinearAlgebra
 using IntervalSets
 using Dierckx
-using PyCall
-using MeshCat
-using PlotlyJS
+#using PyCall
+#using MeshCat
+#using PlotlyJS
 
 import Base.show, Base.zero, Base.iterate
 import Base.convert
