@@ -117,7 +117,7 @@ arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=
     ArcPath(center, radius, start_angle, amplitude)
 path_domain(path::ArcPath) = (0, path.amplitude)
 location_at(path::ArcPath, ϕ::Real) =
-  let s = sign(path.amplitude),
+  let s = sign(path.amplitude/1.0), # HACK: a trick to avoid a bug in Julia when amplitude is pi 
       ϕ = ϕ*s
     loc_from_o_vx_vy(add_pol(path.center, path.radius, path.start_angle + ϕ),
                      vpol(1, path.start_angle + ϕ + π, path.center.cs),
