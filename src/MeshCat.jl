@@ -115,7 +115,7 @@ meshcat_line_material(color) =
    #linewidth=2, Due to limitations of the OpenGL Core Profile with the WebGL renderer on most platforms linewidth will always be 1 regardless of the set value.
    #depthFunc=3,
    #depthTest=true,
-   #depthWrite=true,
+   depthWrite=true,
    #stencilWrite=false,
    #stencilWriteMask=255,
    #stencilFunc=519,
@@ -363,8 +363,9 @@ meshcat_circle_mesh(center, radius, start_angle, amplitude, material) =
               radius=radius,
               segments=64,
               thetaStart=start_angle,
-              thetaLength=amplitude)
-    meshcat_object("Mesh", geom, material, center)
+              thetaLength=amplitude),
+      cs = cs_from_o_vz(center, vy(1, center.cs))
+    meshcat_object("Mesh", geom, material, u0(cs))
   end
 
 meshcat_centered_box(p, dx, dy, dz, material) =
@@ -521,6 +522,25 @@ meshcat_extruded_surface_polygon(outer_vertices, holes_vertices, material) =
     meshcat_object_shapes("Mesh", geom, [shape], material, u0(cs))
   end
 =#
+#=
+meshcat_text(txt, p, font) =
+  let geom = (uuid=string(uuid1()),
+              type="TextGeometry",
+              data=(
+                attributes=(
+                  position=meshcat_buffer_geometry_attributes_position(vertices),
+                  #uv=?
+                  ),
+                index=(
+                  itemSize=3,
+                  type="Uint32Array",
+                  array=convert(Vector{UInt32}, collect(Iterators.flatten(faces))))))
+    meshcat_object("Mesh", geom, material, u0(world_cs))
+  end
+
+const geometry = new THREE.FontGeometry("Hello There", {font: font, size: 80})
+=#
+
 send_setview(v, camera::Loc, target::Loc, lens::Real, aperture::Real) =
   let (x1,y1,z1) = raw_point(camera),
       (x2,y2,z2) = raw_point(target)
@@ -727,6 +747,8 @@ backend_stroke(b::MCAT, path::RectangularPath) =
       meshcat_line([c, add_x(c, dx), add_xy(c, dx, dy), add_y(c, dy), c],
                    line_material(b)))
   end
+backend_polygon(b::MCAT, vs::Locs) =
+  backend_stroke_line(b, [vs..., vs[1]])
 backend_surface_polygon(b::MCAT, vs::Locs) =
   add_object(b, meshcat_surface_polygon(vs, material(b)))
 backend_stroke(b::MCAT, path::ArcPath) =
@@ -768,19 +790,12 @@ backend_fill_curves(b::MCAT, ref::MCATId) = @remote(b, SurfaceFromCurves([ref]))
 =#
 backend_stroke_line(b::MCAT, vs) =
 	add_object(b, meshcat_line(vs, line_material(b)))
-
-backend_stroke_arc(b::MCAT, center::Loc, radius::Real, start_angle::Real, amplitude::Real) =
-  let end_angle = start_angle + amplitude
-    @remote(b, Arc(center, vz(1, center.cs), radius, start_angle, end_angle))
-  end
-backend_stroke_unite(b::MCAT, refs) = @remote(b, JoinCurves(refs))
-
 #=
 realize(b::MCAT, s::Point) =
   @remote(b, Point(s.position))
-=#
+  =#
 realize(b::MCAT, s::Line) =
-  stroke(open_polygonal_path(s.vertices), b)
+  backend_stroke_line(b, s.vertices)
 
 realize(b::MCAT, s::Spline) =
  # This should be merged with opensplinepath
@@ -794,25 +809,12 @@ realize(b::MCAT, s::Spline) =
 
 realize(b::MCAT, s::ClosedSpline) =
   backend_stroke(b, closed_spline_path(s.points))
-#=
-realize(b::MCAT, s::Circle) =
-  @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
-realize(b::MCAT, s::Arc) =
-  if s.radius == 0
-    @remote(b, Point(s.center))
-  elseif s.amplitude == 0
-    @remote(b, Point(s.center + vpol(s.radius, s.start_angle, s.center.cs)))
-  elseif abs(s.amplitude) >= 2*pi
-    @remote(b, Circle(s.center, vz(1, s.center.cs), s.radius))
-  else
-    end_angle = s.start_angle + s.amplitude
-    if end_angle > s.start_angle
-      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle))
-    else
-      @remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle))
-    end
-  end
 
+realize(b::MCAT, s::Circle) =
+  backend_stroke(b, circular_path(s.center, s.radius))
+realize(b::MCAT, s::Arc) =
+  backend_stroke(b, arc_path(s.center, s.radius, s.start_angle, s.amplitude))
+#=
 realize(b::MCAT, s::Ellipse) =
   if s.radius_x > s.radius_y
     @remote(b, Ellipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x))
@@ -821,52 +823,9 @@ realize(b::MCAT, s::Ellipse) =
   end
 realize(b::MCAT, s::EllipticArc) =
   error("Finish this")
-
-realize(b::MCAT, s::Polygon) =
-  @remote(b, ClosedPolyLine(s.vertices))
-realize(b::MCAT, s::RegularPolygon) =
-  @remote(b, ClosedPolyLine(regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed)))
-realize(b::MCAT, s::Rectangle) =
-  @remote(b, ClosedPolyLine(
-    [s.corner,
-     add_x(s.corner, s.dx),
-     add_xy(s.corner, s.dx, s.dy),
-     add_y(s.corner, s.dy)]))
+=#
 realize(b::MCAT, s::SurfaceCircle) =
-  @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
-realize(b::MCAT, s::SurfaceArc) =
-    #@remote(b, SurfaceArc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, s.start_angle + s.amplitude))
-    if s.radius == 0
-        @remote(b, Point(s.center))
-    elseif s.amplitude == 0
-        @remote(b, Point(s.center + vpol(s.radius, s.start_angle, s.center.cs)))
-    elseif abs(s.amplitude) >= 2*pi
-        @remote(b, SurfaceCircle(s.center, vz(1, s.center.cs), s.radius))
-    else
-        end_angle = s.start_angle + s.amplitude
-        if end_angle > s.start_angle
-            @remote(b, SurfaceFromCurves(
-                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, s.start_angle, end_angle)),
-                 @remote(b, PolyLine([add_pol(s.center, s.radius, end_angle),
-                                              add_pol(s.center, s.radius, s.start_angle)]))]))
-        else
-            @remote(b, SurfaceFromCurves(
-                [@remote(b, Arc(s.center, vz(1, s.center.cs), s.radius, end_angle, s.start_angle)),
-                 @remote(b, PolyLine([add_pol(s.center, s.radius, s.start_angle),
-                                              add_pol(s.center, s.radius, end_angle)]))]))
-        end
-    end
-
-realize(b::MCAT, s::SurfaceEllipse) =
-  if s.radius_x > s.radius_y
-    @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(s.radius_x, 0, 0, s.center.cs), s.radius_y/s.radius_x))
-  else
-    @remote(b, SurfaceEllipse(s.center, vz(1, s.center.cs), vxyz(0, s.radius_y, 0, s.center.cs), s.radius_x/s.radius_y))
-  end
-
-
-realize(b::MCAT, s::SurfacePolygon) =
-  @remote(b, SurfaceClosedPolyLine(s.vertices))
+  add_object(b, meshcat_circle_mesh(s.center, s.radius, 0, 2pi, material(b)))
 
 realize(b::MCAT, s::Surface) =
   let #ids = map(r->@remote(b, NurbSurfaceFrom(r)), @remote(b, SurfaceFromCurves(collect_ref(s.frontier))))
@@ -876,7 +835,6 @@ realize(b::MCAT, s::Surface) =
   end
 backend_surface_boundary(b::MCAT, s::Shape2D) =
     map(c -> shape_from_ref(c, b), @remote(b, CurvesFromSurface(ref(s).value)))
-=#
 
 realize(b::MCAT, s::Sphere) =
   add_object(b, meshcat_sphere(s.center, s.radius, material(b)))
@@ -1077,10 +1035,10 @@ realize_pyramid_frustum(b::MCAT, top, bot, side, bot_vs::Locs, top_vs::Locs, clo
 #regular_pyramid_frustum(5)
 
 
-realize_polygon(b::MCAT, mat, path::PathSet, acw=true) =
-  realize_polygon(b, mat, path_vertices(path.paths[1])) # WARNING: Ignore the remaining paths that should be subtracted
+backend_surface_polygon(b::MCAT, mat, path::PathSet, acw=true) =
+  backend_surface_polygon(b, mat, path_vertices(path.paths[1])) # WARNING: Ignore the remaining paths that should be subtracted
 
-realize_polygon(b::MCAT, mat, vs::Locs, acw=true) =
+backend_surface_polygon(b::MCAT, mat, vs::Locs, acw=true) =
   add_object(b, meshcat_surface_polygon(vs, mat))
 #=
 # Polygons with holes need a PathSets in MCAT

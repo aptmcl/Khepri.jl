@@ -97,6 +97,9 @@ collect_ref(b::Backend{K,T}, r::UnionRef{K,T}) where {K,T} = mapreduce(collect_r
 collect_ref(b::Backend{K,T}, r::SubtractionRef{K,T}) where {K,T} = vcat(collect_ref(b, r.value), mapreduce(collect_ref(b), vcat, r.values, init=[]))
 
 # Boolean algebra laws
+# currying
+unite_ref(b::Backend{K,T}) where {K,T} = (r0::GenericRef{K,T}, r1::GenericRef{K,T}) -> unite_ref(b, r0, r1)
+
 unite_ref(b::Backend{K,T}, r0::GenericRef{K,T}, r1::UniversalRef{K,T}) where {K,T} = r1
 unite_ref(b::Backend{K,T}, r0::UniversalRef{K,T}, r1::GenericRef{K,T}) where {K,T} = r0
 
@@ -116,6 +119,9 @@ unite_ref(b::Backend{K,T}, r0::UnionRef{K,T}, r1::GenericRef{K,T}) where {K,T} =
 unite_ref(b::Backend{K,T}, r0::GenericRef{K,T}, r1::UnionRef{K,T}) where {K,T} =
   unite_ref(b, r0, unite_refs(b, r1))
 
+# currying
+intersect_ref(b::Backend{K,T}) where {K,T} = (r0::GenericRef{K,T}, r1::GenericRef{K,T}) -> intersect_ref(b, r0, r1)
+
 intersect_ref(b::Backend{K,T}, r0::GenericRef{K,T}, r1::UniversalRef{K,T}) where {K,T} = r0
 intersect_ref(b::Backend{K,T}, r0::UniversalRef{K,T}, r1::GenericRef{K,T}) where {K,T} = r1
 intersect_ref(b::Backend{K,T}, r0::GenericRef{K,T}, r1::EmptyRef{K,T}) where {K,T} = r1
@@ -126,6 +132,9 @@ intersect_ref(b::Backend{K,T}, r0::UnionRef{K,T}, r1::GenericRef{K,T}) where {K,
   intersect_ref(b, unite_refs(b, r0), r1)
 
 #To avoid ambiguity
+# currying
+subtract_ref(b::Backend{K,T}) where {K,T} = (r0::GenericRef{K,T}, r1::GenericRef{K,T}) -> subtract_ref(b, r0, r1)
+
 subtract_ref(b::Backend{K,T}, r0::UnionRef{K,T}, r1::UnionRef{K,T}) where {K,T} =
   subtract_ref(b, unite_refs(b, r0), unite_refs(b, r1))
 subtract_ref(b::Backend{K,T}, r0::GenericRef{K,T}, r1::UniversalRef{K,T}) where {K,T} = EmptyRef{K,T}()
@@ -531,12 +540,22 @@ closed_spline(v0, v1, vs...) = closed_spline([v0, v1, vs...])
 @defproxy(ellipse, Shape1D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1)
 @defproxy(polygon, Shape1D, vertices::Locs=[u0(), ux(), uy()])
 polygon(v0, v1, vs...) = polygon([v0, v1, vs...])
+realize(b::Backend, s::Polygon) =
+  backend_polygon(b, s.vertices)
 @defproxy(regular_polygon, Shape1D, edges::Integer=3, center::Loc=u0(), radius::Real=1, angle::Real=0, inscribed::Bool=true)
+realize(b::Backend, s::RegularPolygon) =
+  backend_polygon(b, regular_polygon_vertices(s.edges, s.center, s.radius, s.angle, s.inscribed))
 @defproxy(rectangle, Shape1D, corner::Loc=u0(), dx::Real=1, dy::Real=1)
 rectangle(p::Loc, q::Loc) =
   let v = in_cs(q - p, p.cs)
     rectangle(p, v.x, v.y)
   end
+realize(b::Backend, s::Rectangle) =
+  backend_polygon(b, [
+    s.corner,
+    add_x(s.corner, s.dx),
+    add_xy(s.corner, s.dx, s.dy),
+    add_y(s.corner, s.dy)])
 @defproxy(surface_circle, Shape2D, center::Loc=u0(), radius::Real=1)
 @defproxy(surface_arc, Shape2D, center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=pi)
 @defproxy(surface_elliptic_arc, Shape2D, center::Loc=u0(), radius_x::Real=1, radius_y::Real=1, start_angle::Real=0, amplitude::Real=pi)
