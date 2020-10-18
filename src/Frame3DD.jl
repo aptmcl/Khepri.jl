@@ -221,7 +221,7 @@ backend_truss_analysis(b::FR3DD, load::Vec) =
       #run(`$frame3dd_plugin -w -i $input_path -o $output_path`)
       #run(`$frame3dd_plugin -i $input_path -o $output_path`)
       withenv("FRAME3DD_OUTDIR"=>simulation_folder) do
-        run(`$frame3dd_plugin -i $input_path -o $output_path`)
+        run(`$frame3dd_plugin -q -i $input_path -o $output_path`)
       end
     catch e
     end
