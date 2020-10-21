@@ -350,12 +350,13 @@ realize(b::RH, s::SurfaceEllipse) =
 
 backend_surface_polygon(b::RH, vs::Locs) =
   @remote(b, SurfaceClosedPolyLine(vs))
-#=
+
 realize(b::RH, s::Surface) =
-  let ids = @remote(b, SurfaceFromCurves(collect_ref(s.frontier)))
+  let ids = @remote(b, SurfaceFrom(collect_ref(s.frontier)))
     foreach(mark_deleted, s.frontier)
     ids
   end
+#=
 realize(b::RH, s::Text) =
   @remote(b, Text(s.str, s.c, vx(1, s.c.cs), vy(1, s.c.cs), s.h))
 =#
