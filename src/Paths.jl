@@ -117,7 +117,7 @@ arc_path(center::Loc=u0(), radius::Real=1, start_angle::Real=0, amplitude::Real=
     ArcPath(center, radius, start_angle, amplitude)
 path_domain(path::ArcPath) = (0, path.amplitude)
 location_at(path::ArcPath, ϕ::Real) =
-  let s = sign(path.amplitude/1.0), # HACK: a trick to avoid a bug in Julia when amplitude is pi 
+  let s = sign(path.amplitude/1.0), # HACK: a trick to avoid a bug in Julia when amplitude is pi
       ϕ = ϕ*s
     loc_from_o_vx_vy(add_pol(path.center, path.radius, path.start_angle + ϕ),
                      vpol(1, path.start_angle + ϕ + π, path.center.cs),
@@ -294,8 +294,8 @@ translate(path::ArcPath, v::Vec) = ArcPath(path.center + v, path.radius, path.st
 translate(path::RectangularPath, v::Vec) = RectangularPath(path.corner + v, path.dx, path.dy)
 translate(path::OpenPolygonalPath, v::Vec) = OpenPolygonalPath(translate(path.vertices, v))
 translate(path::ClosedPolygonalPath, v::Vec) = ClosedPolygonalPath(translate(path.vertices, v))
-translate(path::OpenSplinePath, v::Vec) = OpenSplinePath(translate(path.vertices, v), path.v0, path.v1)
-translate(path::ClosedSplinePath, v::Vec) = ClosedSplinePath(translate(path.vertices, v))
+translate(path::OpenSplinePath, v::Vec) = OpenSplinePath(translate(path.vertices, v), path.v0, path.v1, path.interpolator)
+translate(path::ClosedSplinePath, v::Vec) = ClosedSplinePath(translate(path.vertices, v), path.interpolator)
 translate(ps::Locs, v::Vec) = map(p->p+v, ps)
 
 in_cs(path::PointPath, cs::CS) = PointPath(in_cs(path.location, cs))
@@ -998,4 +998,14 @@ union(m::Mesh, ms...) =
         mesh(vcat(m.vertices, ms[1].vertices),
             vcat(m.faces, [face.+n for face in ms[1].faces])),
         ms[2:end]...)
+    end
+
+export length_at_location
+length_at_location(path::Path, p::Loc, t0=0, t1=path_length(path)) =
+  t1 - t0 < epsilon() ?
+    (t0+t1)/2 :
+    let ts = division(t0, t1, 10),
+        pts = map(t->location_at_length(path, t), ts),
+        idx = argmin(map(p1 -> distance(p, p1), pts))
+      length_at_location(path, p, ts[max(1, idx-1)], ts[min(length(ts), idx+1)])
     end
