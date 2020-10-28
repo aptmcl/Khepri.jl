@@ -752,6 +752,7 @@ realize(b::ACAD, s::Thicken) =
 backend_frame_at(b::ACAD, s::Circle, t::Real) = add_pol(s.center, s.radius, t)
 
 backend_frame_at(b::ACAD, c::Shape1D, t::Real) = @remote(b, CurveFrameAt(ref(c).value, t))
+backend_curve_length(b::ACAD, c::Shape1D) = @remote(b, CurveLength(ref(c).value))
 backend_frame_at_length(b::ACAD, c::Shape1D, t::Real) = @remote(b, CurveFrameAtLength(ref(c).value, t))
 
 #backend_frame_at(b::ACAD, s::Surface, u::Real, v::Real) =
