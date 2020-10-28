@@ -980,13 +980,14 @@ convert(::Type{ClosedPath}, s::Polygon) =
 
 
 #####################################################################
-export curve_domain, surface_domain, frame_at
+export curve_domain, surface_domain, frame_at, frame_at_length
 surface_domain(s::SurfaceRectangle) = (0, s.dx, 0, s.dy)
 surface_domain(s::SurfaceCircle) = (0, s.radius, 0, 2pi)
 surface_domain(s::SurfaceArc) = (0, s.radius, s.start_angle, s.amplitude)
 
 
 frame_at(c::Shape1D, t::Real) = backend_frame_at(backend(c), c, t)
+frame_at_length(c::Shape1D, t::Real) = backend_frame_at_length(backend(c), c, t)
 frame_at(s::Shape2D, u::Real, v::Real) = backend_frame_at(backend(s), s, u, v)
 
 #Some specific cases can be handled in an uniform way without the backend

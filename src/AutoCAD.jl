@@ -672,7 +672,7 @@ unite_refs(b::ACAD, refs::Vector{<:ACADRef}) =
     ACADUnionRef(tuple(refs...))
 
 realize(b::ACAD, s::IntersectionShape) =
-  let r = foldl((r0,r1)->intersect_ref(b,r0,r1), map(ref, s.shapes),
+  let r = foldl(intersect_ref(b), map(ref, s.shapes),
                 init=ACADUniversalRef())
     mark_deleted(s.shapes)
     r
@@ -752,6 +752,7 @@ realize(b::ACAD, s::Thicken) =
 backend_frame_at(b::ACAD, s::Circle, t::Real) = add_pol(s.center, s.radius, t)
 
 backend_frame_at(b::ACAD, c::Shape1D, t::Real) = @remote(b, CurveFrameAt(ref(c).value, t))
+backend_frame_at_length(b::ACAD, c::Shape1D, t::Real) = @remote(b, CurveFrameAtLength(ref(c).value, t))
 
 #backend_frame_at(b::ACAD, s::Surface, u::Real, v::Real) =
     #What should we do with v?
@@ -1186,3 +1187,8 @@ mentalray_render_view(name::String) =
 
 save_as(pathname::String, format::String, b::ACAD) =
     @remote(b, SaveAs(pathname, format))
+
+
+export autocad_command
+autocad_command(s::String) =
+  @remote(autocad, Command("$(s)\n"))
