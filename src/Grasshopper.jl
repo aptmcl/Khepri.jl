@@ -57,6 +57,16 @@ end
 @ghdef(Many, [])
 @ghdef(Evals, [])
 @ghdef(JLs, [])
+@ghdef(Stringss, [])
+@ghdef(Pathss, [])
+@ghdef(Booleanss, [])
+@ghdef(Numberss, [])
+@ghdef(Integerss, [])
+@ghdef(Pointss, [])
+@ghdef(Vectorss, [])
+@ghdef(Manies, [])
+@ghdef(Evalss, [])
+@ghdef(JLss, [])
 
 export define_kgh_function
 
