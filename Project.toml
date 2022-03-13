@@ -11,5 +11,6 @@ KhepriAutoCAD = "84eb9a3b-232b-4081-b917-cfea549d0d83"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
-Reexport = "1"
+ColorTypes = "0.11"
 Colors = "0.12"
+Reexport = "1"
