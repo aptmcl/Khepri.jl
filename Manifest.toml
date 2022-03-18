@@ -72,11 +72,9 @@ version = "1.4.1"
 
 [[deps.KhepriAutoCAD]]
 deps = ["ColorTypes", "Dates", "EzXML", "KhepriBase", "Reexport", "Sockets"]
-git-tree-sha1 = "18f9cbbc1827b6e981987f718c7c09a021131b55"
-repo-rev = "master"
-repo-url = "https://github.com/aptmcl/KhepriAutoCAD.jl"
+git-tree-sha1 = "e07134a54db2bfb3e1994ce3de449cb172f21f92"
 uuid = "84eb9a3b-232b-4081-b917-cfea549d0d83"
-version = "1.0.0"
+version = "0.2.0"
 
 [[deps.KhepriBase]]
 deps = ["ColorTypes", "Dates", "Dierckx", "LinearAlgebra", "Sockets", "StaticArrays"]
@@ -176,9 +174,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "74fb527333e72ada2dd9ef77d98e4991fb185f04"
+git-tree-sha1 = "6976fab022fea2ffea3d945159317556e5dad87c"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.4.1"
+version = "1.4.2"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
