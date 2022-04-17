@@ -72,15 +72,15 @@ version = "1.4.1"
 
 [[deps.KhepriAutoCAD]]
 deps = ["ColorTypes", "Dates", "EzXML", "KhepriBase", "Reexport", "Sockets"]
-git-tree-sha1 = "e07134a54db2bfb3e1994ce3de449cb172f21f92"
+git-tree-sha1 = "53c87fb9415cdb15110e9436dee88ae00ab7b887"
 uuid = "84eb9a3b-232b-4081-b917-cfea549d0d83"
-version = "0.2.0"
+version = "1.1.0"
 
 [[deps.KhepriBase]]
 deps = ["ColorTypes", "Dates", "Dierckx", "LinearAlgebra", "Sockets", "StaticArrays"]
-git-tree-sha1 = "7ab3b822592292977ae8e2737906dd295f0be2b7"
+git-tree-sha1 = "7a8b987f9c0a2d78ea6f782c3e823fbc62f4a5f9"
 uuid = "4cc0fe96-1163-46f3-ba32-de1e65d9548f"
-version = "0.4.0"
+version = "0.4.3"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -174,9 +174,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "6976fab022fea2ffea3d945159317556e5dad87c"
+git-tree-sha1 = "4f6ec5d99a28e1a749559ef7dd518663c5eca3d5"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.4.2"
+version = "1.4.3"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
