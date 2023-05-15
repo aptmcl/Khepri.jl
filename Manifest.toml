@@ -14,9 +14,9 @@ uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
+git-tree-sha1 = "eb7f0f8307f71fac7c606984ea5fb2817275d6e4"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.0"
+version = "0.11.4"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -72,15 +72,15 @@ version = "1.4.1"
 
 [[deps.KhepriAutoCAD]]
 deps = ["ColorTypes", "Dates", "EzXML", "KhepriBase", "Reexport", "Sockets"]
-git-tree-sha1 = "53c87fb9415cdb15110e9436dee88ae00ab7b887"
+git-tree-sha1 = "ea9cb0f3b995239e86a5902c16d24ae48f00a3a9"
 uuid = "84eb9a3b-232b-4081-b917-cfea549d0d83"
-version = "1.1.0"
+version = "1.1.1"
 
 [[deps.KhepriBase]]
 deps = ["ColorTypes", "Dates", "Dierckx", "LinearAlgebra", "Sockets", "StaticArrays"]
-git-tree-sha1 = "7a8b987f9c0a2d78ea6f782c3e823fbc62f4a5f9"
+git-tree-sha1 = "0939a5bd73982291a9dac27e8d6b41d93f2a53eb"
 uuid = "4cc0fe96-1163-46f3-ba32-de1e65d9548f"
-version = "0.4.3"
+version = "0.4.4"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -138,9 +138,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[deps.Preferences]]
 deps = ["TOML"]
-git-tree-sha1 = "d3538e7f8a790dc8903519090857ef8e1283eecd"
+git-tree-sha1 = "47e5f437cc0e7ef2ce8406ce1e7e24d44915f88d"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
-version = "1.2.5"
+version = "1.3.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -173,10 +173,15 @@ deps = ["LinearAlgebra", "Random"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.StaticArrays]]
-deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "4f6ec5d99a28e1a749559ef7dd518663c5eca3d5"
+deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
+git-tree-sha1 = "4e051b85454b4e4f66e6a6b7bdc452ad9da3dcf6"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.4.3"
+version = "1.5.10"
+
+[[deps.StaticArraysCore]]
+git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
+uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+version = "1.4.0"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -199,9 +204,9 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "1acf5bdf07aa0907e0a37d3718bb88d4b687b74a"
+git-tree-sha1 = "58443b63fb7e465a8a7210828c91c08b92132dff"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.9.12+0"
+version = "2.9.14+0"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
