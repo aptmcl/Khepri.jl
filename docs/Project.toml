@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Khepri = "59ceddad-2dad-55ad-af66-072f48a109d0"
+
+[compat]
+Documenter = "1"
