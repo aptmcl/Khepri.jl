@@ -6,3 +6,4 @@
 [![Coverage](https://codecov.io/gh/aptmcl/Khepri.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/aptmcl/Khepri.jl)
 
 Khepri for Julia users.
+Currently, restricted to the AutoCAD backend.
