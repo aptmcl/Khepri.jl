@@ -47,6 +47,35 @@ jobs:
       - uses: codecov/codecov-action@v7
         with:
           files: lcov.info
+  registry-deps:
+    name: Registry dependency resolution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      # This job deliberately does NOT Pkg.develop KhepriBase master. Every other
+      # job does, which means nothing ever loaded the package against its own
+      # declared compat bounds -- the resolution a registry user actually gets.
+      # KhepriAutoCAD v1.5.0 failed AutoMerge for exactly that reason: it called
+      # KhepriBase.curve_geometry_capabilities, absent from the registered 0.8.0
+      # that a bound of "0.8" resolved to, while CI stayed green against master.
+      - name: Load with every dependency resolved from the registry
+        run: |
+          julia --color=yes -e '
+            using Pkg
+            repo = pwd()
+            proj = Pkg.Types.read_project(joinpath(repo, "Project.toml"))
+            Pkg.activate(mktempdir())
+            Pkg.develop(path = repo)
+            for (_, p) in Pkg.dependencies()
+              if p.name !== nothing && p.name != proj.name && startswith(p.name, "Khepri")
+                @info "resolved" package = p.name version = p.version
+              end
+            end
+            Base.require(Base.PkgId(proj.uuid, proj.name))
+            @info "loaded with registry-resolved dependencies"'
   docs:
     name: Documentation
     runs-on: ubuntu-latest
